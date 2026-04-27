@@ -14,16 +14,21 @@ struct OnboardingView: View {
     @State private var draft: String = ""
     @FocusState private var isFieldFocused: Bool
 
-    private let suggestions: [String] = [
-        "David Fincher",
-        "Aftersun",
-        "Secret Hitler",
-        "Brutalist architecture",
-        "Kendrick Lamar",
-        "Cooking with lemons",
-        "Studio Ghibli",
-        "Formula 1 strategy",
-    ]
+    // AI suggestion state
+    @State private var aiSuggestions: [String] = []
+    @State private var isSuggesting: Bool = false
+    /// Shown when the last suggest request returned no chips (HTTP error, parse, connectivity).
+    @State private var suggestionFootnote: String?
+    @State private var debounceTask: Task<Void, Never>? = nil
+    /// Separate from `debounceTask` so typing / debounce does not cancel an in-flight refresh.
+    @State private var refreshTask: Task<Void, Never>? = nil
+
+    /// Suggestions not already added as interests (case-insensitive).
+    private var visibleSuggestions: [String] {
+        aiSuggestions.filter { suggestion in
+            !interests.contains { $0.caseInsensitiveCompare(suggestion) == .orderedSame }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -53,7 +58,10 @@ struct OnboardingView: View {
         }
         .onAppear {
             interests = FeedView.parse(interests: storedInterests)
+            scheduleSuggestion()
         }
+        .onChange(of: draft) { _, _ in scheduleSuggestion() }
+        .onChange(of: interests) { _, _ in scheduleSuggestion() }
     }
 
     // MARK: - Subviews
@@ -112,20 +120,74 @@ struct OnboardingView: View {
 
     private var suggestionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Ideas to try")
-                .font(.headline)
-            FlowLayout(spacing: 8) {
-                ForEach(suggestions.filter { !interests.contains($0) }, id: \.self) { suggestion in
-                    Button(suggestion) {
-                        interests.append(suggestion)
+            HStack(spacing: 8) {
+                Text("Ideas to try")
+                    .font(.headline)
+                if isSuggesting {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text("Thinking…")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .font(.callout)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.background.secondary, in: Capsule())
-                    .overlay(Capsule().stroke(.separator, lineWidth: 0.5))
-                    .foregroundStyle(.primary)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
+                Spacer(minLength: 0)
+                Button {
+                    refreshIdeas()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.body.weight(.semibold))
+                }
+                .buttonStyle(.borderless)
+                .disabled(isSuggesting)
+                .accessibilityLabel("Refresh ideas")
+            }
+            .animation(.easeInOut(duration: 0.2), value: isSuggesting)
+
+            if !visibleSuggestions.isEmpty {
+                FlowLayout(spacing: 8) {
+                    ForEach(visibleSuggestions, id: \.self) { suggestion in
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                interests.append(suggestion)
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "sparkle")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.accentColor)
+                                Text(suggestion)
+                            }
+                        }
+                        .font(.callout)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.background.secondary, in: Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [Color.accentColor.opacity(0.5), Color.accentColor.opacity(0.15)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                        .foregroundStyle(.primary)
+                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                    }
+                }
+                .animation(.spring(response: 0.4, dampingFraction: 0.75), value: visibleSuggestions)
+            }
+
+            if let footnote = suggestionFootnote, !isSuggesting {
+                Text(footnote)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -157,6 +219,87 @@ struct OnboardingView: View {
         }
         draft = ""
         isFieldFocused = true
+    }
+
+    /// Cancel any pending debounce and schedule a new one.
+    private func scheduleSuggestion() {
+        debounceTask?.cancel()
+        debounceTask = Task {
+            // 600 ms debounce — fast enough to feel reactive, slow enough to
+            // avoid a request per keystroke.
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+
+            let (snapshotInterests, snapshotDraft) = await MainActor.run {
+                (interests, trimmedDraft)
+            }
+
+            await MainActor.run {
+                isSuggesting = true
+                suggestionFootnote = nil
+            }
+
+            let outcome: InterestSuggestResponse
+            do {
+                outcome = try await Task.detached {
+                    try await InterestSuggestor.suggest(
+                        interests: snapshotInterests,
+                        draft: snapshotDraft,
+                        excludeSuggestions: []
+                    )
+                }.value
+            } catch {
+                await MainActor.run { isSuggesting = false }
+                return
+            }
+
+            await MainActor.run {
+                applySuggestOutcome(outcome)
+            }
+        }
+    }
+
+    /// New AI batch excluding the current pills.
+    private func refreshIdeas() {
+        debounceTask?.cancel()
+        refreshTask?.cancel()
+        let exclude = aiSuggestions
+        let snapshotInterests = interests
+        let snapshotDraft = trimmedDraft
+        refreshTask = Task {
+            await MainActor.run {
+                isSuggesting = true
+                suggestionFootnote = nil
+            }
+            let outcome: InterestSuggestResponse
+            do {
+                outcome = try await Task.detached {
+                    try await InterestSuggestor.suggest(
+                        interests: snapshotInterests,
+                        draft: snapshotDraft,
+                        excludeSuggestions: exclude
+                    )
+                }.value
+            } catch {
+                await MainActor.run { isSuggesting = false }
+                return
+            }
+            await MainActor.run {
+                applySuggestOutcome(outcome)
+            }
+        }
+    }
+
+    private func applySuggestOutcome(_ outcome: InterestSuggestResponse) {
+        if !outcome.suggestions.isEmpty {
+            suggestionFootnote = nil
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                aiSuggestions = outcome.suggestions
+            }
+        } else {
+            suggestionFootnote = outcome.loadingIssue ?? "Could not load ideas."
+        }
+        isSuggesting = false
     }
 
     private func save() {

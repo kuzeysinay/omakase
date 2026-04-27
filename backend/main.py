@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import uuid
 from typing import AsyncIterator
 
@@ -68,14 +69,35 @@ class FeedRequest(BaseModel):
     )
 
 
+class SuggestRequest(BaseModel):
+    """Payload for the interest-suggestion endpoint."""
+
+    interests: list[str] = Field(
+        default_factory=list,
+        description="Interests the user has already added or is currently typing.",
+    )
+    draft: str = Field(
+        default="",
+        description="Partial text the user is typing right now (may be empty).",
+    )
+    exclude_suggestions: list[str] = Field(
+        default_factory=list,
+        description="Suggestions already shown; the model must not repeat these.",
+    )
+
+
 SYSTEM_PROMPT = (
     "You are the voice of Omakase — a charismatic, well-read curator who loves "
     "surprising people with things they didn't know they needed to know. "
     "Every post you write has personality: it's funny, sharp, or delightfully weird. "
-    "Write ONE short, self-contained post (40-90 words) that feels like a banger tweet "
-    "from a very smart friend. Avoid hashtags, emoji, and meta commentary. "
-    "Do not greet the reader. Do not mention that you are an AI. "
-    "Start directly with the post content."
+    "You MUST output exactly two parts:\n"
+    "1) The first line ONLY must be: TITLE: <a short, specific headline for THIS post, max 8 words> "
+    "(no quotes around the title).\n"
+    "2) Starting on the next line, write the post body: ONE short, self-contained piece (40-90 words) "
+    "like a banger tweet from a very smart friend.\n"
+    "The title must preview the body; do not use a generic label. Do not repeat 'TITLE' or the headline "
+    "inside the body. Avoid hashtags, emoji, and meta commentary. "
+    "Do not greet the reader. Do not mention that you are an AI."
 )
 
 # Rotating format templates. The user prompt picks one based on seen_count so
@@ -145,6 +167,40 @@ def _build_user_prompt(interests: list[str], seen_count: int) -> str:
     )
 
 
+_TITLE_LINE = re.compile(r"(?i)^TITLE:\s*(.+)$")
+
+
+def _feed_tokens_from_stream_chunks(response: object, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop) -> None:
+    """Turn Gemini stream chunks into queue items; emits ('title', str) then body ('token', str)."""
+    carry = ""
+    title_done = False
+    for chunk in response:
+        text = _stream_chunk_text(chunk)
+        if not text:
+            continue
+        carry += text
+        if not title_done:
+            if "\n" not in carry:
+                continue
+            first_line, carry = carry.split("\n", 1)
+            m = _TITLE_LINE.match(first_line.strip())
+            if m:
+                loop.call_soon_threadsafe(
+                    queue.put_nowait,
+                    ("title", m.group(1).strip()),
+                )
+            else:
+                carry = first_line + "\n" + carry
+            title_done = True
+        if carry:
+            loop.call_soon_threadsafe(queue.put_nowait, ("token", carry))
+            carry = ""
+    if not title_done and carry:
+        loop.call_soon_threadsafe(queue.put_nowait, ("token", carry))
+    elif title_done and carry:
+        loop.call_soon_threadsafe(queue.put_nowait, ("token", carry))
+
+
 def _stream_chunk_text(chunk: object) -> str:
     """Best-effort text from a streaming chunk (Gemini SDK quirks vary by chunk)."""
     try:
@@ -209,23 +265,23 @@ async def _stream_post(interests: list[str], seen_count: int) -> AsyncIterator[s
         def _produce() -> None:
             try:
                 response = model.generate_content(prompt, stream=True)
-                for chunk in response:
-                    text = _stream_chunk_text(chunk)
-                    if text:
-                        loop.call_soon_threadsafe(queue.put_nowait, ("token", text))
+                _feed_tokens_from_stream_chunks(response, queue, loop)
                 loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
             except Exception as exc:  # noqa: BLE001 — funnel any SDK error to the client
                 loop.call_soon_threadsafe(queue.put_nowait, ("error", exc))
 
         producer = asyncio.create_task(asyncio.to_thread(_produce))
 
-        saw_token = False
+        saw_any_output = False
         saw_error = False
         while True:
             kind, payload = await queue.get()
             if kind == "token":
-                saw_token = True
+                saw_any_output = True
                 yield _sse_event({"text": payload}, event="token")
+            elif kind == "title":
+                saw_any_output = True
+                yield _sse_event({"title": str(payload)}, event="title")
             elif kind == "done":
                 break
             elif kind == "error":
@@ -236,7 +292,7 @@ async def _stream_post(interests: list[str], seen_count: int) -> AsyncIterator[s
 
         await producer
 
-        if not saw_token and not saw_error:
+        if not saw_any_output and not saw_error:
             yield _sse_event(
                 {
                     "message": (
@@ -255,6 +311,133 @@ async def _stream_post(interests: list[str], seen_count: int) -> AsyncIterator[s
     yield _sse_event({"id": post_id}, event="done")
 
 
+def _generative_response_text(response: object) -> str:
+    """Best-effort plain text from google-generativeai (handles blocked / multi-part replies)."""
+    try:
+        text = response.text  # type: ignore[attr-defined]
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+    except Exception:  # noqa: BLE001 — SDK raises if no parts / blocked
+        pass
+    candidates = getattr(response, "candidates", None) or []
+    if not candidates:
+        return ""
+    parts_out: list[str] = []
+    for cand in candidates:
+        content = getattr(cand, "content", None)
+        parts = getattr(content, "parts", None) if content is not None else None
+        if not parts:
+            continue
+        for part in parts:
+            t = getattr(part, "text", None)
+            if isinstance(t, str) and t:
+                parts_out.append(t)
+    return "".join(parts_out).strip()
+
+
+def _parse_suggestion_strings(raw: str) -> list[str]:
+    """Parse model output into a list of suggestion strings (JSON array, with fallbacks)."""
+    s = raw.strip()
+    s = s.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+
+    def _loads_list(payload: str) -> list[str]:
+        data = json.loads(payload)
+        if not isinstance(data, list):
+            raise ValueError("Model did not return a JSON array.")
+        return [str(x) for x in data if x]
+
+    try:
+        return _loads_list(s)
+    except (json.JSONDecodeError, ValueError, TypeError):
+        pass
+
+    # Model wrapped the array in prose; take the first [...] block.
+    start = s.find("[")
+    end = s.rfind("]")
+    if start != -1 and end > start:
+        try:
+            return _loads_list(s[start : end + 1])
+        except (json.JSONDecodeError, ValueError, TypeError):
+            pass
+
+    # Last resort: double-quoted strings on their own lines.
+    quoted = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', s)
+    if len(quoted) >= 3:
+        return quoted[:10]
+
+    raise ValueError(f"Could not parse suggestions from model output (first 200 chars): {s[:200]!r}")
+
+
+_SUGGEST_SYSTEM = (
+    "You are an interest-discovery assistant. Given a list of things a user already cares about "
+    "(and optionally a partial search term they are typing), suggest NEW interests they might enjoy. "
+    "Follow these rules strictly:\n"
+    "1. Return ONLY a JSON array of strings — no markdown, no explanation, no extra keys.\n"
+    "2. Return exactly 7 suggestions.\n"
+    "3. About 4 of the 7 should be closely related to what the user already listed.\n"
+    "4. The remaining 3 should be surprising, lateral, or from an adjacent domain — things the user "
+    "probably hasn't considered but might love once they discover them.\n"
+    "5. Never repeat an interest the user already has, nor any item listed as an excluded suggestion.\n"
+    "6. Keep each suggestion short: 1-4 words, title-cased.\n"
+    "7. Prioritise specificity over genre labels (e.g. prefer 'Wong Kar-wai' over 'Arthouse Cinema')."
+)
+
+
+@app.post("/interests/suggest")
+async def interests_suggest(req: SuggestRequest) -> dict:
+    """Return ~7 AI-generated interest suggestions based on what the user already has.
+
+    Response: ``{ "suggestions": ["...", ...] }``
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=503, detail="Server is missing GEMINI_API_KEY.")
+
+    existing = [i.strip() for i in req.interests if i.strip()]
+    draft = req.draft.strip()
+    excluded = [s.strip() for s in req.exclude_suggestions if s.strip()]
+
+    parts: list[str] = []
+    if existing:
+        parts.append("Interests already added: " + ", ".join(existing) + ".")
+    if draft:
+        parts.append(f'The user is currently typing: "{draft}".  '
+                     "Include suggestions related to this term as well.")
+    if not parts:
+        parts.append("The user hasn't added any interests yet. Suggest a diverse, intriguing starter set.")
+    if excluded:
+        parts.append(
+            "These ideas were already shown — suggest 7 completely different ones (do not repeat or "
+            "minorly rephrase): " + ", ".join(excluded) + "."
+        )
+
+    user_prompt = " ".join(parts) + "\n\nRespond with a JSON array only."
+
+    model = genai.GenerativeModel(
+        model_name=GEMINI_MODEL,
+        system_instruction=_SUGGEST_SYSTEM,
+    )
+
+    try:
+        response = await asyncio.to_thread(
+            model.generate_content,
+            user_prompt,
+            # No streaming needed — we want a fast, small response.
+        )
+        raw = _generative_response_text(response)
+        if not raw:
+            fr = None
+            if getattr(response, "candidates", None):
+                fr = getattr(response.candidates[0], "finish_reason", None)
+            logger.warning("Interest suggestion: empty model text (finish_reason=%s)", fr)
+            raise ValueError("Model returned no text (blocked, empty, or unsupported response).")
+        suggestions = _parse_suggestion_strings(raw)[:10]
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Interest suggestion failed: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Suggestion generation failed: {exc}") from exc
+
+    return {"suggestions": suggestions}
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "model": GEMINI_MODEL, "has_api_key": str(bool(GEMINI_API_KEY))}
@@ -264,10 +447,11 @@ async def health() -> dict[str, str]:
 async def feed_stream(req: FeedRequest) -> StreamingResponse:
     """Stream a single generated post as Server-Sent Events.
 
-    The response is `text/event-stream` with three event types:
+    The response is `text/event-stream` with event types:
 
     - `start` — `{ "id": "<uuid>" }` signals a new post
-    - `token` — `{ "text": "<delta>" }` for each text chunk from Gemini
+    - `title` — `{ "title": "<headline>" }` once, parsed from the model's `TITLE:` line
+    - `token` — `{ "text": "<delta>" }` for each body chunk (title line is not repeated here)
     - `done`  — `{ "id": "<uuid>" }` signals the post is complete
 
     On failure an `error` event is emitted with a human-readable message.

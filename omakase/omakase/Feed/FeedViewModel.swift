@@ -87,6 +87,7 @@ final class FeedViewModel {
         let streamURL = url
         let streamBody = bodyData
         let streamPostID = postID
+        let apiBaseForErrors = baseURL
         streamingTask = Task.detached(priority: .userInitiated) {
             let stream = SSEClient.events(
                 from: streamURL,
@@ -167,7 +168,7 @@ final class FeedViewModel {
                 // #endregion
                 await MainActor.run { [weak self] in
                     guard let self else { return }
-                    self.errorMessage = error.localizedDescription
+                    self.errorMessage = Self.friendlyStreamError(error, apiBase: apiBaseForErrors)
                     self.markPostComplete(streamPostID)
                 }
             }
@@ -231,6 +232,10 @@ final class FeedViewModel {
         // #endregion
 
         switch event.event {
+        case "title":
+            if let title = payload["title"] as? String {
+                setTitle(title, for: postID)
+            }
         case "token":
             if let text = payload["text"] as? String {
                 // #region agent log
@@ -258,6 +263,14 @@ final class FeedViewModel {
             // `start` or anything we don't care about — ignore.
             break
         }
+    }
+
+    private func setTitle(_ title: String, for postID: UUID) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
+        var copy = posts
+        copy[idx].title = trimmed
+        posts = copy
     }
 
     private func appendText(_ text: String, to postID: UUID) {
@@ -294,6 +307,27 @@ final class FeedViewModel {
         } else {
             markPostComplete(postID)
         }
+    }
+
+    /// Maps URLSession / transport errors to a short hint (default URL error text is vague).
+    private static func friendlyStreamError(_ error: Error, apiBase: URL) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .cannotConnectToHost, .cannotFindHost, .networkConnectionLost, .notConnectedToInternet,
+                 .timedOut, .dnsLookupFailed:
+                let base = apiBase.absoluteString
+                return (
+                    "Could not connect to the API at \(base). "
+                    + "Start the backend from the repo’s `backend` folder: "
+                    + "`uvicorn main:app --reload --host 0.0.0.0 --port 8000`. "
+                    + "On a physical iPhone, 127.0.0.1 points at the phone — set OMAKASE_API_URL in Info.plist "
+                    + "to your Mac’s LAN IP (e.g. http://192.168.1.x:8000)."
+                )
+            default:
+                break
+            }
+        }
+        return error.localizedDescription
     }
 
     private static func decodeJSON(_ raw: String) -> [String: Any] {
