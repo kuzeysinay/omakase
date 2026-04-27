@@ -10,53 +10,33 @@ struct FeedView: View {
     @AppStorage("omakase.interests") private var storedInterests: String = ""
 
     @State private var viewModel: FeedViewModel
-    @State private var bookmarksStore = BookmarksStore.shared
-    @State private var showBookmarksSheet = false
-    @State private var showInterestsEditor = false
+    @State private var bookmarkStore = BookmarkStore()
+    @State private var showBookmarks = false
+    @State private var showAdjustTastes = false
 
     init() {
-        // `@AppStorage` isn't available at init time, so read UserDefaults
-        // directly for the initial interests list.
         let raw = UserDefaults.standard.string(forKey: "omakase.interests") ?? ""
         let interests = Self.parse(interests: raw)
         _viewModel = State(initialValue: FeedViewModel(interests: interests))
     }
 
     var body: some View {
-        // Helps SwiftUI track @Observable mutations from this @State-held model.
         @Bindable var viewModel = viewModel
+        @Bindable var bookmarkStore = bookmarkStore
         return NavigationStack {
-            VStack(spacing: 0) {
-                tastesStrip
-                Group {
-                    if viewModel.posts.isEmpty {
-                        emptyState
-                    } else {
-                        feedList
-                    }
+            Group {
+                if viewModel.posts.isEmpty {
+                    emptyState
+                } else {
+                    feedList(bookmarkStore: bookmarkStore)
                 }
             }
             .navigationTitle("Omakase")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 20) {
-                        Button {
-                            showBookmarksSheet = true
-                        } label: {
-                            ZStack(alignment: .topTrailing) {
-                                Image(systemName: "bookmark")
-                                if bookmarksStore.items.count > 0 {
-                                    Text("\(bookmarksStore.items.count)")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .frame(minWidth: 16, minHeight: 16)
-                                        .background(Color.accentColor, in: Circle())
-                                        .offset(x: 10, y: -10)
-                                }
-                            }
-                        }
-                        .accessibilityLabel("Saved bookmarks")
-
+                    HStack(spacing: 4) {
+                        tastePillButton
+                        bookmarkToolbarButton(bookmarkStore: bookmarkStore)
                         Menu {
                             Button("Clear feed", systemImage: "trash", role: .destructive) {
                                 viewModel.reset()
@@ -84,11 +64,11 @@ struct FeedView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
-            .sheet(isPresented: $showBookmarksSheet) {
-                BookmarksSheet(store: bookmarksStore)
+            .sheet(isPresented: $showBookmarks) {
+                BookmarksSheet(bookmarkStore: bookmarkStore)
             }
-            .sheet(isPresented: $showInterestsEditor) {
-                InterestsEditorSheet(storedInterests: $storedInterests)
+            .sheet(isPresented: $showAdjustTastes) {
+                AdjustTastesSheet()
             }
         }
         .task {
@@ -102,52 +82,67 @@ struct FeedView: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Toolbar
 
-    /// Live taste chips + edit affordance (replaces routing back through onboarding).
-    private var tastesStrip: some View {
-        let tags = Self.parse(interests: storedInterests)
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("Your tastes", systemImage: "sparkles")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .labelStyle(.titleAndIcon)
-                Spacer(minLength: 8)
-                Button {
-                    showInterestsEditor = true
-                } label: {
-                    Label("Edit", systemImage: "pencil.circle.fill")
-                        .font(.caption.weight(.semibold))
-                        .labelStyle(.titleAndIcon)
-                }
-                .buttonStyle(.borderless)
+    private var tastePillButton: some View {
+        Button {
+            showAdjustTastes = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                Text(dynamicTasteLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.accentColor.opacity(0.14), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Edit tastes, \(dynamicTasteAccessibility)")
+    }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    if tags.isEmpty {
-                        Text("Tap Edit to add what you're into")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    } else {
-                        ForEach(tags, id: \.self) { tag in
-                            Text(tag)
-                                .font(.caption)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.accentColor.opacity(0.14), in: Capsule())
-                        }
+    private var dynamicTasteLabel: String {
+        let list = Self.parse(interests: storedInterests)
+        if list.isEmpty { return "Add tastes" }
+        if list.count == 1 {
+            let one = list[0]
+            return one.count > 16 ? String(one.prefix(14)) + "…" : one
+        }
+        return "\(list.count) tastes"
+    }
+
+    private var dynamicTasteAccessibility: String {
+        let list = Self.parse(interests: storedInterests)
+        if list.isEmpty { return "none selected" }
+        return "\(list.count) selected"
+    }
+
+    private func bookmarkToolbarButton(bookmarkStore: BookmarkStore) -> some View {
+        Button {
+            showBookmarks = true
+        } label: {
+            Image(systemName: "bookmark")
+                .overlay(alignment: .topTrailing) {
+                    if bookmarkStore.count > 0 {
+                        Text("\(bookmarkStore.count)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.accentColor, in: Capsule())
+                            .offset(x: 8, y: -8)
                     }
                 }
-                .padding(.horizontal, 16)
-            }
         }
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial)
+        .accessibilityLabel(
+            bookmarkStore.count > 0
+                ? "Saved posts, \(bookmarkStore.count)"
+                : "Saved posts"
+        )
     }
+
+    // MARK: - Subviews
 
     private var emptyState: some View {
         VStack(spacing: 12) {
@@ -165,18 +160,14 @@ struct FeedView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var feedList: some View {
+    private func feedList(bookmarkStore: BookmarkStore) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 16) {
                     ForEach(viewModel.posts) { post in
-                        PostCard(
-                            post: post,
-                            isBookmarked: bookmarksStore.contains(postID: post.id),
-                            onBookmarkToggle: { bookmarksStore.toggle(post) }
-                        )
-                        .id(post.id)
-                        .padding(.horizontal)
+                        PostCard(post: post, bookmarkStore: bookmarkStore)
+                            .id(post.id)
+                            .padding(.horizontal)
                     }
 
                     if viewModel.isGenerating, viewModel.posts.last?.isComplete == true {
@@ -228,13 +219,12 @@ struct FeedView: View {
 
 private struct PostCard: View {
     let post: Post
-    let isBookmarked: Bool
-    let onBookmarkToggle: () -> Void
+    @Bindable var bookmarkStore: BookmarkStore
 
     @State private var showCursor: Bool = true
 
-    private var canBookmark: Bool {
-        post.isComplete && !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    private var isBookmarked: Bool {
+        bookmarkStore.contains(postId: post.id)
     }
 
     var body: some View {
@@ -253,18 +243,17 @@ private struct PostCard: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button {
-                    onBookmarkToggle()
-                } label: {
-                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(isBookmarked ? Color.accentColor : Color.secondary)
+                if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        bookmarkStore.toggle(post)
+                    } label: {
+                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(isBookmarked ? Color.accentColor : .secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Bookmark post")
                 }
-                .buttonStyle(.borderless)
-                .disabled(!canBookmark)
-                .opacity(canBookmark ? 1 : 0.35)
-                .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Bookmark post")
-
                 if !post.isComplete {
                     Text("LIVE")
                         .font(.caption2.monospaced()).bold()
@@ -305,7 +294,6 @@ private struct PostCard: View {
         return Self.fallbackTitle(from: post.text, isStreaming: !post.isComplete)
     }
 
-    /// When the backend does not send `title` (older server) or the model skips `TITLE:`.
     private static func fallbackTitle(from text: String, isStreaming: Bool) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return isStreaming ? "Composing…" : "Untitled bite" }

@@ -7,44 +7,64 @@ import SwiftUI
 
 struct BookmarksSheet: View {
 
-    let store: BookmarksStore
+    @Bindable var bookmarkStore: BookmarkStore
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Group {
-                if store.items.isEmpty {
-                    ContentUnavailableView(
-                        "No bookmarks yet",
-                        systemImage: "bookmark",
-                        description: Text("Finish a post, then tap the bookmark on the card to save it here.")
-                    )
+                if bookmarkStore.entries.isEmpty {
+                    ContentUnavailableView {
+                        Label("No bookmarks", systemImage: "bookmark")
+                    } description: {
+                        Text("Save a finished post from your feed to read it again here.")
+                    }
                 } else {
                     List {
-                        ForEach(store.items) { item in
+                        ForEach(bookmarkStore.entries) { entry in
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Saved bite" : item.title)
+                                Text(entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                     ? "Saved post"
+                                     : entry.title)
                                     .font(.headline)
                                     .lineLimit(2)
-                                Text(item.text)
+                                Text(entry.postCreatedAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(entry.text)
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
-                                    .lineLimit(5)
-                                Text("Saved \(item.savedAt.formatted(date: .abbreviated, time: .shortened))")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(4)
                             }
                             .padding(.vertical, 4)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    bookmarkStore.remove(id: entry.id)
+                                } label: {
+                                    Label("Remove", systemImage: "trash")
+                                }
+                            }
                         }
-                        .onDelete { store.remove(at: $0) }
                     }
+                    .listStyle(.plain)
                 }
             }
-            .navigationTitle("Bookmarked")
+            .navigationTitle("Saved")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
+                }
+                if !bookmarkStore.entries.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Button("Remove all saved", systemImage: "trash", role: .destructive) {
+                                bookmarkStore.removeAll()
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                    }
                 }
             }
         }
