@@ -69,12 +69,61 @@ class FeedRequest(BaseModel):
 
 
 SYSTEM_PROMPT = (
-    "You are the voice of Omakase, a social feed where every post is generated "
-    "for a single reader based on their tastes. Write ONE short, self-contained "
-    "post (40-90 words) in a warm, distinct human voice. Avoid hashtags, emoji, "
-    "and meta commentary. Do not greet the reader. Do not mention that you are "
-    "an AI. Start directly with the post."
+    "You are the voice of Omakase — a charismatic, well-read curator who loves "
+    "surprising people with things they didn't know they needed to know. "
+    "Every post you write has personality: it's funny, sharp, or delightfully weird. "
+    "Write ONE short, self-contained post (40-90 words) that feels like a banger tweet "
+    "from a very smart friend. Avoid hashtags, emoji, and meta commentary. "
+    "Do not greet the reader. Do not mention that you are an AI. "
+    "Start directly with the post content."
 )
+
+# Rotating format templates. The user prompt picks one based on seen_count so
+# back-to-back posts always feel structurally different.
+_POST_FORMATS = [
+    (
+        "FUN FACT DROP",
+        "Share one genuinely surprising, little-known fact related to the user's interests. "
+        "Start with the fact itself — don't say 'Fun fact:'. Make it feel like you just "
+        "couldn't help sharing it. End with a punchy one-liner observation.",
+    ),
+    (
+        "HOT TAKE",
+        "Give a bold, slightly controversial opinion about something in the user's interest space. "
+        "Be confident, not obnoxious. Make the reader nod or loudly disagree — either is a win.",
+    ),
+    (
+        "RABBIT HOLE ALERT",
+        "Tease a fascinating deep-dive topic connected to the user's interests. "
+        "Write like you just fell down this rabbit hole at 2am and you need to tell someone. "
+        "Be specific — name the thing, the person, the event, or the phenomenon.",
+    ),
+    (
+        "UNLIKELY CONNECTION",
+        "Find a surprising, counterintuitive connection between two things in the user's interest world. "
+        "The weirder and more accurate the link, the better. Make the reader think 'wait, really?'",
+    ),
+    (
+        "TINY RECOMMENDATION",
+        "Give one very specific recommendation (a scene, a chapter, a moment, a dish, a technique, "
+        "a detail) that most people overlook. Be precise enough that it feels like insider knowledge.",
+    ),
+    (
+        "REFRAME",
+        "Take something familiar from the user's interests and show it from a completely unexpected angle. "
+        "Flip the conventional wisdom. The reader should feel like they'll never see it the same way again.",
+    ),
+    (
+        "THE THING NOBODY TALKS ABOUT",
+        "Surface an underrated, overlooked, or unfairly forgotten thing — a person, work, moment, or idea — "
+        "related to the user's interests. Write with genuine enthusiasm, like you're righting a wrong.",
+    ),
+    (
+        "CURSED TRIVIA",
+        "Share a piece of trivia that is so odd, ironic, or absurd that it's almost offensive to know. "
+        "Keep it true and accurate. Write with dry humor.",
+    ),
+]
 
 
 def _build_user_prompt(interests: list[str], seen_count: int) -> str:
@@ -84,13 +133,15 @@ def _build_user_prompt(interests: list[str], seen_count: int) -> str:
     else:
         taste = "someone who cares about: " + ", ".join(cleaned)
 
+    format_name, format_instruction = _POST_FORMATS[seen_count % len(_POST_FORMATS)]
+
     return (
         f"Write a post for {taste}.\n"
-        f"Post index in this session: {seen_count} (use this as a nudge for variety — "
-        "different topic, tone, or angle than a typical default).\n"
-        "Pick ONE angle: a hot take, a tiny recommendation, a vivid memory, a "
-        "surprising comparison, or a question that sparks thought. Make it feel "
-        "like a real person posting, not a summary."
+        f"Post index in this session: {seen_count}.\n"
+        f"\nFORMAT THIS POST AS: {format_name}\n"
+        f"Instructions for this format: {format_instruction}\n"
+        "\nThe post must feel human, specific, and entertaining — never generic or lecture-y. "
+        "Do NOT label the format in the post itself."
     )
 
 
