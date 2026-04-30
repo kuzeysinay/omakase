@@ -222,7 +222,12 @@ _TITLE_LINE = re.compile(r"(?i)^TITLE:\s*(.+)$")
 
 # Gemini often emits the entire post body in one stream delta. Clients expect multiple small
 # `token` SSE events so the Swift UI can animate like Gemini in the browser.
-_SPLIT_STREAM_SOFT_CAP = 40
+_SPLIT_STREAM_SOFT_CAP = 6
+
+# Artificial delay (seconds) inserted between SSE token events to create a smooth
+# typing cadence on the client. Without this, tokens that arrive in a burst from
+# the model are flushed all at once and the UI "jumps" instead of streaming.
+_TOKEN_DRIP_DELAY = 0.045
 
 
 def _split_fragment_for_smooth_stream(fragment: str, *, max_piece: int = _SPLIT_STREAM_SOFT_CAP) -> list[str]:
@@ -234,7 +239,7 @@ def _split_fragment_for_smooth_stream(fragment: str, *, max_piece: int = _SPLIT_
     chunks: list[str] = []
     idx = 0
     fragment_len = len(fragment)
-    min_wordish = max(6, max_piece // 4)
+    min_wordish = max(2, max_piece // 6)
     while idx < fragment_len:
         end = min(idx + max_piece, fragment_len)
         if end >= fragment_len:
@@ -369,6 +374,14 @@ async def _stream_post(interests: list[str], seen_count: int, language: str) -> 
             if kind == "token":
                 saw_any_output = True
                 yield _sse_event({"text": payload}, event="token")
+                # Drip-feed tokens so the client sees a gradual typing effect
+                # even when Gemini dumps the entire response in one burst.
+                # The sleep *alone* isn't enough — Starlette can still batch
+                # successive small yields into a single HTTP chunk. The SSE
+                # comment (`:flush`) is harmless per spec but adds enough
+                # bytes so the transport layer pushes the data immediately.
+                yield ": flush\n\n"
+                await asyncio.sleep(_TOKEN_DRIP_DELAY)
             elif kind == "title":
                 saw_any_output = True
                 yield _sse_event({"title": str(payload)}, event="title")

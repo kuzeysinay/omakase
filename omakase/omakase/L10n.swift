@@ -370,4 +370,62 @@ struct L10n {
         case .turkish: "Tüm kayıtlıları sil"
         }
     }
+
+    var selectEdit: String {
+        switch lang {
+        case .english: "Select"
+        case .turkish: "Seç"
+        }
+    }
+
+    func deleteSelectedCount(_ count: Int) -> String {
+        switch lang {
+        case .english: "Delete \(count) selected"
+        case .turkish: "\(count) seçili gönderiyi sil"
+        }
+    }
+
+    // MARK: - Delete confirmations
+
+    var confirmDeleteTitle: String {
+        switch lang {
+        case .english: "Delete bookmark?"
+        case .turkish: "Yer imi silinsin mi?"
+        }
+    }
+
+    var confirmDeleteMessage: String {
+        switch lang {
+        case .english: "This saved post will be removed permanently."
+        case .turkish: "Bu kaydedilen gönderi kalıcı olarak silinecek."
+        }
+    }
+
+    func confirmDeleteSelectedTitle(_ count: Int) -> String {
+        switch lang {
+        case .english: "Delete \(count) bookmarks?"
+        case .turkish: "\(count) yer imi silinsin mi?"
+        }
+    }
+
+    func confirmDeleteSelectedMessage(_ count: Int) -> String {
+        switch lang {
+        case .english: "The \(count) selected posts will be removed permanently."
+        case .turkish: "Seçilen \(count) gönderi kalıcı olarak silinecek."
+        }
+    }
+
+    var confirmDeleteAllTitle: String {
+        switch lang {
+        case .english: "Delete all bookmarks?"
+        case .turkish: "Tüm yer imleri silinsin mi?"
+        }
+    }
+
+    var confirmDeleteAllMessage: String {
+        switch lang {
+        case .english: "All saved posts will be removed permanently."
+        case .turkish: "Tüm kaydedilen gönderiler kalıcı olarak silinecek."
+        }
+    }
 }
