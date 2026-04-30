@@ -37,12 +37,14 @@ enum InterestSuggestor {
     static func suggest(
         interests: [String],
         draft: String,
-        excludeSuggestions: [String] = []
+        excludeSuggestions: [String] = [],
+        language: AppLanguage
     ) async throws -> InterestSuggestResponse {
         let url = baseURL.appendingPathComponent("interests/suggest")
         var body: [String: Any] = [
             "interests": interests,
             "draft": draft,
+            "language": language.rawValue,
         ]
         if !excludeSuggestions.isEmpty {
             body["exclude_suggestions"] = excludeSuggestions

@@ -15,6 +15,8 @@ final class FeedViewModel {
     private(set) var posts: [Post] = []
     private(set) var isGenerating: Bool = false
     private(set) var errorMessage: String?
+    /// Cycles while ``isGenerating`` so the UI can show rotating “kitchen” lines.
+    private(set) var loadingQuipIndex: Int = 0
 
     // MARK: - Config
 
@@ -31,8 +33,12 @@ final class FeedViewModel {
         return URL(string: "http://127.0.0.1:8000")!
     }()
 
+    /// Mirrors UI language for localized transport errors and API payload `language`.
+    private var contentLanguage: AppLanguage = .english
+
     private var interests: [String]
     private var streamingTask: Task<Void, Never>?
+    private var loadingQuipTask: Task<Void, Never>?
     /// The post the current `streamingTask` is filling; only that task may clear `isGenerating`.
     private var activeStreamPostID: UUID?
 
@@ -46,20 +52,25 @@ final class FeedViewModel {
         interests = newValue
     }
 
+    func setContentLanguage(_ lang: AppLanguage) {
+        contentLanguage = lang
+    }
+
     // MARK: - Actions
 
-    /// Append a new post and start streaming it. Safe to call while another
+    /// Append a new post **at the top** and start streaming it. Safe to call while another
     /// stream is in flight — the previous one is cancelled.
     func requestNextPost() {
         streamingTask?.cancel()
         errorMessage = nil
 
         let post = Post()
-        // Whole-array assignment so @Observable reliably invalidates SwiftUI.
-        posts = posts + [post]
+        // Newest first — prepend so the feed reads top → bottom, latest → older.
+        posts = [post] + posts
         let postID = post.id
         isGenerating = true
         activeStreamPostID = postID
+        startLoadingQuipRotation()
 
         // #region agent log
         AgentDebugLog.log(
@@ -79,6 +90,7 @@ final class FeedViewModel {
         let requestBody: [String: Any] = [
             "interests": interests,
             "seen_count": max(posts.count - 1, 0),
+            "language": contentLanguage.rawValue,
         ]
         let bodyData = (try? JSONSerialization.data(withJSONObject: requestBody)) ?? Data()
 
@@ -99,9 +111,13 @@ final class FeedViewModel {
             do {
                 for try await event in stream {
                     if Task.isCancelled { break }
+                    let isBodyToken = (event.event == "token")
                     await MainActor.run { [weak self] in
                         guard let self else { return }
                         self.handle(event: event, for: streamPostID)
+                    }
+                    if isBodyToken {
+                        await Task.yield()
                     }
                 }
                 let streamEndedByCancellation = Task.isCancelled
@@ -141,11 +157,8 @@ final class FeedViewModel {
                             p.text.isEmpty,
                             self.errorMessage == nil
                         {
-                            self.errorMessage = (
-                                "The feed stream ended with no post text. Check that the backend is running, "
-                                + "GEMINI_API_KEY and GEMINI_MODEL are set, and the device can reach the API (on a real "
-                                + "iPhone, use your Mac’s LAN address instead of 127.0.0.1 in OMAKASE_API_URL)."
-                            )
+                            let l10n = L10n(lang: self.contentLanguage)
+                            self.errorMessage = l10n.streamEndedNoText
                             self.markPostComplete(streamPostID)
                         }
                     }
@@ -168,7 +181,11 @@ final class FeedViewModel {
                 // #endregion
                 await MainActor.run { [weak self] in
                     guard let self else { return }
-                    self.errorMessage = Self.friendlyStreamError(error, apiBase: apiBaseForErrors)
+                    self.errorMessage = Self.friendlyStreamError(
+                        error,
+                        apiBase: apiBaseForErrors,
+                        l10n: L10n(lang: self.contentLanguage)
+                    )
                     self.markPostComplete(streamPostID)
                 }
             }
@@ -178,12 +195,19 @@ final class FeedViewModel {
                     self.activeStreamPostID == streamPostID
                 else { return }
                 self.isGenerating = false
+                self.stopLoadingQuipRotation()
             }
         }
     }
 
     func dismissError() {
         errorMessage = nil
+    }
+
+    func cookingCaption(l10n: L10n) -> String {
+        let quips = l10n.cookingQuips
+        guard !quips.isEmpty else { return "" }
+        return quips[loadingQuipIndex % quips.count]
     }
 
     func reset() {
@@ -193,9 +217,29 @@ final class FeedViewModel {
         posts = []
         isGenerating = false
         errorMessage = nil
+        stopLoadingQuipRotation()
+        loadingQuipIndex = 0
     }
 
     // MARK: - Private
+
+    private func startLoadingQuipRotation() {
+        loadingQuipTask?.cancel()
+        loadingQuipIndex = 0
+        loadingQuipTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(2800))
+                guard !Task.isCancelled else { break }
+                guard self.isGenerating else { break }
+                self.loadingQuipIndex += 1
+            }
+        }
+    }
+
+    private func stopLoadingQuipRotation() {
+        loadingQuipTask?.cancel()
+        loadingQuipTask = nil
+    }
 
     private func handle(event: SSEEvent, for postID: UUID) {
         // Each event's `data` is a JSON object. Parse defensively so a single
@@ -310,19 +354,12 @@ final class FeedViewModel {
     }
 
     /// Maps URLSession / transport errors to a short hint (default URL error text is vague).
-    private static func friendlyStreamError(_ error: Error, apiBase: URL) -> String {
+    private static func friendlyStreamError(_ error: Error, apiBase: URL, l10n: L10n) -> String {
         if let urlError = error as? URLError {
             switch urlError.code {
             case .cannotConnectToHost, .cannotFindHost, .networkConnectionLost, .notConnectedToInternet,
                  .timedOut, .dnsLookupFailed:
-                let base = apiBase.absoluteString
-                return (
-                    "Could not connect to the API at \(base). "
-                    + "Start the backend from the repo’s `backend` folder: "
-                    + "`uvicorn main:app --reload --host 0.0.0.0 --port 8000`. "
-                    + "On a physical iPhone, 127.0.0.1 points at the phone — set OMAKASE_API_URL in Info.plist "
-                    + "to your Mac’s LAN IP (e.g. http://192.168.1.x:8000)."
-                )
+                return l10n.couldNotConnect(apiBase: apiBase.absoluteString)
             default:
                 break
             }

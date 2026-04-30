@@ -7,12 +7,17 @@ import SwiftUI
 
 struct FeedView: View {
 
+    @Environment(\.appLanguage) private var appLanguage
     @AppStorage("omakase.interests") private var storedInterests: String = ""
 
     @State private var viewModel: FeedViewModel
     @State private var bookmarkStore = BookmarkStore()
     @State private var showBookmarks = false
     @State private var showAdjustTastes = false
+
+    private var l10n: L10n {
+        L10n(lang: appLanguage)
+    }
 
     init() {
         let raw = UserDefaults.standard.string(forKey: "omakase.interests") ?? ""
@@ -31,115 +36,91 @@ struct FeedView: View {
                     feedList(bookmarkStore: bookmarkStore)
                 }
             }
-            .navigationTitle("Omakase")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationTitle(l10n.appTitle)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 4) {
-                        tastePillButton
-                        bookmarkToolbarButton(bookmarkStore: bookmarkStore)
-                        Menu {
-                            Button("Clear feed", systemImage: "trash", role: .destructive) {
-                                viewModel.reset()
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    LanguagePicker()
+                    Button {
+                        showAdjustTastes = true
+                    } label: {
+                        Image(systemName: "wand.and.stars")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.primary.opacity(0.85))
                     }
+                    .accessibilityLabel(l10n.editTastesA11y(dynamicTasteAccessibility))
+                    Button {
+                        showBookmarks = true
+                    } label: {
+                        Image(systemName: "bookmark")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.primary.opacity(0.85))
+                    }
+                    .accessibilityLabel(l10n.savedPostsA11y(count: bookmarkStore.count))
+                    Menu {
+                        Button(l10n.clearFeed, systemImage: "trash.fill", role: .destructive) {
+                            viewModel.reset()
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.primary.opacity(0.85))
+                    }
+                    .accessibilityLabel(l10n.feedMoreActionsA11y)
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                generateButton
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
-                    .background(.ultraThinMaterial)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 0) {
+                    Divider()
+                        .opacity(0.35)
+                    generateButton
+                        .padding(.top, 10)
+                        .padding(.bottom, 10)
+                        .padding(.horizontal, 20)
+                }
+                .frame(maxWidth: .infinity)
+                .background(.bar)
             }
             .alert(
-                "Something went wrong",
+                l10n.errorSomethingWrong,
                 isPresented: .init(
                     get: { viewModel.errorMessage != nil },
                     set: { if !$0 { viewModel.dismissError() } }
                 )
             ) {
-                Button("OK", role: .cancel) { viewModel.dismissError() }
+                Button(l10n.ok, role: .cancel) { viewModel.dismissError() }
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
             .sheet(isPresented: $showBookmarks) {
                 BookmarksSheet(bookmarkStore: bookmarkStore)
+                    .environment(\.appLanguage, appLanguage)
             }
             .sheet(isPresented: $showAdjustTastes) {
                 AdjustTastesSheet()
+                    .environment(\.appLanguage, appLanguage)
             }
         }
         .task {
+            viewModel.setContentLanguage(appLanguage)
             viewModel.updateInterests(Self.parse(interests: storedInterests))
             if viewModel.posts.isEmpty {
                 viewModel.requestNextPost()
             }
+        }
+        .onChange(of: appLanguage) { _, newLang in
+            viewModel.setContentLanguage(newLang)
         }
         .onChange(of: storedInterests) { _, newValue in
             viewModel.updateInterests(Self.parse(interests: newValue))
         }
     }
 
-    // MARK: - Toolbar
-
-    private var tastePillButton: some View {
-        Button {
-            showAdjustTastes = true
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                Text(dynamicTasteLabel)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.accentColor.opacity(0.14), in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Edit tastes, \(dynamicTasteAccessibility)")
-    }
-
-    private var dynamicTasteLabel: String {
-        let list = Self.parse(interests: storedInterests)
-        if list.isEmpty { return "Add tastes" }
-        if list.count == 1 {
-            let one = list[0]
-            return one.count > 16 ? String(one.prefix(14)) + "…" : one
-        }
-        return "\(list.count) tastes"
-    }
-
     private var dynamicTasteAccessibility: String {
         let list = Self.parse(interests: storedInterests)
-        if list.isEmpty { return "none selected" }
-        return "\(list.count) selected"
-    }
-
-    private func bookmarkToolbarButton(bookmarkStore: BookmarkStore) -> some View {
-        Button {
-            showBookmarks = true
-        } label: {
-            Image(systemName: "bookmark")
-                .overlay(alignment: .topTrailing) {
-                    if bookmarkStore.count > 0 {
-                        Text("\(bookmarkStore.count)")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.accentColor, in: Capsule())
-                            .offset(x: 8, y: -8)
-                    }
-                }
-        }
-        .accessibilityLabel(
-            bookmarkStore.count > 0
-                ? "Saved posts, \(bookmarkStore.count)"
-                : "Saved posts"
-        )
+        if list.isEmpty { return l10n.tastesNoneA11y() }
+        return l10n.tastesCountA11y(list.count)
     }
 
     // MARK: - Subviews
@@ -149,9 +130,9 @@ struct FeedView: View {
             Image(systemName: "sparkles")
                 .font(.system(size: 44, weight: .light))
                 .foregroundStyle(.tint)
-            Text("Your feed is warming up…")
+            Text(l10n.emptyFeedHeadline)
                 .font(.headline)
-            Text("Tap the button below to taste the first post.")
+            Text(l10n.emptyFeedDetail)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -165,18 +146,21 @@ struct FeedView: View {
             ScrollView {
                 LazyVStack(spacing: 16) {
                     ForEach(viewModel.posts) { post in
-                        PostCard(post: post, bookmarkStore: bookmarkStore)
-                            .id(post.id)
-                            .padding(.horizontal)
-                    }
-
-                    if viewModel.isGenerating, viewModel.posts.last?.isComplete == true {
-                        ProgressView().padding()
+                        PostCard(
+                            post: post,
+                            bookmarkStore: bookmarkStore,
+                            cookingCaption: viewModel.isGenerating && !post.isComplete
+                                ? viewModel.cookingCaption(l10n: l10n)
+                                : nil
+                        )
+                        .environment(\.appLanguage, appLanguage)
+                        .id(post.id)
+                        .padding(.horizontal)
                     }
                 }
                 .padding(.vertical)
             }
-            .onChange(of: viewModel.posts.last?.id) { _, newID in
+            .onChange(of: viewModel.posts.first?.id) { _, newID in
                 guard let newID else { return }
                 withAnimation(.easeOut(duration: 0.25)) {
                     proxy.scrollTo(newID, anchor: .top)
@@ -186,19 +170,35 @@ struct FeedView: View {
     }
 
     private var generateButton: some View {
-        Button {
+        let quip =
+            viewModel.isGenerating ? viewModel.cookingCaption(l10n: l10n) : nil
+        return Button {
             viewModel.requestNextPost()
         } label: {
-            HStack {
-                if viewModel.isGenerating {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(.white)
+            VStack(spacing: 6) {
+                HStack(spacing: 10) {
+                    if viewModel.isGenerating {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                    }
+                    Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
+                        .fontWeight(.semibold)
                 }
-                Text(viewModel.isGenerating ? "Generating…" : "Serve next post")
-                    .fontWeight(.semibold)
+                if let quip {
+                    Text(quip)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                        .foregroundStyle(Color.white.opacity(0.92))
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                }
             }
+            .animation(.easeInOut(duration: 0.35), value: quip)
             .frame(maxWidth: .infinity)
+            .padding(.vertical, viewModel.isGenerating && quip != nil ? 10 : 0)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
@@ -220,6 +220,12 @@ struct FeedView: View {
 private struct PostCard: View {
     let post: Post
     @Bindable var bookmarkStore: BookmarkStore
+    /// Kitchen-style line while Gemini streams (`nil` once the card is idle or finished).
+    var cookingCaption: String?
+
+    @Environment(\.appLanguage) private var appLanguage
+
+    private var l10n: L10n { L10n(lang: appLanguage) }
 
     @State private var showCursor: Bool = true
 
@@ -252,16 +258,26 @@ private struct PostCard: View {
                             .foregroundStyle(isBookmarked ? Color.accentColor : .secondary)
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Bookmark post")
+                    .accessibilityLabel(isBookmarked ? l10n.removeBookmarkA11y : l10n.bookmarkPostA11y)
                 }
                 if !post.isComplete {
-                    Text("LIVE")
+                    Text(l10n.liveBadge)
                         .font(.caption2.monospaced()).bold()
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(.red.opacity(0.15), in: Capsule())
                         .foregroundStyle(.red)
                 }
+            }
+
+            if let cookingCaption, !cookingCaption.isEmpty {
+                Text(cookingCaption)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .italic()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .animation(.easeInOut(duration: 0.35), value: cookingCaption)
             }
 
             Text(postBody)
@@ -291,12 +307,12 @@ private struct PostCard: View {
     private var cardTitle: String {
         let t = post.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !t.isEmpty { return t }
-        return Self.fallbackTitle(from: post.text, isStreaming: !post.isComplete)
+        return Self.fallbackTitle(from: post.text, isStreaming: !post.isComplete, l10n: l10n)
     }
 
-    private static func fallbackTitle(from text: String, isStreaming: Bool) -> String {
+    private static func fallbackTitle(from text: String, isStreaming: Bool, l10n: L10n) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return isStreaming ? "Composing…" : "Untitled bite" }
+        if trimmed.isEmpty { return isStreaming ? l10n.composingTitle : l10n.untitledBite }
         let snippet = trimmed.prefix(52)
         if snippet.count < trimmed.count {
             return String(snippet).trimmingCharacters(in: .whitespaces) + "…"

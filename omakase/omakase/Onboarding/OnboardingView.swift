@@ -7,10 +7,13 @@ import SwiftUI
 
 struct OnboardingView: View {
 
+    @Environment(\.appLanguage) private var appLanguage
     @AppStorage("omakase.interests") private var storedInterests: String = ""
     @AppStorage("omakase.hasOnboarded") private var hasOnboarded: Bool = false
 
     @State private var interests: [String] = []
+
+    private var l10n: L10n { L10n(lang: appLanguage) }
 
     var body: some View {
         NavigationStack {
@@ -31,6 +34,11 @@ struct OnboardingView: View {
                     .background(.ultraThinMaterial)
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    LanguagePicker()
+                }
+            }
         }
         .onAppear {
             interests = FeedView.parse(interests: storedInterests)
@@ -41,9 +49,9 @@ struct OnboardingView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Omakase")
+            Text(l10n.appTitle)
                 .font(.largeTitle.bold())
-            Text("Tell us what you love. Your feed is generated fresh, just for you.")
+            Text(l10n.onboardingTagline)
                 .font(.title3)
                 .foregroundStyle(.secondary)
         }
@@ -53,7 +61,7 @@ struct OnboardingView: View {
         Button {
             save()
         } label: {
-            Text(interests.isEmpty ? "Add at least one interest" : "Start my feed")
+            Text(interests.isEmpty ? l10n.onboardingNeedInterest : l10n.onboardingStartFeed)
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
         }

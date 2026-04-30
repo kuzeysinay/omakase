@@ -9,7 +9,10 @@ import SwiftUI
 
 struct InterestsEditorForm: View {
 
+    @Environment(\.appLanguage) private var appLanguage
     @Binding var interests: [String]
+
+    private var l10n: L10n { L10n(lang: appLanguage) }
 
     @State private var draft: String = ""
     @FocusState private var isFieldFocused: Bool
@@ -46,7 +49,7 @@ struct InterestsEditorForm: View {
     private var inputField: some View {
         HStack {
             TextField(
-                "Add a taste…",
+                l10n.addTastePlaceholder,
                 text: $draft
             )
             .textInputAutocapitalization(.words)
@@ -88,13 +91,13 @@ struct InterestsEditorForm: View {
     private var suggestionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Text("Ideas to try")
+                Text(l10n.ideasToTry)
                     .font(.headline)
                 if isSuggesting {
                     HStack(spacing: 4) {
                         ProgressView()
                             .scaleEffect(0.7)
-                        Text("Thinking…")
+                        Text(l10n.thinking)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -109,7 +112,7 @@ struct InterestsEditorForm: View {
                 }
                 .buttonStyle(.borderless)
                 .disabled(isSuggesting)
-                .accessibilityLabel("Refresh ideas")
+                .accessibilityLabel(l10n.refreshIdeasA11y)
             }
             .animation(.easeInOut(duration: 0.2), value: isSuggesting)
 
@@ -179,8 +182,8 @@ struct InterestsEditorForm: View {
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled else { return }
 
-            let (snapshotInterests, snapshotDraft) = await MainActor.run {
-                (interests, trimmedDraft)
+            let (snapshotInterests, snapshotDraft, snapshotLang) = await MainActor.run {
+                (interests, trimmedDraft, appLanguage)
             }
 
             await MainActor.run {
@@ -194,7 +197,8 @@ struct InterestsEditorForm: View {
                     try await InterestSuggestor.suggest(
                         interests: snapshotInterests,
                         draft: snapshotDraft,
-                        excludeSuggestions: []
+                        excludeSuggestions: [],
+                        language: snapshotLang
                     )
                 }.value
             } catch {
@@ -214,6 +218,7 @@ struct InterestsEditorForm: View {
         let exclude = aiSuggestions
         let snapshotInterests = interests
         let snapshotDraft = trimmedDraft
+        let snapshotLang = appLanguage
         refreshTask = Task {
             await MainActor.run {
                 isSuggesting = true
@@ -225,7 +230,8 @@ struct InterestsEditorForm: View {
                     try await InterestSuggestor.suggest(
                         interests: snapshotInterests,
                         draft: snapshotDraft,
-                        excludeSuggestions: exclude
+                        excludeSuggestions: exclude,
+                        language: snapshotLang
                     )
                 }.value
             } catch {
@@ -245,7 +251,7 @@ struct InterestsEditorForm: View {
                 aiSuggestions = outcome.suggestions
             }
         } else {
-            suggestionFootnote = outcome.loadingIssue ?? "Could not load ideas."
+            suggestionFootnote = outcome.loadingIssue ?? l10n.couldNotLoadIdeas
         }
         isSuggesting = false
     }

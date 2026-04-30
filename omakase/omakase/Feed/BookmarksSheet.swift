@@ -7,24 +7,27 @@ import SwiftUI
 
 struct BookmarksSheet: View {
 
+    @Environment(\.appLanguage) private var appLanguage
     @Bindable var bookmarkStore: BookmarkStore
     @Environment(\.dismiss) private var dismiss
+
+    private var l10n: L10n { L10n(lang: appLanguage) }
 
     var body: some View {
         NavigationStack {
             Group {
                 if bookmarkStore.entries.isEmpty {
                     ContentUnavailableView {
-                        Label("No bookmarks", systemImage: "bookmark")
+                        Label(l10n.noBookmarks, systemImage: "bookmark")
                     } description: {
-                        Text("Save a finished post from your feed to read it again here.")
+                        Text(l10n.bookmarksHint)
                     }
                 } else {
                     List {
                         ForEach(bookmarkStore.entries) { entry in
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                     ? "Saved post"
+                                     ? l10n.savedPostFallbackTitle
                                      : entry.title)
                                     .font(.headline)
                                     .lineLimit(2)
@@ -41,7 +44,7 @@ struct BookmarksSheet: View {
                                 Button(role: .destructive) {
                                     bookmarkStore.remove(id: entry.id)
                                 } label: {
-                                    Label("Remove", systemImage: "trash")
+                                    Label(l10n.remove, systemImage: "trash")
                                 }
                             }
                         }
@@ -49,16 +52,16 @@ struct BookmarksSheet: View {
                     .listStyle(.plain)
                 }
             }
-            .navigationTitle("Saved")
+            .navigationTitle(l10n.savedTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button(l10n.done) { dismiss() }
                 }
                 if !bookmarkStore.entries.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
-                            Button("Remove all saved", systemImage: "trash", role: .destructive) {
+                            Button(l10n.removeAllSaved, systemImage: "trash", role: .destructive) {
                                 bookmarkStore.removeAll()
                             }
                         } label: {

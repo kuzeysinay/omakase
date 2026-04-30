@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
@@ -67,6 +67,18 @@ class FeedRequest(BaseModel):
         default=0,
         description="Number of posts already shown; used to nudge the model toward variety.",
     )
+    language: str = Field(
+        default="en",
+        description="BCP-47 language tag for model output (e.g. en, tr). Unknown values fall back to English.",
+    )
+
+    @field_validator("language")
+    @classmethod
+    def _normalize_language(cls, v: str) -> str:
+        s = (v or "en").strip().lower()
+        if s not in ("en", "tr"):
+            return "en"
+        return s
 
 
 class SuggestRequest(BaseModel):
@@ -84,6 +96,18 @@ class SuggestRequest(BaseModel):
         default_factory=list,
         description="Suggestions already shown; the model must not repeat these.",
     )
+    language: str = Field(
+        default="en",
+        description="BCP-47 language tag for suggestion strings (en or tr).",
+    )
+
+    @field_validator("language")
+    @classmethod
+    def _normalize_language_suggest(cls, v: str) -> str:
+        s = (v or "en").strip().lower()
+        if s not in ("en", "tr"):
+            return "en"
+        return s
 
 
 SYSTEM_PROMPT = (
@@ -99,6 +123,24 @@ SYSTEM_PROMPT = (
     "inside the body. Avoid hashtags, emoji, and meta commentary. "
     "Do not greet the reader. Do not mention that you are an AI."
 )
+
+
+def _feed_language_instruction(language: str) -> str:
+    """Tells the model which natural language to use for TITLE line and body."""
+    if language == "tr":
+        return (
+            "LANGUAGE: Write the entire post in Turkish (Türkçe). "
+            "Both the TITLE: headline (after the prefix TITLE: ) and every word of the body must be Turkish. "
+            "Keep the literal ASCII prefix TITLE: on the first line."
+        )
+    return (
+        "LANGUAGE: Write the entire post in English. "
+        "Both the TITLE: headline (after the prefix TITLE: ) and the body must be English."
+    )
+
+
+def _feed_system_instruction(language: str) -> str:
+    return SYSTEM_PROMPT + "\n\n" + _feed_language_instruction(language)
 
 # Rotating format templates. The user prompt picks one based on seen_count so
 # back-to-back posts always feel structurally different.
@@ -148,7 +190,7 @@ _POST_FORMATS = [
 ]
 
 
-def _build_user_prompt(interests: list[str], seen_count: int) -> str:
+def _build_user_prompt(interests: list[str], seen_count: int, language: str) -> str:
     cleaned = [i.strip() for i in interests if i and i.strip()]
     if not cleaned:
         taste = "someone with eclectic, thoughtful taste in culture"
@@ -157,8 +199,16 @@ def _build_user_prompt(interests: list[str], seen_count: int) -> str:
 
     format_name, format_instruction = _POST_FORMATS[seen_count % len(_POST_FORMATS)]
 
+    follow_lang = ""
+    if language == "tr":
+        follow_lang = (
+            "Uyarı: Gönderiyi mutlaka Türkçe yaz. Aşağıdaki İngilizce format adı ve talimatlar "
+            "sadece yapı için; çıktı tamamen Türkçe olmalı.\n\n"
+        )
+
     return (
-        f"Write a post for {taste}.\n"
+        follow_lang
+        + f"Write a post for {taste}.\n"
         f"Post index in this session: {seen_count}.\n"
         f"\nFORMAT THIS POST AS: {format_name}\n"
         f"Instructions for this format: {format_instruction}\n"
@@ -168,6 +218,46 @@ def _build_user_prompt(interests: list[str], seen_count: int) -> str:
 
 
 _TITLE_LINE = re.compile(r"(?i)^TITLE:\s*(.+)$")
+
+
+# Gemini often emits the entire post body in one stream delta. Clients expect multiple small
+# `token` SSE events so the Swift UI can animate like Gemini in the browser.
+_SPLIT_STREAM_SOFT_CAP = 40
+
+
+def _split_fragment_for_smooth_stream(fragment: str, *, max_piece: int = _SPLIT_STREAM_SOFT_CAP) -> list[str]:
+    """Split large model deltas into modest substrings, preferring word boundaries."""
+    if not fragment:
+        return []
+    if len(fragment) <= max_piece:
+        return [fragment]
+    chunks: list[str] = []
+    idx = 0
+    fragment_len = len(fragment)
+    min_wordish = max(6, max_piece // 4)
+    while idx < fragment_len:
+        end = min(idx + max_piece, fragment_len)
+        if end >= fragment_len:
+            tail = fragment[idx:]
+            if tail:
+                chunks.append(tail)
+            break
+        window = fragment[idx:end]
+        cut = window.rfind(" ")
+        if cut >= min_wordish:
+            end = idx + cut + 1
+        chunks.append(fragment[idx:end])
+        idx = end
+    return chunks if chunks else [fragment]
+
+
+def _enqueue_stream_body_fragment(
+    loop: asyncio.AbstractEventLoop,
+    queue: asyncio.Queue,
+    fragment: str,
+) -> None:
+    for piece in _split_fragment_for_smooth_stream(fragment):
+        loop.call_soon_threadsafe(queue.put_nowait, ("token", piece))
 
 
 def _feed_tokens_from_stream_chunks(response: object, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop) -> None:
@@ -193,12 +283,12 @@ def _feed_tokens_from_stream_chunks(response: object, queue: asyncio.Queue, loop
                 carry = first_line + "\n" + carry
             title_done = True
         if carry:
-            loop.call_soon_threadsafe(queue.put_nowait, ("token", carry))
+            _enqueue_stream_body_fragment(loop, queue, carry)
             carry = ""
     if not title_done and carry:
         loop.call_soon_threadsafe(queue.put_nowait, ("token", carry))
     elif title_done and carry:
-        loop.call_soon_threadsafe(queue.put_nowait, ("token", carry))
+        _enqueue_stream_body_fragment(loop, queue, carry)
 
 
 def _stream_chunk_text(chunk: object) -> str:
@@ -238,7 +328,7 @@ def _sse_event(data: dict, *, event: str | None = None) -> str:
     return "\n".join(lines)
 
 
-async def _stream_post(interests: list[str], seen_count: int) -> AsyncIterator[str]:
+async def _stream_post(interests: list[str], seen_count: int, language: str) -> AsyncIterator[str]:
     """Yield SSE frames for one generated post."""
     post_id = str(uuid.uuid4())
     yield _sse_event({"id": post_id}, event="start")
@@ -252,9 +342,9 @@ async def _stream_post(interests: list[str], seen_count: int) -> AsyncIterator[s
 
     model = genai.GenerativeModel(
         model_name=GEMINI_MODEL,
-        system_instruction=SYSTEM_PROMPT,
+        system_instruction=_feed_system_instruction(language),
     )
-    prompt = _build_user_prompt(interests, seen_count)
+    prompt = _build_user_prompt(interests, seen_count, language)
 
     try:
         # google-generativeai's streaming API is synchronous; run it in a
@@ -383,6 +473,16 @@ _SUGGEST_SYSTEM = (
 )
 
 
+def _suggest_system_for_language(language: str) -> str:
+    lang_rule = (
+        "8. Write all 7 strings in natural Turkish (Türkçe), using culturally normal spelling and "
+        "title-style capitalization suitable for Turkish."
+        if language == "tr"
+        else "8. Write all 7 strings in English."
+    )
+    return _SUGGEST_SYSTEM + "\n" + lang_rule
+
+
 @app.post("/interests/suggest")
 async def interests_suggest(req: SuggestRequest) -> dict:
     """Return ~7 AI-generated interest suggestions based on what the user already has.
@@ -410,11 +510,13 @@ async def interests_suggest(req: SuggestRequest) -> dict:
             "minorly rephrase): " + ", ".join(excluded) + "."
         )
 
+    lang_code = req.language
+
     user_prompt = " ".join(parts) + "\n\nRespond with a JSON array only."
 
     model = genai.GenerativeModel(
         model_name=GEMINI_MODEL,
-        system_instruction=_SUGGEST_SYSTEM,
+        system_instruction=_suggest_system_for_language(lang_code),
     )
 
     try:
@@ -466,7 +568,7 @@ async def feed_stream(req: FeedRequest) -> StreamingResponse:
         "X-Accel-Buffering": "no",
     }
     return StreamingResponse(
-        _stream_post(req.interests, req.seen_count),
+        _stream_post(req.interests, req.seen_count, req.language),
         media_type="text/event-stream",
         headers=headers,
     )
