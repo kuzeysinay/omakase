@@ -221,6 +221,10 @@ final class FeedViewModel {
         loadingQuipIndex = 0
     }
 
+    func removePost(id: UUID) {
+        posts.removeAll { $0.id == id }
+    }
+
     // MARK: - Private
 
     private func startLoadingQuipRotation() {
@@ -280,6 +284,10 @@ final class FeedViewModel {
             if let title = payload["title"] as? String {
                 setTitle(title, for: postID)
             }
+        case "tags":
+            if let tags = payload["tags"] as? [String] {
+                setTags(tags, for: postID)
+            }
         case "token":
             if let text = payload["text"] as? String {
                 // #region agent log
@@ -314,6 +322,13 @@ final class FeedViewModel {
         guard !trimmed.isEmpty, let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
         var copy = posts
         copy[idx].title = trimmed
+        posts = copy
+    }
+
+    private func setTags(_ tags: [String], for postID: UUID) {
+        guard !tags.isEmpty, let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
+        var copy = posts
+        copy[idx].tags = tags
         posts = copy
     }
 

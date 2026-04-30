@@ -428,4 +428,18 @@ struct L10n {
         case .turkish: "Tüm kaydedilen gönderiler kalıcı olarak silinecek."
         }
     }
+
+    var confirmDeletePostTitle: String {
+        switch lang {
+        case .english: "Delete post?"
+        case .turkish: "Gönderi silinsin mi?"
+        }
+    }
+
+    var confirmDeletePostMessage: String {
+        switch lang {
+        case .english: "This post will be removed from your feed."
+        case .turkish: "Bu gönderi akışından kaldırılacak."
+        }
+    }
 }

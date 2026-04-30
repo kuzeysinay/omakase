@@ -14,6 +14,8 @@ struct FeedView: View {
     @State private var bookmarkStore = BookmarkStore()
     @State private var showBookmarks = false
     @State private var showAdjustTastes = false
+    @State private var pendingDeletePostID: UUID?
+    @State private var showDeletePostConfirmation = false
 
     private var l10n: L10n {
         L10n(lang: appLanguage)
@@ -93,6 +95,21 @@ struct FeedView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
+            .alert(l10n.confirmDeletePostTitle, isPresented: $showDeletePostConfirmation) {
+                Button(l10n.cancel, role: .cancel) {
+                    pendingDeletePostID = nil
+                }
+                Button(l10n.remove, role: .destructive) {
+                    if let id = pendingDeletePostID {
+                        withAnimation {
+                            viewModel.removePost(id: id)
+                        }
+                    }
+                    pendingDeletePostID = nil
+                }
+            } message: {
+                Text(l10n.confirmDeletePostMessage)
+            }
             .sheet(isPresented: $showBookmarks) {
                 BookmarksSheet(bookmarkStore: bookmarkStore)
                     .environment(\.appLanguage, appLanguage)
@@ -143,23 +160,33 @@ struct FeedView: View {
 
     private func feedList(bookmarkStore: BookmarkStore) -> some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(viewModel.posts) { post in
-                        PostCard(
-                            post: post,
-                            bookmarkStore: bookmarkStore,
-                            cookingCaption: viewModel.isGenerating && !post.isComplete
-                                ? viewModel.cookingCaption(l10n: l10n)
-                                : nil
-                        )
-                        .environment(\.appLanguage, appLanguage)
-                        .id(post.id)
-                        .padding(.horizontal)
+            List {
+                ForEach(viewModel.posts) { post in
+                    PostCard(
+                        post: post,
+                        bookmarkStore: bookmarkStore,
+                        cookingCaption: viewModel.isGenerating && !post.isComplete
+                            ? viewModel.cookingCaption(l10n: l10n)
+                            : nil
+                    )
+                    .environment(\.appLanguage, appLanguage)
+                    .id(post.id)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            pendingDeletePostID = post.id
+                            showDeletePostConfirmation = true
+                        } label: {
+                            Label(l10n.remove, systemImage: "trash")
+                        }
                     }
                 }
-                .padding(.vertical)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .padding(.vertical, 8)
             .onChange(of: viewModel.posts.first?.id) { _, newID in
                 guard let newID else { return }
                 withAnimation(.easeOut(duration: 0.25)) {
@@ -284,6 +311,12 @@ private struct PostCard: View {
                 .font(.body)
                 .fixedSize(horizontal: false, vertical: true)
                 .animation(.default, value: post.text)
+
+            if post.isComplete, !post.tags.isEmpty {
+                tagChips
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    .animation(.easeOut(duration: 0.3), value: post.tags)
+            }
         }
         .padding()
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -328,6 +361,73 @@ private struct PostCard: View {
             attributed.append(cursor)
         }
         return attributed
+    }
+
+    private var tagChips: some View {
+        FlowLayout(spacing: 6) {
+            ForEach(post.tags, id: \.self) { tag in
+                Text(tag)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.accentColor.opacity(0.12), in: Capsule())
+                    .foregroundStyle(Color.accentColor)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Simple flow layout that wraps chips onto new rows.
+private struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = layoutRows(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = layoutRows(proposal: ProposedViewSize(width: bounds.width, height: bounds.height), subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+                proposal: .unspecified
+            )
+        }
+    }
+
+    private struct LayoutResult {
+        var size: CGSize
+        var positions: [CGPoint]
+    }
+
+    private func layoutRows(proposal: ProposedViewSize, subviews: Subviews) -> LayoutResult {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var totalWidth: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth, currentX > 0 {
+                currentX = 0
+                currentY += rowHeight + spacing
+                rowHeight = 0
+            }
+            positions.append(CGPoint(x: currentX, y: currentY))
+            rowHeight = max(rowHeight, size.height)
+            currentX += size.width + spacing
+            totalWidth = max(totalWidth, currentX - spacing)
+        }
+
+        return LayoutResult(
+            size: CGSize(width: totalWidth, height: currentY + rowHeight),
+            positions: positions
+        )
     }
 }
 

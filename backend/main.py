@@ -114,28 +114,34 @@ SYSTEM_PROMPT = (
     "You are the voice of Omakase — a charismatic, well-read curator who loves "
     "surprising people with things they didn't know they needed to know. "
     "Every post you write has personality: it's funny, sharp, or delightfully weird. "
-    "You MUST output exactly two parts:\n"
+    "You MUST output exactly three parts, each on its own line:\n"
     "1) The first line ONLY must be: TITLE: <a short, specific headline for THIS post, max 8 words> "
     "(no quotes around the title).\n"
-    "2) Starting on the next line, write the post body: ONE short, self-contained piece (40-90 words) "
+    "2) The second line ONLY must be: TAGS: <comma-separated list of user interests this post relates to>. "
+    "Pick ONLY from the interests the user provided — do not invent new tags. "
+    "Usually 1-3 tags. If the post bridges multiple interests, list each one.\n"
+    "3) Starting on the next line, write the post body: ONE short, self-contained piece (40-90 words) "
     "like a banger tweet from a very smart friend.\n"
     "The title must preview the body; do not use a generic label. Do not repeat 'TITLE' or the headline "
-    "inside the body. Avoid hashtags, emoji, and meta commentary. "
+    "inside the body. Do not repeat 'TAGS' or any tag inside the body. "
+    "Avoid hashtags, emoji, and meta commentary. "
     "Do not greet the reader. Do not mention that you are an AI."
 )
 
 
 def _feed_language_instruction(language: str) -> str:
-    """Tells the model which natural language to use for TITLE line and body."""
+    """Tells the model which natural language to use for TITLE line, TAGS line, and body."""
     if language == "tr":
         return (
             "LANGUAGE: Write the entire post in Turkish (Türkçe). "
             "Both the TITLE: headline (after the prefix TITLE: ) and every word of the body must be Turkish. "
-            "Keep the literal ASCII prefix TITLE: on the first line."
+            "Keep the literal ASCII prefixes TITLE: and TAGS: on their respective lines. "
+            "The tag values after TAGS: must match the user's original interest strings exactly (do not translate them)."
         )
     return (
         "LANGUAGE: Write the entire post in English. "
-        "Both the TITLE: headline (after the prefix TITLE: ) and the body must be English."
+        "Both the TITLE: headline (after the prefix TITLE: ) and the body must be English. "
+        "Keep the literal ASCII prefixes TITLE: and TAGS: on their respective lines."
     )
 
 
@@ -218,6 +224,7 @@ def _build_user_prompt(interests: list[str], seen_count: int, language: str) -> 
 
 
 _TITLE_LINE = re.compile(r"(?i)^TITLE:\s*(.+)$")
+_TAGS_LINE = re.compile(r"(?i)^TAGS:\s*(.+)$")
 
 
 # Gemini often emits the entire post body in one stream delta. Clients expect multiple small
@@ -266,9 +273,13 @@ def _enqueue_stream_body_fragment(
 
 
 def _feed_tokens_from_stream_chunks(response: object, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop) -> None:
-    """Turn Gemini stream chunks into queue items; emits ('title', str) then body ('token', str)."""
+    """Turn Gemini stream chunks into queue items.
+
+    Emits ('title', str), then ('tags', list[str]), then body ('token', str) events.
+    """
     carry = ""
     title_done = False
+    tags_done = False
     for chunk in response:
         text = _stream_chunk_text(chunk)
         if not text:
@@ -287,6 +298,22 @@ def _feed_tokens_from_stream_chunks(response: object, queue: asyncio.Queue, loop
             else:
                 carry = first_line + "\n" + carry
             title_done = True
+        if title_done and not tags_done:
+            if "\n" not in carry:
+                continue
+            second_line, rest = carry.split("\n", 1)
+            mt = _TAGS_LINE.match(second_line.strip())
+            if mt:
+                raw_tags = [t.strip() for t in mt.group(1).split(",") if t.strip()]
+                loop.call_soon_threadsafe(
+                    queue.put_nowait,
+                    ("tags", raw_tags),
+                )
+                carry = rest
+            else:
+                # Model didn't produce a TAGS line — put the line back.
+                carry = second_line + "\n" + rest
+            tags_done = True
         if carry:
             _enqueue_stream_body_fragment(loop, queue, carry)
             carry = ""
@@ -385,6 +412,9 @@ async def _stream_post(interests: list[str], seen_count: int, language: str) -> 
             elif kind == "title":
                 saw_any_output = True
                 yield _sse_event({"title": str(payload)}, event="title")
+            elif kind == "tags":
+                saw_any_output = True
+                yield _sse_event({"tags": payload}, event="tags")
             elif kind == "done":
                 break
             elif kind == "error":
