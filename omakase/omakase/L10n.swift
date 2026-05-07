@@ -442,4 +442,163 @@ struct L10n {
         case .turkish: "Bu gönderi akışından kaldırılacak."
         }
     }
+
+    // MARK: - Auth
+
+    var authTagline: String {
+        switch lang {
+        case .english: "Sign in to discover and share curated bites with people who get it."
+        case .turkish: "Keşfetmek ve küratörlüğünü yaptığın lokmaları paylaşmak için giriş yap."
+        }
+    }
+
+    var signInWithGoogle: String {
+        switch lang {
+        case .english: "Sign in with Google"
+        case .turkish: "Google ile giriş yap"
+        }
+    }
+
+    var signOut: String {
+        switch lang {
+        case .english: "Sign out"
+        case .turkish: "Çıkış yap"
+        }
+    }
+
+    // MARK: - Tabs
+
+    var tabMyFeed: String {
+        switch lang {
+        case .english: "My Feed"
+        case .turkish: "Akışım"
+        }
+    }
+
+    var tabTimeline: String {
+        switch lang {
+        case .english: "Timeline"
+        case .turkish: "Zaman Akışı"
+        }
+    }
+
+    // MARK: - Timeline
+
+    var loadingTimeline: String {
+        switch lang {
+        case .english: "Loading timeline…"
+        case .turkish: "Zaman akışı yükleniyor…"
+        }
+    }
+
+    var timelineEmptyHeadline: String {
+        switch lang {
+        case .english: "Your timeline is empty"
+        case .turkish: "Zaman akışın boş"
+        }
+    }
+
+    var timelineEmptyDetail: String {
+        switch lang {
+        case .english: "Follow people to see the posts they share from their AI feeds."
+        case .turkish: "Yapay zeka akışlarından paylaştıkları gönderileri görmek için insanları takip et."
+        }
+    }
+
+    var discoverBannerTitle: String {
+        switch lang {
+        case .english: "Discover"
+        case .turkish: "Keşfet"
+        }
+    }
+
+    var discoverBannerDetail: String {
+        switch lang {
+        case .english: "You're not following anyone yet. Here's what people are sharing."
+        case .turkish: "Henüz kimseyi takip etmiyorsun. İnsanların paylaştıkları burada."
+        }
+    }
+
+    // MARK: - Follow system
+
+    var findPeople: String {
+        switch lang {
+        case .english: "Find people"
+        case .turkish: "Kişi bul"
+        }
+    }
+
+    var follow: String {
+        switch lang {
+        case .english: "Follow"
+        case .turkish: "Takip et"
+        }
+    }
+
+    var following: String {
+        switch lang {
+        case .english: "Following"
+        case .turkish: "Takip ediliyor"
+        }
+    }
+
+    var followers: String {
+        switch lang {
+        case .english: "Followers"
+        case .turkish: "Takipçi"
+        }
+    }
+
+    var followingLabel: String {
+        switch lang {
+        case .english: "Following"
+        case .turkish: "Takip"
+        }
+    }
+
+    var searchUsersPlaceholder: String {
+        switch lang {
+        case .english: "Search by name…"
+        case .turkish: "İsme göre ara…"
+        }
+    }
+
+    var searchUsersHint: String {
+        switch lang {
+        case .english: "Search for people to follow"
+        case .turkish: "Takip etmek için kişi ara"
+        }
+    }
+
+    var noUsersFound: String {
+        switch lang {
+        case .english: "No users found"
+        case .turkish: "Kullanıcı bulunamadı"
+        }
+    }
+
+    // MARK: - Profile
+
+    var myProfile: String {
+        switch lang {
+        case .english: "My Profile"
+        case .turkish: "Profilim"
+        }
+    }
+
+    // MARK: - Share
+
+    var sharePost: String {
+        switch lang {
+        case .english: "Share to timeline"
+        case .turkish: "Zaman akışına paylaş"
+        }
+    }
+
+    var unsharePost: String {
+        switch lang {
+        case .english: "Remove from timeline"
+        case .turkish: "Zaman akışından kaldır"
+        }
+    }
 }

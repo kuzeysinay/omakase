@@ -17,11 +17,14 @@ struct FeedView: View {
     @State private var pendingDeletePostID: UUID?
     @State private var showDeletePostConfirmation = false
 
+    let authService: AuthService
+
     private var l10n: L10n {
         L10n(lang: appLanguage)
     }
 
-    init() {
+    init(authService: AuthService) {
+        self.authService = authService
         let raw = UserDefaults.standard.string(forKey: "omakase.interests") ?? ""
         let interests = Self.parse(interests: raw)
         _viewModel = State(initialValue: FeedViewModel(interests: interests))
@@ -165,6 +168,7 @@ struct FeedView: View {
                     PostCard(
                         post: post,
                         bookmarkStore: bookmarkStore,
+                        authService: authService,
                         cookingCaption: viewModel.isGenerating && !post.isComplete
                             ? viewModel.cookingCaption(l10n: l10n)
                             : nil
@@ -247,6 +251,7 @@ struct FeedView: View {
 private struct PostCard: View {
     let post: Post
     @Bindable var bookmarkStore: BookmarkStore
+    let authService: AuthService
     /// Kitchen-style line while Gemini streams (`nil` once the card is idle or finished).
     var cookingCaption: String?
 
@@ -255,6 +260,8 @@ private struct PostCard: View {
     private var l10n: L10n { L10n(lang: appLanguage) }
 
     @State private var showCursor: Bool = true
+    @State private var isShared: Bool = false
+    @State private var isSharePending: Bool = false
 
     private var isBookmarked: Bool {
         bookmarkStore.contains(postId: post.id)
@@ -277,6 +284,23 @@ private struct PostCard: View {
                 }
                 Spacer()
                 if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    // Share button
+                    Button {
+                        Task { await toggleShare() }
+                    } label: {
+                        if isSharePending {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: isShared ? "paperplane.fill" : "paperplane")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(isShared ? Color.accentColor : .secondary)
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(isShared ? l10n.unsharePost : l10n.sharePost)
+                    .disabled(isSharePending)
+
+                    // Bookmark button
                     Button {
                         bookmarkStore.toggle(post)
                     } label: {
@@ -335,6 +359,13 @@ private struct PostCard: View {
             }
             showCursor = false
         }
+        .task {
+            // Check if this post was already shared.
+            guard post.isComplete, let user = authService.currentUser else { return }
+            isShared = (try? await FirestoreService.shared.hasSharedPost(
+                text: post.text, authorId: user.uid
+            )) ?? false
+        }
     }
 
     private var cardTitle: String {
@@ -376,6 +407,23 @@ private struct PostCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Share action
+
+    private func toggleShare() async {
+        guard let user = authService.currentUser else { return }
+        isSharePending = true
+        do {
+            if isShared {
+                try await FirestoreService.shared.unsharePost(text: post.text, authorId: user.uid)
+                isShared = false
+            } else {
+                try await FirestoreService.shared.sharePost(post, author: user)
+                isShared = true
+            }
+        } catch { }
+        isSharePending = false
     }
 }
 
@@ -432,5 +480,5 @@ private struct FlowLayout: Layout {
 }
 
 #Preview {
-    FeedView()
+    FeedView(authService: AuthService())
 }
