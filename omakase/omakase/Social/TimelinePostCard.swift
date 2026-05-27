@@ -11,6 +11,7 @@ struct TimelinePostCard: View {
     let post: SharedPost
     let authService: AuthService
     var onAuthorTap: () -> Void
+    var onDelete: (() -> Void)? = nil
 
     @Environment(\.appLanguage) private var appLanguage
     private var l10n: L10n { L10n(lang: appLanguage) }
@@ -22,24 +23,44 @@ struct TimelinePostCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Author header
-            Button(action: onAuthorTap) {
-                HStack(spacing: 10) {
-                    authorAvatar
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(post.authorName)
-                            .font(.subheadline).bold()
-                            .foregroundStyle(.primary)
-                        Text(post.sharedAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                Button(action: onAuthorTap) {
+                    HStack(spacing: 10) {
+                        authorAvatar
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(post.authorName)
+                                .font(.subheadline).bold()
+                                .foregroundStyle(.primary)
+                            Text(post.sharedAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    Spacer()
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                if post.authorId == authService.uid {
+                    Menu {
+                        Button(role: .destructive) {
+                            onDelete?()
+                        } label: {
+                            Label(l10n.lang == .turkish ? "Gönderiyi Sil" : "Delete Post", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.body.weight(.medium))
+                            .padding(4)
+                    }
+                    .tint(.primary)
+                    .foregroundStyle(.primary)
+                } else {
                     Image(systemName: "arrow.up.right.circle")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
             }
-            .buttonStyle(.plain)
 
             // Post title
             if !post.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

@@ -59,12 +59,25 @@ final class BookmarkStore {
     }
 
     func toggle(_ post: Post) {
-        if let i = entries.firstIndex(where: { $0.id == post.id }) {
-            entries.remove(at: i)
+        if entries.contains(where: { $0.id == post.id }) {
+            entries.removeAll(where: { $0.id == post.id })
         } else {
-            var entry = BookmarkEntry(from: post)
-            entry.collectionName = "All"
-            entries.insert(entry, at: 0)
+            if post.tags.isEmpty {
+                var entry = BookmarkEntry(from: post)
+                entry.collectionName = "All"
+                entries.insert(entry, at: 0)
+            } else {
+                var cols = customCollections
+                for tag in post.tags {
+                    if !cols.contains(tag) {
+                        cols.append(tag)
+                    }
+                    var entry = BookmarkEntry(from: post)
+                    entry.collectionName = tag
+                    entries.insert(entry, at: 0)
+                }
+                customCollections = cols
+            }
         }
         save()
     }
@@ -113,7 +126,8 @@ final class BookmarkStore {
 
     func entries(in collection: String) -> [BookmarkEntry] {
         if collection == "All" {
-            return entries
+            var seen = Set<UUID>()
+            return entries.filter { seen.insert($0.id).inserted }
         }
         return entries.filter { $0.collectionName == collection }
     }
@@ -160,8 +174,11 @@ final class BookmarkStore {
     }
 
     func moveToCollection(entryId: UUID, collection: String) {
-        if let idx = entries.firstIndex(where: { $0.id == entryId }) {
-            entries[idx].collectionName = collection
+        if let first = entries.first(where: { $0.id == entryId }) {
+            entries.removeAll(where: { $0.id == entryId })
+            var updated = first
+            updated.collectionName = collection
+            entries.insert(updated, at: 0)
             save()
         }
     }

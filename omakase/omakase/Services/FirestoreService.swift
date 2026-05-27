@@ -163,6 +163,11 @@ final class FirestoreService {
         return !snapshot.documents.isEmpty
     }
 
+    /// Delete a shared post by ID (for when a user deletes it from the social feed or their profile).
+    func deleteSharedPost(postId: String) async throws {
+        try await db.collection("shared_posts").document(postId).delete()
+    }
+
     /// Unshare (delete) a post from the communal timeline.
     func unsharePost(text: String, authorId: String) async throws {
         let snapshot = try await db.collection("shared_posts")
@@ -188,7 +193,6 @@ final class FirestoreService {
         for chunk in followingUIDs.chunked(into: 30) {
             let snapshot = try await db.collection("shared_posts")
                 .whereField("authorId", in: chunk)
-                .order(by: "sharedAt", descending: true)
                 .limit(to: 50)
                 .getDocuments()
 
@@ -208,6 +212,18 @@ final class FirestoreService {
             .getDocuments()
 
         return snapshot.documents.compactMap { try? $0.data(as: SharedPost.self) }
+    }
+
+    /// Fetch shared posts from a specific user.
+    func fetchUserTimeline(uid: String, limit: Int = 50) async throws -> [SharedPost] {
+        let snapshot = try await db.collection("shared_posts")
+            .whereField("authorId", isEqualTo: uid)
+            .limit(to: limit)
+            .getDocuments()
+            
+        var posts = snapshot.documents.compactMap { try? $0.data(as: SharedPost.self) }
+        posts.sort { $0.sharedAt > $1.sharedAt }
+        return posts
     }
 
     // MARK: - Reactions

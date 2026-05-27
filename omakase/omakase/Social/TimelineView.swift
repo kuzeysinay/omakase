@@ -122,9 +122,23 @@ struct TimelineView: View {
                 }
 
                 ForEach(viewModel.posts, id: \.id) { post in
-                    TimelinePostCard(post: post, authService: authService) {
-                        selectedAuthorId = post.authorId
-                    }
+                    TimelinePostCard(
+                        post: post,
+                        authService: authService,
+                        onAuthorTap: {
+                            selectedAuthorId = post.authorId
+                        },
+                        onDelete: {
+                            Task {
+                                if let postId = post.id {
+                                    try? await FirestoreService.shared.deleteSharedPost(postId: postId)
+                                    withAnimation {
+                                        viewModel.removePost(id: postId)
+                                    }
+                                }
+                            }
+                        }
+                    )
                 }
             }
             .padding(.horizontal, 16)

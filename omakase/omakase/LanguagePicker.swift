@@ -7,6 +7,7 @@ import SwiftUI
 
 /// Icon-only globe: language names live inside the menu (avoids cramped “Türkçe” labels in bars).
 struct LanguagePicker: View {
+    var isSubmenu: Bool = false
 
     @AppStorage("omakase.language") private var languageCode: String = AppLanguage.english.rawValue
     private var resolved: AppLanguage { AppLanguage(rawValue: languageCode) ?? .english }
@@ -27,11 +28,15 @@ struct LanguagePicker: View {
                 }
             }
         } label: {
-            Image(systemName: "globe")
-                .font(.body.weight(.medium))
-                .foregroundStyle(Color.primary.opacity(0.85))
-                .frame(width: 32, height: 32)
-                .contentShape(Rectangle())
+            if isSubmenu {
+                Label(L10n(lang: resolved).languageMenuAccessibility, systemImage: "globe")
+            } else {
+                Image(systemName: "globe")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.primary.opacity(0.85))
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
         }
         .menuActionDismissBehavior(.automatic)
         .accessibilityLabel(L10n(lang: resolved).languageMenuAccessibility)

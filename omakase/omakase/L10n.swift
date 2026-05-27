@@ -61,6 +61,13 @@ struct L10n {
         }
     }
 
+    var noPostsYet: String {
+        switch lang {
+        case .english: "No posts yet"
+        case .turkish: "Henüz post yok"
+        }
+    }
+
     var offlineBanner: String {
         switch lang {
         case .english: "You're offline. Showing cached posts."

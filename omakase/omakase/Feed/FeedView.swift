@@ -16,6 +16,7 @@ struct FeedView: View {
     @State private var showAdjustTastes = false
     @State private var pendingDeletePostID: UUID?
     @State private var showDeletePostConfirmation = false
+    @State private var toastMessage: String?
 
     let authService: AuthService
     /// Reference kept so PostCard can call deep dive.
@@ -48,7 +49,6 @@ struct FeedView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    LanguagePicker()
                     Button {
                         showAdjustTastes = true
                     } label: {
@@ -66,6 +66,7 @@ struct FeedView: View {
                     }
                     .accessibilityLabel(l10n.savedPostsA11y(count: bookmarkStore.count))
                     Menu {
+                        LanguagePicker(isSubmenu: true)
                         Button(l10n.clearFeed, systemImage: "trash.fill", role: .destructive) {
                             viewModel.reset()
                         }
@@ -123,6 +124,7 @@ struct FeedView: View {
                 AdjustTastesSheet()
                     .environment(\.appLanguage, appLanguage)
             }
+            .toast(message: $toastMessage)
         }
         .task {
             viewModel.setContentLanguage(appLanguage)
@@ -192,6 +194,7 @@ struct FeedView: View {
                         bookmarkStore: bookmarkStore,
                         authService: authService,
                         viewModel: viewModel,
+                        toastMessage: $toastMessage,
                         cookingCaption: viewModel.isGenerating && !post.isComplete
                             ? viewModel.cookingCaption(l10n: l10n)
                             : nil
@@ -281,6 +284,7 @@ private struct PostCard: View {
     @Bindable var bookmarkStore: BookmarkStore
     let authService: AuthService
     var viewModel: FeedViewModel
+    var toastMessage: Binding<String?>
     /// Kitchen-style line while Gemini streams (`nil` once the card is idle or finished).
     var cookingCaption: String?
 
@@ -313,56 +317,6 @@ private struct PostCard: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    // iOS Share Sheet button
-                    Button {
-                        ShareService.presentShareSheet(post: post)
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Color.secondary)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel(l10n.shareSheetA11y)
-
-                    // Deep Dive button
-                    Button {
-                        viewModel.requestDeepDive(for: post)
-                    } label: {
-                        Image(systemName: "fish")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Color.secondary)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel(l10n.deepDiveA11y)
-
-                    // Share to timeline button
-                    Button {
-                        Task { await toggleShare() }
-                    } label: {
-                        if isSharePending {
-                            ProgressView().controlSize(.mini)
-                        } else {
-                            Image(systemName: isShared ? "paperplane.fill" : "paperplane")
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(isShared ? Color.accentColor : .secondary)
-                        }
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel(isShared ? l10n.unsharePost : l10n.sharePost)
-                    .disabled(isSharePending)
-
-                    // Bookmark button
-                    Button {
-                        bookmarkStore.toggle(post)
-                    } label: {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(isBookmarked ? Color.accentColor : .secondary)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel(isBookmarked ? l10n.removeBookmarkA11y : l10n.bookmarkPostA11y)
-                }
                 if !post.isComplete {
                     Text(l10n.liveBadge)
                         .font(.caption2.monospaced()).bold()
@@ -439,6 +393,71 @@ private struct PostCard: View {
                 tagChips
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     .animation(.easeOut(duration: 0.3), value: post.tags)
+            }
+            
+            if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Divider().padding(.vertical, 4)
+                
+                HStack(spacing: 24) {
+                    // Deep Dive button
+                    Button {
+                        viewModel.requestDeepDive(for: post)
+                    } label: {
+                        Image(systemName: "fish")
+                            .font(.title3)
+                            .foregroundStyle(Color.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(l10n.deepDiveA11y)
+
+                    // Share to timeline button
+                    Button {
+                        Task { await toggleShare() }
+                    } label: {
+                        if isSharePending {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: isShared ? "paperplane.fill" : "paperplane")
+                                .font(.title3)
+                                .foregroundStyle(isShared ? Color.accentColor : .secondary)
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(isShared ? l10n.unsharePost : l10n.sharePost)
+                    .disabled(isSharePending)
+                    
+                    // iOS Share Sheet button
+                    Button {
+                        ShareService.presentShareSheet(post: post)
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.title3)
+                            .foregroundStyle(Color.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(l10n.shareSheetA11y)
+
+                    Spacer()
+
+                    // Bookmark button
+                    Button {
+                        bookmarkStore.toggle(post)
+                        if bookmarkStore.contains(postId: post.id) {
+                            toastMessage.wrappedValue = "Post bookmarked"
+                        } else {
+                            toastMessage.wrappedValue = "Bookmark removed"
+                        }
+                    } label: {
+                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                            .font(.title3)
+                            .foregroundStyle(isBookmarked ? Color.accentColor : .secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(isBookmarked ? l10n.removeBookmarkA11y : l10n.bookmarkPostA11y)
+                }
+                .padding(.top, 4)
+                .padding(.bottom, 2)
+                .padding(.horizontal, 4)
             }
         }
         .padding()
@@ -563,9 +582,11 @@ private struct PostCard: View {
             if isShared {
                 try await FirestoreService.shared.unsharePost(text: post.text, authorId: user.uid)
                 isShared = false
+                toastMessage.wrappedValue = "Post unshared"
             } else {
                 try await FirestoreService.shared.sharePost(post, author: user)
                 isShared = true
+                toastMessage.wrappedValue = "Post shared to Social Feed"
             }
         } catch { }
         isSharePending = false
@@ -626,4 +647,40 @@ private struct FlowLayout: Layout {
 
 #Preview {
     FeedView(authService: AuthService())
+}
+
+// MARK: - Toast Modifier
+
+struct ToastModifier: ViewModifier {
+    @Binding var message: String?
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .bottom) {
+                if let message = message {
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color.black.opacity(0.8), in: Capsule())
+                        .padding(.bottom, 20)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .zIndex(1)
+                        .task {
+                            try? await Task.sleep(nanoseconds: 2_000_000_000)
+                            withAnimation(.easeInOut) {
+                                self.message = nil
+                            }
+                        }
+                }
+            }
+            .animation(.spring(), value: message)
+    }
+}
+
+extension View {
+    func toast(message: Binding<String?>) -> some View {
+        modifier(ToastModifier(message: message))
+    }
 }

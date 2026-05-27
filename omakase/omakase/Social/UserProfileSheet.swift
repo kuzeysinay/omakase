@@ -19,6 +19,8 @@ struct UserProfileSheet: View {
     @State private var isPending = false
     @State private var followerCount = 0
     @State private var followingCount = 0
+    @State private var userPosts: [SharedPost] = []
+    @State private var isLoadingPosts = true
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -26,7 +28,9 @@ struct UserProfileSheet: View {
         NavigationStack {
             Group {
                 if let profile {
-                    profileContent(profile)
+                    ScrollView {
+                        profileContent(profile)
+                    }
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -106,6 +110,28 @@ struct UserProfileSheet: View {
                 .padding(.horizontal, 24)
             }
 
+            Divider().padding(.vertical)
+
+            if isLoadingPosts {
+                ProgressView().padding()
+            } else if userPosts.isEmpty {
+                Text(l10n.noPostsYet)
+                    .foregroundStyle(.secondary)
+                    .padding()
+            } else {
+                LazyVStack(spacing: 16) {
+                    ForEach(userPosts) { post in
+                        TimelinePostCard(
+                            post: post, 
+                            authService: authService,
+                            onAuthorTap: { },
+                            onDelete: nil
+                        )
+                    }
+                }
+                .padding(.horizontal)
+            }
+
             Spacer()
         }
     }
@@ -121,6 +147,9 @@ struct UserProfileSheet: View {
         isFollowing = (try? await FirestoreService.shared.isFollowing(targetUid: userId, currentUid: uid)) ?? false
         followerCount = (try? await FirestoreService.shared.fetchFollowerCount(uid: userId)) ?? 0
         followingCount = (try? await FirestoreService.shared.fetchFollowingCount(uid: userId)) ?? 0
+        
+        userPosts = (try? await FirestoreService.shared.fetchUserTimeline(uid: userId)) ?? []
+        isLoadingPosts = false
     }
 
     private func toggleFollow() async {
@@ -153,13 +182,16 @@ struct MyProfileSheet: View {
     @State private var profile: UserProfile?
     @State private var followerCount = 0
     @State private var followingCount = 0
+    @State private var userPosts: [SharedPost] = []
+    @State private var isLoadingPosts = true
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                Spacer().frame(height: 20)
+            ScrollView {
+                VStack(spacing: 20) {
+                    Spacer().frame(height: 20)
 
                 if let urlStr = profile?.photoURL, let url = URL(string: urlStr) {
                     AsyncImage(url: url) { phase in
@@ -199,8 +231,41 @@ struct MyProfileSheet: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
-                .padding(.bottom, 32)
+                
+                Divider().padding(.vertical)
+                
+                if isLoadingPosts {
+                    ProgressView().padding()
+                } else if userPosts.isEmpty {
+                    Text(l10n.noPostsYet)
+                        .foregroundStyle(.secondary)
+                        .padding()
+                } else {
+                    LazyVStack(spacing: 16) {
+                        ForEach(userPosts) { post in
+                            TimelinePostCard(
+                                post: post,
+                                authService: authService,
+                                onAuthorTap: { },
+                                onDelete: {
+                                    Task {
+                                        if let postId = post.id {
+                                            try? await FirestoreService.shared.deleteSharedPost(postId: postId)
+                                            withAnimation {
+                                                userPosts.removeAll { $0.id == post.id }
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                
+                Spacer().frame(height: 32)
             }
+            } // Close ScrollView
             .navigationTitle(l10n.myProfile)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -214,6 +279,9 @@ struct MyProfileSheet: View {
             profile = try? await FirestoreService.shared.fetchUserProfile(uid: uid)
             followerCount = (try? await FirestoreService.shared.fetchFollowerCount(uid: uid)) ?? 0
             followingCount = (try? await FirestoreService.shared.fetchFollowingCount(uid: uid)) ?? 0
+            
+            userPosts = (try? await FirestoreService.shared.fetchUserTimeline(uid: uid)) ?? []
+            isLoadingPosts = false
         }
     }
 

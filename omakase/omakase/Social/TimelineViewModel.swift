@@ -51,6 +51,10 @@ final class TimelineViewModel {
         isLoading = false
     }
 
+    func removePost(id: String) {
+        posts.removeAll { $0.id == id }
+    }
+
     /// Refresh the timeline (pull-to-refresh).
     func refresh() async {
         await loadTimeline()
