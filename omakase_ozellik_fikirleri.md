@@ -17,7 +17,7 @@
 
 ## 1. İçerik & Feed Deneyimi
 
-### 🔴 Deep Dive Modu
+### 🔴 Deep Dive Modu (Tamamlandı ✅)
 Bir post'un altında **"Daha fazla anlat"** butonu → Gemini'ye aynı konu hakkında daha uzun, daha detaylı bir follow-up post ürettirir. Kullanıcı tavşan deliğine girmek istediğinde feed'den çıkmadan derinleşebilir.
 
 **Neden önemli:** Engagement süresini 2-3x artırır. "Daha fazla" isteği doğal bir kullanıcı dürtüsü.
@@ -62,7 +62,7 @@ Post'ları TTS (Text-to-Speech) ile dinleyebilme. "Yürürken Omakase" deneyimi.
 
 ---
 
-### 🟢 Post Formatı Çeşitliliği
+### 🟢 Post Formatı Çeşitliliği (Tamamlandı ✅)
 Mevcut 7 format template'ine ek olarak:
 - **"Debate"** — bir konunun iki tarafını kısaca sun
 - **"Timeline"** — kronolojik bir mini-tarih (3-4 madde)
@@ -79,14 +79,14 @@ Gemini'nin görsel üretim/analiz yetenekleriyle post'lara ilgili görseller ekl
 
 ## 2. Sosyal & Topluluk
 
-### 🔴 Reaction Sistemi
+### 🔴 Reaction Sistemi (Tamamlandı ✅)
 Shared post'lara emoji reaction (🤯 🔥 💡 😂 🎯). Like'tan daha zengin etkileşim.
 
 **Teknik:** Firestore'da `shared_posts/{postId}/reactions/{uid}` subcollection.
 
 ---
 
-### 🟡 Yorum / Tartışma
+### 🟡 Yorum / Tartışma (Tamamlandı ✅)
 Shared post'ların altına kısa yorumlar. Karakter limiti 280 (tweet tarzı). Moderasyon için AI-based content filter.
 
 **Dikkat:** Apple Review'da moderation araçları (report, block) zorunlu hale gelir. Önceki raporda zaten belirtildi.
@@ -153,14 +153,14 @@ Gemini'ye kullanıcının geçmiş beğenileri, tarzı hakkında özet bir "user
 
 ## 4. Utility & Pratik Değer
 
-### 🟡 Paylaş (iOS Share Sheet)
+### 🟡 Paylaş (iOS Share Sheet) (Tamamlandı ✅)
 Post'u Instagram Stories, Twitter, iMessage ile paylaş. Güzel formatlı bir kart görseli oluştur (SwiftUI → UIImage render).
 
 **Neden:** Viral büyüme kanalı. Kullanıcılar ilginç bilgileri arkadaşlarıyla paylaşmak ister.
 
 ---
 
-### 🟡 Koleksiyonlar
+### 🟡 Koleksiyonlar (Tamamlandı ✅)
 Bookmark'ları klasörlere ayır: "Film notları", "Tarih", "Yemek tarifleri". Şu an tek bir bookmark listesi var.
 
 **Teknik:** Mevcut `BookmarkStore`'a `collectionName: String` field'ı ekle.
@@ -193,7 +193,7 @@ Post'taki bir yer/obje hakkında bilgi varken kamerayı aç → AR overlay ile e
 
 ## 5. Teknik & Altyapı Özellikleri
 
-### 🔴 Offline Modu
+### 🔴 Offline Modu (Tamamlandı ✅)
 Daha önce üretilen postları Firestore veya local cache'den göster. İnternet yokken bile feed'e bakılabilir.
 
 **Teknik:** Core Data veya SwiftData ile local persistence. Mevcut `Post` modeli zaten `Codable`'a yakın.

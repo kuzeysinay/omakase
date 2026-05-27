@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import Network
 import Observation
 
 @Observable
@@ -36,16 +37,23 @@ final class FeedViewModel {
     /// Mirrors UI language for localized transport errors and API payload `language`.
     private var contentLanguage: AppLanguage = .english
 
+    private(set) var isOffline = false
+    private(set) var isShowingCachedContent = false
+    private let monitor = NWPathMonitor()
+
     private var interests: [String]
     private var streamingTask: Task<Void, Never>?
     private var loadingQuipTask: Task<Void, Never>?
     /// The post the current `streamingTask` is filling; only that task may clear `isGenerating`.
     private var activeStreamPostID: UUID?
+    
+    // Typewriter effect state removed (handled by backend token drip)
 
     // MARK: - Init
 
     init(interests: [String]) {
         self.interests = interests
+        startNetworkMonitoring()
     }
 
     func updateInterests(_ newValue: [String]) {
@@ -225,6 +233,124 @@ final class FeedViewModel {
         posts.removeAll { $0.id == id }
     }
 
+    // MARK: - Network monitoring
+
+    func startNetworkMonitoring() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                self?.isOffline = (path.status != .satisfied)
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "NetworkMonitor"))
+    }
+
+    // MARK: - Offline cache
+
+    func loadCachedPosts() async {
+        let cached = await PostCacheService.shared.loadCachedPosts()
+        if !cached.isEmpty {
+            posts = cached
+            isShowingCachedContent = true
+        }
+    }
+
+    // MARK: - Deep Dive
+
+    func requestDeepDive(for post: Post) {
+        streamingTask?.cancel()
+        guard !isGenerating else { return }
+        isGenerating = true
+        errorMessage = nil
+
+        guard let idx = posts.firstIndex(where: { $0.id == post.id }) else {
+            isGenerating = false
+            return
+        }
+        var copy = posts
+        copy[idx].isComplete = false
+        // Initialize deepDiveText to direct incoming tokens to the deep dive section.
+        if copy[idx].deepDiveText == nil {
+            copy[idx].deepDiveText = ""
+        }
+        posts = copy
+
+        let deepDiveId = post.id
+        activeStreamPostID = deepDiveId
+        startLoadingQuipRotation()
+
+        let url = baseURL.appendingPathComponent("feed/deep-dive")
+        let requestBody: [String: Any] = [
+            "original_title": post.title,
+            "original_text": post.text,
+            "interests": interests,
+            "language": contentLanguage.rawValue,
+        ]
+        let bodyData = (try? JSONSerialization.data(withJSONObject: requestBody)) ?? Data()
+
+        let streamURL = url
+        let streamBody = bodyData
+        let streamPostID = deepDiveId
+        let apiBaseForErrors = baseURL
+        streamingTask = Task.detached(priority: .userInitiated) {
+            let stream = SSEClient.events(
+                from: streamURL,
+                method: "POST",
+                headers: ["Content-Type": "application/json"],
+                body: streamBody
+            )
+
+            do {
+                for try await event in stream {
+                    if Task.isCancelled { break }
+                    let isBodyToken = (event.event == "token")
+                    await MainActor.run { [weak self] in
+                        guard let self else { return }
+                        self.handle(event: event, for: streamPostID)
+                    }
+                    if isBodyToken {
+                        await Task.yield()
+                    }
+                }
+                let streamEndedByCancellation = Task.isCancelled
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    if streamEndedByCancellation {
+                        self.handleStreamAbandoned(postID: streamPostID)
+                    } else {
+                        let p = self.posts.first { $0.id == streamPostID }
+                        if let p, !p.isComplete, p.text.isEmpty, self.errorMessage == nil {
+                            let l10n = L10n(lang: self.contentLanguage)
+                            self.errorMessage = l10n.streamEndedNoText
+                            self.markPostComplete(streamPostID)
+                        }
+                    }
+                }
+            } catch is CancellationError {
+                await MainActor.run { [weak self] in
+                    self?.handleStreamAbandoned(postID: streamPostID)
+                }
+            } catch {
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.errorMessage = Self.friendlyStreamError(
+                        error,
+                        apiBase: apiBaseForErrors,
+                        l10n: L10n(lang: self.contentLanguage)
+                    )
+                    self.markPostComplete(streamPostID)
+                }
+            }
+            await MainActor.run { [weak self] in
+                guard
+                    let self,
+                    self.activeStreamPostID == streamPostID
+                else { return }
+                self.isGenerating = false
+                self.stopLoadingQuipRotation()
+            }
+        }
+    }
+
     // MARK: - Private
 
     private func startLoadingQuipRotation() {
@@ -280,6 +406,10 @@ final class FeedViewModel {
         // #endregion
 
         switch event.event {
+        case "format":
+            if let format = payload["format"] as? String {
+                setPostFormat(format, for: postID)
+            }
         case "title":
             if let title = payload["title"] as? String {
                 setTitle(title, for: postID)
@@ -307,6 +437,12 @@ final class FeedViewModel {
             }
         case "done":
             markPostComplete(postID)
+            if let idx = posts.firstIndex(where: { $0.id == postID }) {
+                Task {
+                    await PostCacheService.shared.cachePost(posts[idx])
+                    await PostCacheService.shared.clearOldPosts()
+                }
+            }
         case "error":
             let message = (payload["message"] as? String) ?? "Unknown server error."
             errorMessage = message
@@ -320,9 +456,12 @@ final class FeedViewModel {
     private func setTitle(_ title: String, for postID: UUID) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
-        var copy = posts
-        copy[idx].title = trimmed
-        posts = copy
+        // Only set title if it's empty to prevent overwriting existing post titles during deep dives
+        if posts[idx].title.isEmpty || posts[idx].title == "Diving deeper..." {
+            var copy = posts
+            copy[idx].title = trimmed
+            posts = copy
+        }
     }
 
     private func setTags(_ tags: [String], for postID: UUID) {
@@ -332,21 +471,22 @@ final class FeedViewModel {
         posts = copy
     }
 
-    private func appendText(_ text: String, to postID: UUID) {
-        guard let idx = posts.firstIndex(where: { $0.id == postID }) else {
-            // #region agent log
-            AgentDebugLog.log(
-                location: "FeedViewModel.swift:appendText",
-                message: "post id not in posts",
-                hypothesisId: "H3",
-                data: ["postID": postID.uuidString, "postsCount": String(posts.count)]
-            )
-            // #endregion
-            return
-        }
+    private func setPostFormat(_ format: String, for postID: UUID) {
+        guard let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
         var copy = posts
-        copy[idx].text.append(contentsOf: text)
+        copy[idx].postFormat = format
         posts = copy
+    }
+
+    private func appendText(_ text: String, to postID: UUID) {
+        guard let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
+        var copy = self.posts
+        if copy[idx].deepDiveText != nil {
+            copy[idx].deepDiveText! += text
+        } else {
+            copy[idx].text += text
+        }
+        self.posts = copy
     }
 
     private func markPostComplete(_ postID: UUID) {

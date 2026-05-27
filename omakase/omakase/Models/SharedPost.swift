@@ -19,6 +19,9 @@ struct SharedPost: Codable, Identifiable, Equatable, Sendable {
     var tags: [String]
     var originalCreatedAt: Date
     var sharedAt: Date
+    var reactionCounts: [String: Int]?
+    var totalReactions: Int?
+    var commentCount: Int?
 
     init(
         authorId: String,
@@ -28,7 +31,10 @@ struct SharedPost: Codable, Identifiable, Equatable, Sendable {
         text: String,
         tags: [String],
         originalCreatedAt: Date,
-        sharedAt: Date = .now
+        sharedAt: Date = .now,
+        reactionCounts: [String: Int]? = nil,
+        totalReactions: Int? = nil,
+        commentCount: Int? = nil
     ) {
         self.authorId = authorId
         self.authorName = authorName
@@ -38,5 +44,8 @@ struct SharedPost: Codable, Identifiable, Equatable, Sendable {
         self.tags = tags
         self.originalCreatedAt = originalCreatedAt
         self.sharedAt = sharedAt
+        self.reactionCounts = reactionCounts
+        self.totalReactions = totalReactions
+        self.commentCount = commentCount
     }
 }

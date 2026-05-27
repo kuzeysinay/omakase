@@ -18,6 +18,8 @@ struct FeedView: View {
     @State private var showDeletePostConfirmation = false
 
     let authService: AuthService
+    /// Reference kept so PostCard can call deep dive.
+    private var feedViewModelForCards: FeedViewModel { viewModel }
 
     private var l10n: L10n {
         L10n(lang: appLanguage)
@@ -125,7 +127,9 @@ struct FeedView: View {
         .task {
             viewModel.setContentLanguage(appLanguage)
             viewModel.updateInterests(Self.parse(interests: storedInterests))
-            if viewModel.posts.isEmpty {
+            if viewModel.isOffline && viewModel.posts.isEmpty {
+                await viewModel.loadCachedPosts()
+            } else if viewModel.posts.isEmpty {
                 viewModel.requestNextPost()
             }
         }
@@ -164,11 +168,30 @@ struct FeedView: View {
     private func feedList(bookmarkStore: BookmarkStore) -> some View {
         ScrollViewReader { proxy in
             List {
+                // Offline banner
+                if viewModel.isOffline && viewModel.isShowingCachedContent {
+                    HStack(spacing: 8) {
+                        Image(systemName: "wifi.slash")
+                            .font(.subheadline.weight(.semibold))
+                        Text(l10n.offlineBanner)
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .foregroundStyle(.orange)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                }
+
                 ForEach(viewModel.posts) { post in
                     PostCard(
                         post: post,
                         bookmarkStore: bookmarkStore,
                         authService: authService,
+                        viewModel: viewModel,
                         cookingCaption: viewModel.isGenerating && !post.isComplete
                             ? viewModel.cookingCaption(l10n: l10n)
                             : nil
@@ -203,6 +226,7 @@ struct FeedView: View {
     private var generateButton: some View {
         let quip =
             viewModel.isGenerating ? viewModel.cookingCaption(l10n: l10n) : nil
+        let isDisabled = viewModel.isGenerating || viewModel.isOffline
         return Button {
             viewModel.requestNextPost()
         } label: {
@@ -213,8 +237,13 @@ struct FeedView: View {
                             .controlSize(.small)
                             .tint(.white)
                     }
-                    Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
-                        .fontWeight(.semibold)
+                    if viewModel.isOffline && !viewModel.isGenerating {
+                        Text(l10n.internetRequired)
+                            .fontWeight(.semibold)
+                    } else {
+                        Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
+                            .fontWeight(.semibold)
+                    }
                 }
                 if let quip {
                     Text(quip)
@@ -233,7 +262,7 @@ struct FeedView: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .disabled(viewModel.isGenerating)
+        .disabled(isDisabled)
     }
 
     // MARK: - Helpers
@@ -245,13 +274,13 @@ struct FeedView: View {
             .filter { !$0.isEmpty }
     }
 }
-
 // MARK: - Post card
 
 private struct PostCard: View {
     let post: Post
     @Bindable var bookmarkStore: BookmarkStore
     let authService: AuthService
+    var viewModel: FeedViewModel
     /// Kitchen-style line while Gemini streams (`nil` once the card is idle or finished).
     var cookingCaption: String?
 
@@ -262,6 +291,7 @@ private struct PostCard: View {
     @State private var showCursor: Bool = true
     @State private var isShared: Bool = false
     @State private var isSharePending: Bool = false
+    @State private var isDeepDiveExpanded: Bool = false
 
     private var isBookmarked: Bool {
         bookmarkStore.contains(postId: post.id)
@@ -284,7 +314,29 @@ private struct PostCard: View {
                 }
                 Spacer()
                 if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    // Share button
+                    // iOS Share Sheet button
+                    Button {
+                        ShareService.presentShareSheet(post: post)
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(l10n.shareSheetA11y)
+
+                    // Deep Dive button
+                    Button {
+                        viewModel.requestDeepDive(for: post)
+                    } label: {
+                        Image(systemName: "fish")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(l10n.deepDiveA11y)
+
+                    // Share to timeline button
                     Button {
                         Task { await toggleShare() }
                     } label: {
@@ -334,7 +386,54 @@ private struct PostCard: View {
             Text(postBody)
                 .font(.body)
                 .fixedSize(horizontal: false, vertical: true)
-                .animation(.default, value: post.text)
+                
+            if let deepDive = post.deepDiveText, !deepDive.isEmpty {
+                let expanded = isDeepDiveExpanded || !post.isComplete
+                
+                VStack(spacing: 0) {
+                    if expanded {
+                        Divider().padding(.vertical, 8)
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "fish.fill")
+                                .foregroundStyle(.blue)
+                            Text("Derinlemesine İnceleme")
+                                .font(.headline)
+                                .foregroundStyle(.blue)
+                            Spacer()
+                            Button {
+                                isDeepDiveExpanded = false
+                            } label: {
+                                Image(systemName: "chevron.up")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.bottom, 8)
+                        
+                        Text(deepDive + (!post.isComplete ? (showCursor ? "▌" : " ") : ""))
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .transition(.opacity)
+                    } else {
+                        Button {
+                            isDeepDiveExpanded = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "fish")
+                                Text("Derinlemesine İncelemeyi Oku")
+                                Spacer()
+                                Image(systemName: "chevron.down")
+                            }
+                            .font(.subheadline.bold())
+                            .padding()
+                            .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                            .foregroundStyle(.blue)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .animation(.spring(), value: expanded)
+            }
 
             if post.isComplete, !post.tags.isEmpty {
                 tagChips
@@ -386,7 +485,7 @@ private struct PostCard: View {
 
     private var postBody: AttributedString {
         var attributed = AttributedString(post.text.isEmpty && !post.isComplete ? "…" : post.text)
-        if !post.isComplete {
+        if !post.isComplete && post.deepDiveText == nil {
             var cursor = AttributedString(showCursor ? "▌" : " ")
             cursor.foregroundColor = .accentColor
             attributed.append(cursor)
@@ -407,6 +506,52 @@ private struct PostCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func formatBadge(_ format: String) -> some View {
+        let info = formatInfo(format)
+        HStack(spacing: 5) {
+            Image(systemName: info.icon)
+                .font(.caption2.weight(.semibold))
+            Text(info.label)
+                .font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(info.color)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(info.color.opacity(0.12), in: Capsule())
+    }
+
+    private func formatInfo(_ format: String) -> (icon: String, label: String, color: Color) {
+        switch format {
+        case "DEBATE":
+            return ("bubble.left.and.bubble.right", "Debate", .orange)
+        case "TIMELINE":
+            return ("clock.arrow.circlepath", "Timeline", .cyan)
+        case "VERSUS":
+            return ("arrow.left.arrow.right", "Versus", .red)
+        case "MYTHBUSTER":
+            return ("xmark.shield", "Mythbuster", .purple)
+        case "IF_YOU_LIKE_X_TRY_Y":
+            return ("arrow.triangle.branch", "If You Like…", .mint)
+        case "FUN FACT DROP":
+            return ("lightbulb", "Fun Fact", .yellow)
+        case "NICHES & NUANCE":
+            return ("magnifyingglass", "Niche", .indigo)
+        case "UNLIKELY CONNECTION":
+            return ("link", "Connection", .pink)
+        case "TINY RECOMMENDATION":
+            return ("star", "Recommendation", .orange)
+        case "REFRAME":
+            return ("arrow.triangle.2.circlepath", "Reframe", .teal)
+        case "THE THING NOBODY TALKS ABOUT":
+            return ("eye.slash", "Underrated", .brown)
+        case "CURSED TRIVIA":
+            return ("exclamationmark.triangle", "Cursed Trivia", .red)
+        default:
+            return ("sparkles", format.capitalized, .secondary)
+        }
     }
 
     // MARK: - Share action

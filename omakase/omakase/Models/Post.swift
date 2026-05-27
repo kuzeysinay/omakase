@@ -16,6 +16,10 @@ struct Post: Identifiable, Equatable, Sendable {
     var isComplete: Bool
     /// User interests this post relates to, parsed from the model's `TAGS:` line.
     var tags: [String]
+    /// The format template used to generate this post (e.g. "DEBATE", "TIMELINE").
+    var postFormat: String?
+    /// Deep dive expansion text, if requested.
+    var deepDiveText: String?
     let createdAt: Date
 
     init(
@@ -24,6 +28,8 @@ struct Post: Identifiable, Equatable, Sendable {
         text: String = "",
         isComplete: Bool = false,
         tags: [String] = [],
+        postFormat: String? = nil,
+        deepDiveText: String? = nil,
         createdAt: Date = .now
     ) {
         self.id = id
@@ -31,6 +37,8 @@ struct Post: Identifiable, Equatable, Sendable {
         self.text = text
         self.isComplete = isComplete
         self.tags = tags
+        self.postFormat = postFormat
+        self.deepDiveText = deepDiveText
         self.createdAt = createdAt
     }
 }

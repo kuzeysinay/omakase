@@ -209,6 +209,108 @@ final class FirestoreService {
 
         return snapshot.documents.compactMap { try? $0.data(as: SharedPost.self) }
     }
+
+    // MARK: - Reactions
+
+    func addReaction(postId: String, emoji: String, uid: String) async throws {
+        let batch = db.batch()
+
+        let reactionRef = db.collection("shared_posts").document(postId)
+            .collection("reactions").document(uid)
+        batch.setData([
+            "emoji": emoji,
+            "reactedAt": FieldValue.serverTimestamp()
+        ], forDocument: reactionRef)
+
+        let postRef = db.collection("shared_posts").document(postId)
+        batch.updateData([
+            "reactionCounts.\(emoji)": FieldValue.increment(Int64(1)),
+            "totalReactions": FieldValue.increment(Int64(1))
+        ], forDocument: postRef)
+
+        try await batch.commit()
+    }
+
+    func removeReaction(postId: String, emoji: String, uid: String) async throws {
+        let batch = db.batch()
+
+        let reactionRef = db.collection("shared_posts").document(postId)
+            .collection("reactions").document(uid)
+        batch.deleteDocument(reactionRef)
+
+        let postRef = db.collection("shared_posts").document(postId)
+        batch.updateData([
+            "reactionCounts.\(emoji)": FieldValue.increment(Int64(-1)),
+            "totalReactions": FieldValue.increment(Int64(-1))
+        ], forDocument: postRef)
+
+        try await batch.commit()
+    }
+
+    func fetchMyReaction(postId: String, uid: String) async -> String? {
+        do {
+            let doc = try await db.collection("shared_posts").document(postId)
+                .collection("reactions").document(uid).getDocument()
+            return doc.data()?["emoji"] as? String
+        } catch {
+            return nil
+        }
+    }
+
+    // MARK: - Comments
+
+    func addComment(postId: String, text: String, authorId: String, authorName: String, authorPhotoURL: String?) async throws {
+        let batch = db.batch()
+
+        let commentRef = db.collection("shared_posts").document(postId)
+            .collection("comments").document()
+        batch.setData([
+            "authorId": authorId,
+            "authorName": authorName,
+            "authorPhotoURL": authorPhotoURL as Any,
+            "text": String(text.prefix(280)),
+            "createdAt": FieldValue.serverTimestamp(),
+        ], forDocument: commentRef)
+
+        let postRef = db.collection("shared_posts").document(postId)
+        batch.updateData([
+            "commentCount": FieldValue.increment(Int64(1))
+        ], forDocument: postRef)
+
+        try await batch.commit()
+    }
+
+    func fetchComments(postId: String, limit: Int = 50) async throws -> [Comment] {
+        let snap = try await db.collection("shared_posts").document(postId)
+            .collection("comments")
+            .order(by: "createdAt", descending: false)
+            .limit(to: limit)
+            .getDocuments()
+        return snap.documents.compactMap { try? $0.data(as: Comment.self) }
+    }
+
+    func deleteComment(postId: String, commentId: String) async throws {
+        let batch = db.batch()
+
+        let commentRef = db.collection("shared_posts").document(postId)
+            .collection("comments").document(commentId)
+        batch.deleteDocument(commentRef)
+
+        let postRef = db.collection("shared_posts").document(postId)
+        batch.updateData([
+            "commentCount": FieldValue.increment(Int64(-1))
+        ], forDocument: postRef)
+
+        try await batch.commit()
+    }
+
+    func reportComment(postId: String, commentId: String, reporterUid: String) async throws {
+        try await db.collection("shared_posts").document(postId)
+            .collection("comments").document(commentId)
+            .updateData([
+                "reportedBy": FieldValue.arrayUnion([reporterUid])
+            ])
+    }
 }
 
 // MARK: - Array chunking helper

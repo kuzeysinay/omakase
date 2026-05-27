@@ -122,7 +122,7 @@ struct TimelineView: View {
                 }
 
                 ForEach(viewModel.posts, id: \.id) { post in
-                    TimelinePostCard(post: post) {
+                    TimelinePostCard(post: post, authService: authService) {
                         selectedAuthorId = post.authorId
                     }
                 }

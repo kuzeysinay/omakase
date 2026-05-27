@@ -47,6 +47,34 @@ struct L10n {
 
     // MARK: - Feed
 
+    var shareSheetA11y: String {
+        switch lang {
+        case .english: "Share post"
+        case .turkish: "Gönderiyi paylaş"
+        }
+    }
+
+    var deepDiveA11y: String {
+        switch lang {
+        case .english: "Deep dive"
+        case .turkish: "Derinlemesine incele"
+        }
+    }
+
+    var offlineBanner: String {
+        switch lang {
+        case .english: "You're offline. Showing cached posts."
+        case .turkish: "Çevrimdışısın. Önbellekteki gönderiler gösteriliyor."
+        }
+    }
+
+    var internetRequired: String {
+        switch lang {
+        case .english: "Internet required"
+        case .turkish: "İnternet gerekli"
+        }
+    }
+
     var clearFeed: String {
         switch lang {
         case .english: "Clear feed"

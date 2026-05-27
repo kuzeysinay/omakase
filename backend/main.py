@@ -110,6 +110,22 @@ class SuggestRequest(BaseModel):
         return s
 
 
+class DeepDiveRequest(BaseModel):
+    """Payload sent by the iOS client to request a deep-dive expansion of a post."""
+
+    original_title: str
+    original_text: str
+    interests: list[str] = Field(..., max_length=50)
+    language: str = "en"
+
+    @field_validator("language")
+    @classmethod
+    def _check_lang(cls, v: str) -> str:
+        if v not in ("en", "tr"):
+            raise ValueError("language must be 'en' or 'tr'")
+        return v
+
+
 SYSTEM_PROMPT = (
     "You are the voice of Omakase — an expert curator dedicated to surfacing "
     "high-density, niche information. You avoid generalities, 'fluff', and meta-commentary. "
@@ -128,6 +144,21 @@ SYSTEM_PROMPT = (
     "Do not repeat 'TITLE' or the headline inside the body. Do not repeat 'TAGS' or any tag inside the body. "
     "Avoid hashtags, emoji, and filler words like 'interestingly' or 'surprisingly'. "
     "Get straight to the point. Do not greet the reader. Do not mention you are an AI."
+)
+
+_DEEP_DIVE_SYSTEM = (
+    "You are the voice of Omakase. The user just read a short post and wants "
+    "to go deeper into the topic. Your job is to expand with fascinating "
+    "detail they didn't know about.\n\n"
+    "OUTPUT FORMAT (strictly follow):\n"
+    "Line 1: TITLE: <a compelling new headline for this deep dive>\n"
+    "Line 2: TAGS: <comma-separated relevant tags>\n"
+    "Lines 3+: The deep-dive body (150-250 words).\n\n"
+    "RULES:\n"
+    "- Reveal layers, history, mechanics, or controversy the original post only hinted at.\n"
+    "- Do NOT repeat the original post's content verbatim.\n"
+    "- No emoji, no hashtags, no filler phrases, no greetings.\n"
+    "- Write as a knowledgeable friend, not a textbook."
 )
 
 
@@ -189,6 +220,35 @@ _POST_FORMATS = [
         "CURSED TRIVIA",
         "Share a piece of trivia that is so odd, ironic, or absurd that it's almost offensive to know. "
         "Keep it true and accurate. Write with dry humor.",
+    ),
+    (
+        "DEBATE",
+        "Present two opposing sides of a topic related to the user's interests. "
+        "Label them SIDE A and SIDE B. Keep each side to 2-3 sentences. "
+        "Don't pick a winner—let the reader decide.",
+    ),
+    (
+        "TIMELINE",
+        "Create a mini chronological timeline (3-4 key moments) about something "
+        "related to the user's interests. Use years or dates as anchors. Each "
+        "entry is one punchy sentence.",
+    ),
+    (
+        "VERSUS",
+        "Compare two related things (X vs Y) from the user's interest space. "
+        "2-3 sharp contrasts. No filler, no 'both are great' cop-outs.",
+    ),
+    (
+        "MYTHBUSTER",
+        "Take a widely believed 'fact' related to the user's interests and "
+        "debunk it. State the myth clearly, then the reality. Be specific "
+        "with evidence.",
+    ),
+    (
+        "IF_YOU_LIKE_X_TRY_Y",
+        "Based on one of the user's interests, recommend something unexpected "
+        "from a completely different domain that shares a hidden quality. "
+        "Explain the connection in 1-2 sentences.",
     ),
 ]
 
@@ -362,6 +422,10 @@ async def _stream_post(interests: list[str], seen_count: int, language: str) -> 
     post_id = str(uuid.uuid4())
     yield _sse_event({"id": post_id}, event="start")
 
+    # Emit the format name so the iOS client can show a visual badge.
+    format_name, _ = _POST_FORMATS[seen_count % len(_POST_FORMATS)]
+    yield _sse_event({"format": format_name}, event="format")
+
     if not GEMINI_API_KEY:
         yield _sse_event(
             {"message": "Server is missing GEMINI_API_KEY. See backend/README.md."},
@@ -436,6 +500,98 @@ async def _stream_post(interests: list[str], seen_count: int, language: str) -> 
     except asyncio.CancelledError:
         # Client disconnected — just stop.
         logger.info("Client disconnected from stream %s", post_id)
+        raise
+
+    yield _sse_event({"id": post_id}, event="done")
+
+
+def _build_deep_dive_prompt(req: DeepDiveRequest) -> str:
+    lang_note = ""
+    if req.language == "tr":
+        lang_note = (
+            "\n\nIMPORTANT: Write the TITLE value and body in Turkish. "
+            "Keep the ASCII prefixes TITLE: and TAGS: in English."
+        )
+    return (
+        f"The user's interests: {', '.join(req.interests)}\n\n"
+        f"ORIGINAL POST TITLE: {req.original_title}\n"
+        f"ORIGINAL POST BODY:\n{req.original_text}\n\n"
+        f"Now write a deep-dive expanding on this topic."
+        f"{lang_note}"
+    )
+
+
+async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
+    """Yield SSE frames for a deep-dive expansion of an existing post."""
+    post_id = str(uuid.uuid4())
+    yield _sse_event({"id": post_id}, event="start")
+
+    if not GEMINI_API_KEY:
+        yield _sse_event(
+            {"message": "Server is missing GEMINI_API_KEY. See backend/README.md."},
+            event="error",
+        )
+        return
+
+    system = _DEEP_DIVE_SYSTEM + "\n\n" + _feed_language_instruction(req.language)
+    model = genai.GenerativeModel(
+        model_name=GEMINI_MODEL,
+        system_instruction=system,
+    )
+    prompt = _build_deep_dive_prompt(req)
+
+    try:
+        queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+
+        def _produce() -> None:
+            try:
+                response = model.generate_content(prompt, stream=True)
+                _feed_tokens_from_stream_chunks(response, queue, loop)
+                loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+            except Exception as exc:  # noqa: BLE001
+                loop.call_soon_threadsafe(queue.put_nowait, ("error", exc))
+
+        producer = asyncio.create_task(asyncio.to_thread(_produce))
+
+        saw_any_output = False
+        saw_error = False
+        while True:
+            kind, payload = await queue.get()
+            if kind == "token":
+                saw_any_output = True
+                yield _sse_event({"text": payload}, event="token")
+                yield ": flush\n\n"
+                await asyncio.sleep(_TOKEN_DRIP_DELAY)
+            elif kind == "title":
+                saw_any_output = True
+                yield _sse_event({"title": str(payload)}, event="title")
+            elif kind == "tags":
+                saw_any_output = True
+                yield _sse_event({"tags": payload}, event="tags")
+            elif kind == "done":
+                break
+            elif kind == "error":
+                saw_error = True
+                logger.exception("Gemini deep-dive streaming failed", exc_info=payload)
+                yield _sse_event({"message": str(payload)}, event="error")
+                break
+
+        await producer
+
+        if not saw_any_output and not saw_error:
+            yield _sse_event(
+                {
+                    "message": (
+                        "The model returned no text. Check GEMINI_MODEL in .env "
+                        f"(currently {GEMINI_MODEL!r}), API quota, and that the key is valid."
+                    )
+                },
+                event="error",
+            )
+
+    except asyncio.CancelledError:
+        logger.info("Client disconnected from deep-dive stream %s", post_id)
         raise
 
     yield _sse_event({"id": post_id}, event="done")
@@ -611,4 +767,17 @@ async def feed_stream(req: FeedRequest) -> StreamingResponse:
         _stream_post(req.interests, req.seen_count, req.language),
         media_type="text/event-stream",
         headers=headers,
+    )
+
+
+@app.post("/feed/deep-dive")
+async def deep_dive(req: DeepDiveRequest):
+    """Stream a deep-dive expansion of an existing post as Server-Sent Events.
+
+    The response is `text/event-stream` with the same event types as `/feed/stream`.
+    """
+    return StreamingResponse(
+        _stream_deep_dive(req),
+        media_type="text/event-stream",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )
