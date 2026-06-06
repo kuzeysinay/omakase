@@ -26,6 +26,25 @@ Bir post'un altında **"Daha fazla anlat"** butonu → Gemini'ye aynı konu hakk
 
 ---
 
+### 🔴 Inline Dinamik İlgi Alanı Çubuğu
+Feed'in üst kısmında yatay scrollable **interest chip bar'ı**. Kullanıcı sheet açmadan, feed'den çıkmadan:
+- Mevcut interest'lere tek dokunuşla **aktif/pasif** toggle yapabilir
+- AI önerilerinden yeni interest'leri anında ekleyebilir
+- "+" butonu ile kısa bir inline alanla yeni tat girebilir
+
+Sonraki post sadece o an **aktif** interest'leri kullanarak üretilir → kullanıcı her isteğin rengini anında değiştirebilir.
+
+**Neden önemli:** Kullanıcı interest'lerini değiştirmediğinde feed tekrara düşer ve sıkılıp çıkar. Sheet açmak fazla sürtünme yaratır; inline bar bu sürtünmeyi sıfıra indirerek keşfi teşvik eder ve session süresini uzatır.
+
+**Teknik:** 
+- Yeni `InlineTasteBar` SwiftUI view'ı (yatay ScrollView + chip'ler)
+- `FeedView`'da safeAreaInset olarak toolbar altına sabitlenir
+- Aktif interest seti ayrı `@State` ile tutulur; `requestNextPost()` sadece aktif olanları gönderir
+- Mevcut `AdjustTastesSheet` detaylı düzenleme için korunur
+- Mevcut `/interests/suggest` endpoint'i inline AI öneri chip'leri için kullanılır
+
+---
+
 ### 🔴 Konu Bazlı Filtreleme
 Feed'de tag'lere tıklayarak sadece o konudaki postları göster. Şu an tag'ler görsel olarak var ama filtreleme yok.
 

@@ -201,14 +201,14 @@ struct L10n {
             ]
         case .turkish:
             [
-                "Pişiyor…",
-                "Şef bıçağını biliyor.",
-                "Merak tuzunu iyice çekiyoruz…",
-                "SOS hazırlanıyor. (Session Operating Sauce)",
-                "Ilık bekleyişe tereyağı sürülüyor…",
-                "Parantezleri terbiye ediyoruz…",
-                "Sunum tabağı süzülüyor…",
-                "Bir çıtır detay daha, sonra ocaktan inecek.",
+                "Kelimeler marine ediliyor…",
+                "İlgi alanların harmanlanıyor…",
+                "Tat profili çıkarılıyor…",
+                "İçerik kısık ateşte demleniyor…",
+                "Taze fikirler doğranıyor…",
+                "Cümleler özenle diziliyor…",
+                "Lezzet dengesi kuruluyor…",
+                "Son bir tutam ilham ekleniyor…",
             ]
         }
     }

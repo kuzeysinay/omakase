@@ -13,7 +13,7 @@ struct FeedView: View {
     @State private var viewModel: FeedViewModel
     @State private var bookmarkStore = BookmarkStore()
     @State private var showBookmarks = false
-    @State private var showAdjustTastes = false
+    @State private var activeInterests: Set<String> = []
     @State private var pendingDeletePostID: UUID?
     @State private var showDeletePostConfirmation = false
     @State private var toastMessage: String?
@@ -50,14 +50,6 @@ struct FeedView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
-                        showAdjustTastes = true
-                    } label: {
-                        Image(systemName: "wand.and.stars")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Color.primary.opacity(0.85))
-                    }
-                    .accessibilityLabel(l10n.editTastesA11y(dynamicTasteAccessibility))
-                    Button {
                         showBookmarks = true
                     } label: {
                         Image(systemName: "bookmark")
@@ -90,6 +82,15 @@ struct FeedView: View {
                 .frame(maxWidth: .infinity)
                 .background(.bar)
             }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                InlineTasteBar(
+                    allInterests: allInterests,
+                    activeInterests: $activeInterests,
+                    onAddInterest: { addInterest($0) },
+                    onRemoveInterest: { removeInterest($0) }
+                )
+                .environment(\.appLanguage, appLanguage)
+            }
             .alert(
                 l10n.errorSomethingWrong,
                 isPresented: .init(
@@ -120,15 +121,13 @@ struct FeedView: View {
                 BookmarksSheet(bookmarkStore: bookmarkStore)
                     .environment(\.appLanguage, appLanguage)
             }
-            .sheet(isPresented: $showAdjustTastes) {
-                AdjustTastesSheet()
-                    .environment(\.appLanguage, appLanguage)
-            }
             .toast(message: $toastMessage)
         }
         .task {
+            let parsed = Self.parse(interests: storedInterests)
+            activeInterests = Set(parsed)
             viewModel.setContentLanguage(appLanguage)
-            viewModel.updateInterests(Self.parse(interests: storedInterests))
+            viewModel.updateInterests(parsed)
             if viewModel.isOffline && viewModel.posts.isEmpty {
                 await viewModel.loadCachedPosts()
             } else if viewModel.posts.isEmpty {
@@ -138,15 +137,34 @@ struct FeedView: View {
         .onChange(of: appLanguage) { _, newLang in
             viewModel.setContentLanguage(newLang)
         }
-        .onChange(of: storedInterests) { _, newValue in
-            viewModel.updateInterests(Self.parse(interests: newValue))
+        .onChange(of: storedInterests) { oldValue, newValue in
+            let oldParsed = Set(Self.parse(interests: oldValue))
+            let newParsed = Set(Self.parse(interests: newValue))
+            activeInterests = activeInterests.intersection(newParsed)
+                .union(newParsed.subtracting(oldParsed))
+        }
+        .onChange(of: activeInterests) { _, newValue in
+            let all = Self.parse(interests: storedInterests)
+            let active = all.filter { newValue.contains($0) }
+            viewModel.updateInterests(active)
         }
     }
 
-    private var dynamicTasteAccessibility: String {
-        let list = Self.parse(interests: storedInterests)
-        if list.isEmpty { return l10n.tastesNoneA11y() }
-        return l10n.tastesCountA11y(list.count)
+    private var allInterests: [String] {
+        Self.parse(interests: storedInterests)
+    }
+
+    private func addInterest(_ interest: String) {
+        var list = allInterests
+        guard !list.contains(where: { $0.caseInsensitiveCompare(interest) == .orderedSame }) else { return }
+        list.append(interest)
+        storedInterests = list.joined(separator: ", ")
+    }
+
+    private func removeInterest(_ interest: String) {
+        var list = allInterests
+        list.removeAll { $0.caseInsensitiveCompare(interest) == .orderedSame }
+        storedInterests = list.joined(separator: ", ")
     }
 
     // MARK: - Subviews
@@ -588,7 +606,10 @@ private struct PostCard: View {
                 isShared = true
                 toastMessage.wrappedValue = "Post shared to Social Feed"
             }
-        } catch { }
+        } catch {
+            print("Error toggling share: \(error)")
+            toastMessage.wrappedValue = "Error: \(error.localizedDescription)"
+        }
         isSharePending = false
     }
 }
