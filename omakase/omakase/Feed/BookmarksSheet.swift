@@ -11,6 +11,7 @@ struct BookmarksSheet: View {
 
     @Environment(\.appLanguage) private var appLanguage
     @Bindable var bookmarkStore: BookmarkStore
+    let authService: AuthService
     @Environment(\.dismiss) private var dismiss
 
     private var l10n: L10n { L10n(lang: appLanguage) }
@@ -71,6 +72,7 @@ struct BookmarksSheet: View {
             .navigationDestination(for: String.self) { collectionName in
                 CollectionEntriesView(
                     bookmarkStore: bookmarkStore,
+                    authService: authService,
                     collectionName: collectionName
                 )
             }
@@ -127,6 +129,7 @@ private struct CollectionEntriesView: View {
 
     @Environment(\.appLanguage) private var appLanguage
     @Bindable var bookmarkStore: BookmarkStore
+    let authService: AuthService
     let collectionName: String
 
     private var l10n: L10n { L10n(lang: appLanguage) }
@@ -161,21 +164,23 @@ private struct CollectionEntriesView: View {
             } else {
                 List(selection: isEditing ? $selection : nil) {
                     ForEach(filteredEntries) { entry in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                 ? l10n.savedPostFallbackTitle
-                                 : entry.title)
-                                .font(.headline)
-                                .lineLimit(2)
-                            Text(entry.postCreatedAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text(entry.text)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(4)
+                        NavigationLink(value: entry.id) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                     ? l10n.savedPostFallbackTitle
+                                     : entry.title)
+                                    .font(.headline)
+                                    .lineLimit(2)
+                                Text(entry.postCreatedAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(entry.text)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(4)
+                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 pendingDelete = .single(entry.id)
@@ -222,6 +227,15 @@ private struct CollectionEntriesView: View {
         }
         .navigationTitle(collectionName)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(for: UUID.self) { entryId in
+            if let entry = bookmarkStore.entries.first(where: { $0.id == entryId }) {
+                BookmarkDetailView(
+                    entry: entry,
+                    bookmarkStore: bookmarkStore,
+                    authService: authService
+                )
+            }
+        }
         .toolbar {
             if !filteredEntries.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -328,5 +342,263 @@ private struct CollectionEntriesView: View {
             }
         }
         pendingDelete = nil
+    }
+}
+
+// MARK: - Level 3: Bookmark Detail View
+
+private struct BookmarkDetailView: View {
+
+    let entry: BookmarkEntry
+    @Bindable var bookmarkStore: BookmarkStore
+    let authService: AuthService
+
+    @Environment(\.appLanguage) private var appLanguage
+    @Environment(\.dismiss) private var dismiss
+
+    private var l10n: L10n { L10n(lang: appLanguage) }
+
+    @State private var isDeepDiveExpanded = false
+    @State private var isShared = false
+    @State private var isSharePending = false
+    @State private var toastMessage: String?
+
+    private var post: Post { entry.toPost() }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Header
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: "fork.knife.circle.fill")
+                        .font(.system(size: 28))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(cardTitle)
+                            .font(.headline)
+                            .lineLimit(3)
+                        Text(entry.postCreatedAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+
+                // Full post body
+                Text(entry.text)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // Deep dive section
+                if let deepDive = entry.deepDiveText, !deepDive.isEmpty {
+                    VStack(spacing: 0) {
+                        if isDeepDiveExpanded {
+                            Divider().padding(.vertical, 8)
+
+                            HStack(spacing: 8) {
+                                Image(systemName: "fish.fill")
+                                    .foregroundStyle(.blue)
+                                Text(l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive")
+                                    .font(.headline)
+                                    .foregroundStyle(.blue)
+                                Spacer()
+                                Button {
+                                    isDeepDiveExpanded = false
+                                } label: {
+                                    Image(systemName: "chevron.up")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(.bottom, 8)
+
+                            Text(deepDive)
+                                .font(.body)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .transition(.opacity)
+                        } else {
+                            Button {
+                                isDeepDiveExpanded = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "fish")
+                                    Text(l10n.lang == .turkish ? "Derinlemesine İncelemeyi Oku" : "Read Deep Dive")
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                }
+                                .font(.subheadline.bold())
+                                .padding()
+                                .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                                .foregroundStyle(.blue)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .animation(.spring(), value: isDeepDiveExpanded)
+                }
+
+                // Tags
+                if !entry.tags.isEmpty {
+                    FlowLayoutBookmarks(spacing: 6) {
+                        ForEach(entry.tags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color.accentColor.opacity(0.12), in: Capsule())
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                Divider().padding(.vertical, 4)
+
+                // Action bar
+                HStack(spacing: 24) {
+                    // Share to social timeline
+                    Button {
+                        Task { await toggleShare() }
+                    } label: {
+                        if isSharePending {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            HStack(spacing: 6) {
+                                Image(systemName: isShared ? "paperplane.fill" : "paperplane")
+                                    .font(.title3)
+                                Text(isShared
+                                     ? (l10n.lang == .turkish ? "Paylaşıldı" : "Shared")
+                                     : (l10n.lang == .turkish ? "Paylaş" : "Share"))
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            .foregroundStyle(isShared ? Color.accentColor : .secondary)
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(isSharePending)
+
+                    // iOS Share Sheet
+                    Button {
+                        ShareService.presentShareSheet(post: post)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.title3)
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+
+                    Spacer()
+
+                    // Remove bookmark
+                    Button(role: .destructive) {
+                        bookmarkStore.remove(id: entry.id)
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "bookmark.slash.fill")
+                                .font(.title3)
+                        }
+                        .foregroundStyle(.red)
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .padding(.top, 4)
+                .padding(.bottom, 2)
+                .padding(.horizontal, 4)
+            }
+            .padding()
+        }
+        .navigationTitle(l10n.lang == .turkish ? "Kayıtlı Gönderi" : "Saved Post")
+        .navigationBarTitleDisplayMode(.inline)
+        .toast(message: $toastMessage)
+        .task {
+            // Check if already shared
+            guard let user = authService.currentUser else { return }
+            isShared = (try? await FirestoreService.shared.hasSharedPost(
+                text: entry.text, authorId: user.uid
+            )) ?? false
+        }
+    }
+
+    private var cardTitle: String {
+        let t = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? l10n.savedPostFallbackTitle : t
+    }
+
+    // MARK: - Share action
+
+    private func toggleShare() async {
+        guard let user = authService.currentUser else { return }
+        isSharePending = true
+        do {
+            if isShared {
+                try await FirestoreService.shared.unsharePost(text: post.text, authorId: user.uid)
+                isShared = false
+                toastMessage = l10n.lang == .turkish ? "Paylaşım kaldırıldı" : "Post unshared"
+            } else {
+                try await FirestoreService.shared.sharePost(post, author: user)
+                isShared = true
+                toastMessage = l10n.lang == .turkish ? "Sosyal akışa paylaşıldı" : "Shared to Social Feed"
+            }
+        } catch {
+            print("Error toggling share: \(error)")
+            toastMessage = "Error: \(error.localizedDescription)"
+        }
+        isSharePending = false
+    }
+}
+
+// MARK: - FlowLayout for Bookmarks module
+
+private struct FlowLayoutBookmarks: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        layoutRows(proposal: proposal, subviews: subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = layoutRows(proposal: ProposedViewSize(width: bounds.width, height: bounds.height), subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+                proposal: .unspecified
+            )
+        }
+    }
+
+    private struct LayoutResult {
+        var size: CGSize
+        var positions: [CGPoint]
+    }
+
+    private func layoutRows(proposal: ProposedViewSize, subviews: Subviews) -> LayoutResult {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var totalWidth: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth, currentX > 0 {
+                currentX = 0
+                currentY += rowHeight + spacing
+                rowHeight = 0
+            }
+            positions.append(CGPoint(x: currentX, y: currentY))
+            rowHeight = max(rowHeight, size.height)
+            currentX += size.width + spacing
+            totalWidth = max(totalWidth, currentX - spacing)
+        }
+
+        return LayoutResult(
+            size: CGSize(width: totalWidth, height: currentY + rowHeight),
+            positions: positions
+        )
     }
 }

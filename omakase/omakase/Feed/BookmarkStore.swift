@@ -15,6 +15,10 @@ struct BookmarkEntry: Identifiable, Codable, Equatable, Sendable {
     var postCreatedAt: Date
     var savedAt: Date
     var collectionName: String = "All"
+    /// Deep dive expansion text, if available when bookmarked.
+    var deepDiveText: String?
+    /// The format template used to generate this post.
+    var postFormat: String?
 
     init(from post: Post, collectionName: String = "All") {
         id = post.id
@@ -24,10 +28,13 @@ struct BookmarkEntry: Identifiable, Codable, Equatable, Sendable {
         postCreatedAt = post.createdAt
         savedAt = Date()
         self.collectionName = collectionName
+        self.deepDiveText = post.deepDiveText
+        self.postFormat = post.postFormat
     }
 
-    /// Backward-compatible decoding: bookmarks saved before the `tags` or
-    /// `collectionName` fields existed will decode with sensible defaults.
+    /// Backward-compatible decoding: bookmarks saved before the `tags`,
+    /// `collectionName`, `deepDiveText` or `postFormat` fields existed
+    /// will decode with sensible defaults.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
@@ -37,6 +44,22 @@ struct BookmarkEntry: Identifiable, Codable, Equatable, Sendable {
         postCreatedAt = try c.decode(Date.self, forKey: .postCreatedAt)
         savedAt = try c.decode(Date.self, forKey: .savedAt)
         collectionName = (try? c.decode(String.self, forKey: .collectionName)) ?? "All"
+        deepDiveText = try? c.decode(String.self, forKey: .deepDiveText)
+        postFormat = try? c.decode(String.self, forKey: .postFormat)
+    }
+
+    /// Reconstruct a `Post` from this bookmark entry.
+    func toPost() -> Post {
+        Post(
+            id: id,
+            title: title,
+            text: text,
+            isComplete: true,
+            tags: tags,
+            postFormat: postFormat,
+            deepDiveText: deepDiveText,
+            createdAt: postCreatedAt
+        )
     }
 }
 

@@ -37,6 +37,7 @@ logger = logging.getLogger("omakase")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Default matches current AI Studio model IDs; `gemini-1.5-flash` often 404s on v1beta now.
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_SUGGEST_MODEL = os.getenv("GEMINI_SUGGEST_MODEL", "gemini-3.1-flash-lite")
 
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -711,7 +712,7 @@ async def interests_suggest(req: SuggestRequest) -> dict:
     user_prompt = " ".join(parts) + "\n\nRespond with a JSON array only."
 
     model = genai.GenerativeModel(
-        model_name=GEMINI_MODEL,
+        model_name=GEMINI_SUGGEST_MODEL,
         system_instruction=_suggest_system_for_language(lang_code),
     )
 

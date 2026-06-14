@@ -59,9 +59,6 @@ struct FeedView: View {
                     .accessibilityLabel(l10n.savedPostsA11y(count: bookmarkStore.count))
                     Menu {
                         LanguagePicker(isSubmenu: true)
-                        Button(l10n.clearFeed, systemImage: "trash.fill", role: .destructive) {
-                            viewModel.reset()
-                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                             .font(.body.weight(.medium))
@@ -118,7 +115,7 @@ struct FeedView: View {
                 Text(l10n.confirmDeletePostMessage)
             }
             .sheet(isPresented: $showBookmarks) {
-                BookmarksSheet(bookmarkStore: bookmarkStore)
+                BookmarksSheet(bookmarkStore: bookmarkStore, authService: authService)
                     .environment(\.appLanguage, appLanguage)
             }
             .toast(message: $toastMessage)
