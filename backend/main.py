@@ -20,7 +20,10 @@ import logging
 import os
 import re
 import uuid
-from typing import AsyncIterator
+import xml.etree.ElementTree as ET
+from typing import AsyncIterator, Optional
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -71,6 +74,13 @@ class FeedRequest(BaseModel):
     language: str = Field(
         default="en",
         description="BCP-47 language tag for model output (e.g. en, tr). Unknown values fall back to English.",
+    )
+    letterboxd_films: Optional[list[dict]] = Field(
+        default=None,
+        description=(
+            "Optional list of recently watched films from Letterboxd. "
+            "Each dict has keys: title, year, rating (0-5), watched_date."
+        ),
     )
 
     @field_validator("language")
@@ -254,7 +264,12 @@ _POST_FORMATS = [
 ]
 
 
-def _build_user_prompt(interests: list[str], seen_count: int, language: str) -> str:
+def _build_user_prompt(
+    interests: list[str],
+    seen_count: int,
+    language: str,
+    letterboxd_films: Optional[list[dict]] = None,
+) -> str:
     cleaned = [i.strip() for i in interests if i and i.strip()]
     if not cleaned:
         taste = "someone with eclectic, thoughtful taste in culture"
@@ -270,6 +285,27 @@ def _build_user_prompt(interests: list[str], seen_count: int, language: str) -> 
             "sadece yapı için; çıktı tamamen Türkçe olmalı.\n\n"
         )
 
+    # Letterboxd context — inject recently watched films when available.
+    letterboxd_ctx = ""
+    if letterboxd_films:
+        film_lines: list[str] = []
+        for f in letterboxd_films:  # include all films
+            line = f.get("title", "Unknown")
+            if f.get("year"):
+                line += f" ({f['year']})"
+            if f.get("rating"):
+                line += f" — rated {f['rating']}/5"
+            film_lines.append(line)
+        letterboxd_ctx = (
+            "\n\nLETTERBOXD CONTEXT: The user recently watched these films on Letterboxd "
+            "(most recent first). Use this viewing history to make the post more relevant — "
+            "draw connections, reference directors/genres they clearly enjoy, or surface "
+            "interesting trivia about these specific films:\n"
+            + "\n".join(f"  • {fl}" for fl in film_lines)
+            + "\nCRITICAL: If you write about a specific film from this list, YOU MUST include its exact title in the TAGS line."
+            + "\n"
+        )
+
     return (
         follow_lang
         + f"Write a post for {taste}.\n"
@@ -278,6 +314,7 @@ def _build_user_prompt(interests: list[str], seen_count: int, language: str) -> 
         f"Instructions for this format: {format_instruction}\n"
         "\nThe post must feel human, specific, and entertaining — never generic or lecture-y. "
         "Do NOT label the format in the post itself."
+        + letterboxd_ctx
     )
 
 
@@ -418,7 +455,12 @@ def _sse_event(data: dict, *, event: str | None = None) -> str:
     return "\n".join(lines)
 
 
-async def _stream_post(interests: list[str], seen_count: int, language: str) -> AsyncIterator[str]:
+async def _stream_post(
+    interests: list[str],
+    seen_count: int,
+    language: str,
+    letterboxd_films: Optional[list[dict]] = None,
+) -> AsyncIterator[str]:
     """Yield SSE frames for one generated post."""
     post_id = str(uuid.uuid4())
     yield _sse_event({"id": post_id}, event="start")
@@ -438,7 +480,7 @@ async def _stream_post(interests: list[str], seen_count: int, language: str) -> 
         model_name=GEMINI_MODEL,
         system_instruction=_feed_system_instruction(language),
     )
-    prompt = _build_user_prompt(interests, seen_count, language)
+    prompt = _build_user_prompt(interests, seen_count, language, letterboxd_films=letterboxd_films)
 
     try:
         # google-generativeai's streaming API is synchronous; run it in a
@@ -476,7 +518,12 @@ async def _stream_post(interests: list[str], seen_count: int, language: str) -> 
                 yield _sse_event({"title": str(payload)}, event="title")
             elif kind == "tags":
                 saw_any_output = True
-                yield _sse_event({"tags": payload}, event="tags")
+                final_tags = list(payload)
+                if letterboxd_films:
+                    # Prepend "Letterboxd" tag if not already generated
+                    if "Letterboxd" not in final_tags:
+                        final_tags.insert(0, "Letterboxd")
+                yield _sse_event({"tags": final_tags}, event="tags")
             elif kind == "done":
                 break
             elif kind == "error":
@@ -765,7 +812,12 @@ async def feed_stream(req: FeedRequest) -> StreamingResponse:
         "X-Accel-Buffering": "no",
     }
     return StreamingResponse(
-        _stream_post(req.interests, req.seen_count, req.language),
+        _stream_post(
+            req.interests,
+            req.seen_count,
+            req.language,
+            letterboxd_films=req.letterboxd_films,
+        ),
         media_type="text/event-stream",
         headers=headers,
     )
@@ -782,3 +834,88 @@ async def deep_dive(req: DeepDiveRequest):
         media_type="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Letterboxd RSS parsing
+# ---------------------------------------------------------------------------
+
+_LETTERBOXD_NS = {
+    "letterboxd": "https://letterboxd.com",
+    "tmdb": "https://themoviedb.org",
+    "dc": "http://purl.org/dc/elements/1.1/",
+}
+
+
+class LetterboxdFilmsRequest(BaseModel):
+    """Payload for fetching a user's recent films from Letterboxd."""
+    username: str = Field(..., min_length=1, max_length=100)
+    limit: int = Field(default=20, ge=1, le=20)
+
+
+def _parse_letterboxd_rss(xml_bytes: bytes, *, limit: int = 5) -> list[dict]:
+    """Parse Letterboxd RSS XML into a list of film dicts."""
+    root = ET.fromstring(xml_bytes)
+    channel = root.find("channel")
+    if channel is None:
+        return []
+
+    films: list[dict] = []
+    for item in channel.findall("item"):
+        title = item.findtext("{https://letterboxd.com}filmTitle", "")
+        if not title:
+            # Fall back to <title> and strip the rating suffix.
+            raw_title = item.findtext("title", "")
+            title = re.sub(r"\s*,\s*\d{4}\s*-\s*★.*$", "", raw_title).strip()
+        year = item.findtext("{https://letterboxd.com}filmYear", "")
+        rating = item.findtext("{https://letterboxd.com}memberRating", "")
+        watched = item.findtext("{https://letterboxd.com}watchedDate", "")
+
+        films.append({
+            "title": title,
+            "year": int(year) if year and year.isdigit() else None,
+            "rating": float(rating) if rating else None,
+            "watched_date": watched or None,
+        })
+        if len(films) >= limit:
+            break
+    return films
+
+
+@app.post("/letterboxd/films")
+async def letterboxd_films(req: LetterboxdFilmsRequest) -> dict:
+    """Fetch a user's recently watched films from their Letterboxd RSS feed.
+
+    Response: ``{ "films": [...], "username": "..." }``
+    """
+    rss_url = f"https://letterboxd.com/{req.username}/rss/"
+    logger.info("Fetching Letterboxd RSS for user %r", req.username)
+
+    def _fetch() -> bytes:
+        request = Request(
+            rss_url,
+            headers={
+                "User-Agent": "Omakase/1.0 (https://github.com/omakase-app)",
+                "Accept": "application/rss+xml, application/xml, text/xml",
+            },
+        )
+        try:
+            with urlopen(request, timeout=10) as resp:
+                return resp.read()
+        except HTTPError as exc:
+            if exc.code == 404:
+                raise ValueError(f"Letterboxd user '{req.username}' not found.") from exc
+            raise ValueError(f"Letterboxd returned HTTP {exc.code}.") from exc
+        except URLError as exc:
+            raise ValueError(f"Could not reach Letterboxd: {exc.reason}") from exc
+
+    try:
+        xml_bytes = await asyncio.to_thread(_fetch)
+        films = _parse_letterboxd_rss(xml_bytes, limit=req.limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Letterboxd fetch failed: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Failed to fetch Letterboxd data: {exc}") from exc
+
+    return {"films": films, "username": req.username}

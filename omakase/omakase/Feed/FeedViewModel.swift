@@ -46,6 +46,17 @@ final class FeedViewModel {
     private var loadingQuipTask: Task<Void, Never>?
     /// The post the current `streamingTask` is filling; only that task may clear `isGenerating`.
     private var activeStreamPostID: UUID?
+
+    // MARK: - Letterboxd
+
+    /// Recently fetched films from Letterboxd (cached across post generations).
+    private(set) var letterboxdFilms: [LetterboxdFilm] = []
+    /// Whether Letterboxd mode is currently active for post generation.
+    var isLetterboxdActive: Bool = false
+    /// The Letterboxd username, persisted via FeedView's @AppStorage.
+    var letterboxdUsername: String = ""
+    private(set) var isFetchingLetterboxd: Bool = false
+    private(set) var letterboxdError: String?
     
     // Typewriter effect state removed (handled by backend token drip)
 
@@ -95,11 +106,17 @@ final class FeedViewModel {
         // #endregion
 
         let url = baseURL.appendingPathComponent("feed/stream")
-        let requestBody: [String: Any] = [
+        var requestBody: [String: Any] = [
             "interests": interests,
             "seen_count": max(posts.count - 1, 0),
             "language": contentLanguage.rawValue,
         ]
+
+        // Inject Letterboxd films when the mode is active.
+        if isLetterboxdActive, !letterboxdFilms.isEmpty {
+            requestBody["letterboxd_films"] = letterboxdFilms.map { $0.asDictionary }
+        }
+
         let bodyData = (try? JSONSerialization.data(withJSONObject: requestBody)) ?? Data()
 
         // `Task { }` created here would inherit MainActor and block the UI on
@@ -251,6 +268,40 @@ final class FeedViewModel {
         if !cached.isEmpty {
             posts = cached
             isShowingCachedContent = true
+        }
+    }
+
+    // MARK: - Letterboxd
+
+    /// Fetch the user's recently watched films from Letterboxd (via the backend).
+    /// Results are cached in `letterboxdFilms` and reused across post generations.
+    func fetchLetterboxdFilms() {
+        let username = letterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !username.isEmpty else {
+            letterboxdError = "No Letterboxd username set."
+            return
+        }
+        isFetchingLetterboxd = true
+        letterboxdError = nil
+
+        Task {
+            do {
+                let films = try await LetterboxdService.fetchFilms(username: username)
+                await MainActor.run {
+                    self.letterboxdFilms = films
+                    self.isFetchingLetterboxd = false
+                    if films.isEmpty {
+                        self.letterboxdError = "No films found for @\(username)."
+                    }
+                }
+            } catch is CancellationError {
+                // ignore
+            } catch {
+                await MainActor.run {
+                    self.letterboxdError = error.localizedDescription
+                    self.isFetchingLetterboxd = false
+                }
+            }
         }
     }
 

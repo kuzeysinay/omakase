@@ -636,4 +636,50 @@ struct L10n {
         case .turkish: "Zaman akışından kaldır"
         }
     }
+
+    // MARK: - Letterboxd
+
+    var letterboxdMode: String {
+        switch lang {
+        case .english: "Letterboxd Mode"
+        case .turkish: "Letterboxd Modu"
+        }
+    }
+
+    var letterboxdUsernamePromptTitle: String {
+        switch lang {
+        case .english: "Letterboxd Username"
+        case .turkish: "Letterboxd Kullanıcı Adı"
+        }
+    }
+
+    var letterboxdUsernamePromptMessage: String {
+        switch lang {
+        case .english:
+            "Enter your Letterboxd username to personalize posts with your recently watched films."
+        case .turkish:
+            "Son izlediğin filmlerle gönderileri kişiselleştirmek için Letterboxd kullanıcı adını gir."
+        }
+    }
+
+    var letterboxdUsernamePlaceholder: String {
+        switch lang {
+        case .english: "username"
+        case .turkish: "kullanıcı adı"
+        }
+    }
+
+    var letterboxdActive: String {
+        switch lang {
+        case .english: "Letterboxd active"
+        case .turkish: "Letterboxd aktif"
+        }
+    }
+
+    var letterboxdFetchError: String {
+        switch lang {
+        case .english: "Could not load Letterboxd data."
+        case .turkish: "Letterboxd verileri yüklenemedi."
+        }
+    }
 }

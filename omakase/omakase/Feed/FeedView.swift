@@ -18,6 +18,12 @@ struct FeedView: View {
     @State private var showDeletePostConfirmation = false
     @State private var toastMessage: String?
 
+    // Letterboxd
+    @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
+    @State private var isLetterboxdActive: Bool = false
+    @State private var showLetterboxdUsernamePrompt: Bool = false
+    @State private var letterboxdDraft: String = ""
+
     let authService: AuthService
     /// Reference kept so PostCard can call deep dive.
     private var feedViewModelForCards: FeedViewModel { viewModel }
@@ -84,7 +90,9 @@ struct FeedView: View {
                     allInterests: allInterests,
                     activeInterests: $activeInterests,
                     onAddInterest: { addInterest($0) },
-                    onRemoveInterest: { removeInterest($0) }
+                    onRemoveInterest: { removeInterest($0) },
+                    isLetterboxdActive: $isLetterboxdActive,
+                    onLetterboxdToggle: { handleLetterboxdToggle($0) }
                 )
                 .environment(\.appLanguage, appLanguage)
             }
@@ -118,6 +126,35 @@ struct FeedView: View {
                 BookmarksSheet(bookmarkStore: bookmarkStore, authService: authService)
                     .environment(\.appLanguage, appLanguage)
             }
+            .alert(
+                l10n.letterboxdUsernamePromptTitle,
+                isPresented: $showLetterboxdUsernamePrompt
+            ) {
+                TextField(l10n.letterboxdUsernamePlaceholder, text: $letterboxdDraft)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button(l10n.ok) {
+                    let trimmed = letterboxdDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        storedLetterboxdUsername = trimmed
+                        viewModel.letterboxdUsername = trimmed
+                        viewModel.isLetterboxdActive = true
+                        isLetterboxdActive = true
+                        viewModel.fetchLetterboxdFilms()
+                    } else {
+                        isLetterboxdActive = false
+                        viewModel.isLetterboxdActive = false
+                    }
+                    letterboxdDraft = ""
+                }
+                Button(l10n.cancel, role: .cancel) {
+                    isLetterboxdActive = false
+                    viewModel.isLetterboxdActive = false
+                    letterboxdDraft = ""
+                }
+            } message: {
+                Text(l10n.letterboxdUsernamePromptMessage)
+            }
             .toast(message: $toastMessage)
         }
         .task {
@@ -145,6 +182,9 @@ struct FeedView: View {
             let active = all.filter { newValue.contains($0) }
             viewModel.updateInterests(active)
         }
+        .onChange(of: isLetterboxdActive) { _, newValue in
+            viewModel.isLetterboxdActive = newValue
+        }
     }
 
     private var allInterests: [String] {
@@ -162,6 +202,25 @@ struct FeedView: View {
         var list = allInterests
         list.removeAll { $0.caseInsensitiveCompare(interest) == .orderedSame }
         storedInterests = list.joined(separator: ", ")
+    }
+
+    private func handleLetterboxdToggle(_ isActive: Bool) {
+        if isActive {
+            let username = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+            if username.isEmpty {
+                // No username yet — prompt the user.
+                showLetterboxdUsernamePrompt = true
+            } else {
+                // Username exists; ensure ViewModel knows & fetch if needed.
+                viewModel.letterboxdUsername = username
+                viewModel.isLetterboxdActive = true
+                if viewModel.letterboxdFilms.isEmpty {
+                    viewModel.fetchLetterboxdFilms()
+                }
+            }
+        } else {
+            viewModel.isLetterboxdActive = false
+        }
     }
 
     // MARK: - Subviews

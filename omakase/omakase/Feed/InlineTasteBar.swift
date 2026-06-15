@@ -14,6 +14,8 @@ struct InlineTasteBar: View {
     @Binding var activeInterests: Set<String>
     var onAddInterest: (String) -> Void
     var onRemoveInterest: (String) -> Void
+    @Binding var isLetterboxdActive: Bool
+    var onLetterboxdToggle: (Bool) -> Void
 
     @Environment(\.appLanguage) private var appLanguage
 
@@ -63,6 +65,8 @@ struct InlineTasteBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 refreshButton
+
+                letterboxdChip
 
                 ForEach(allInterests, id: \.self) { interest in
                     interestChip(interest)
@@ -164,6 +168,51 @@ struct InlineTasteBar: View {
         }
         .buttonStyle(.plain)
         .disabled(isFetchingSuggestions)
+    }
+
+    private var letterboxdChip: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            let newValue = !isLetterboxdActive
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                isLetterboxdActive = newValue
+            }
+            onLetterboxdToggle(newValue)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "film.fill")
+                    .font(.caption.weight(.bold))
+                Text("Letterboxd")
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(
+                isLetterboxdActive
+                    ? AnyShapeStyle(
+                        LinearGradient(
+                            colors: [Color.orange.opacity(0.8), Color.green.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                      )
+                    : AnyShapeStyle(Color.clear),
+                in: Capsule()
+            )
+            .foregroundStyle(isLetterboxdActive ? .white : .secondary)
+            .overlay(
+                Capsule()
+                    .stroke(
+                        isLetterboxdActive
+                            ? Color.clear
+                            : Color.secondary.opacity(0.3),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Capsule())
     }
 
     private var addButton: some View {
