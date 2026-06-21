@@ -49,6 +49,11 @@ struct OnboardingView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 48, height: 48)
+                .padding(.bottom, 8)
             Text(l10n.appTitle)
                 .font(.largeTitle.bold())
             Text(l10n.onboardingTagline)

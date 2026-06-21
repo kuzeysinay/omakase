@@ -51,38 +51,55 @@ struct FeedView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .navigationTitle(l10n.appTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        showBookmarks = true
-                    } label: {
-                        Image(systemName: "bookmark")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Color.primary.opacity(0.85))
-                    }
-                    .accessibilityLabel(l10n.savedPostsA11y(count: bookmarkStore.count))
-                    Menu {
-                        LanguagePicker(isSubmenu: true)
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Color.primary.opacity(0.85))
-                    }
-                    .accessibilityLabel(l10n.feedMoreActionsA11y)
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .safeAreaInset(edge: .top, spacing: 0) {
-                InlineTasteBar(
-                    allInterests: allInterests,
-                    activeInterests: $activeInterests,
-                    onAddInterest: { addInterest($0) },
-                    onRemoveInterest: { removeInterest($0) },
-                    isLetterboxdActive: $isLetterboxdActive,
-                    onLetterboxdToggle: { handleLetterboxdToggle($0) }
-                )
-                .environment(\.appLanguage, appLanguage)
+                VStack(spacing: 0) {
+                    // Custom nav header — avoids iOS's automatic circular button
+                    // decoration that UINavigationBar applies to non-SF-Symbol images.
+                    // Uses .bar material (same as InlineTasteBar) for visual unity.
+                    HStack(spacing: 0) {
+                        HStack(spacing: 7) {
+                            Image("AppLogo")
+                                .resizable()
+                                .renderingMode(.template)
+                                .scaledToFit()
+                                .frame(width: 28, height: 28)
+                                .foregroundStyle(Color.primary)
+                            Text(l10n.appTitle)
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(Color.primary)
+                        }
+                        .padding(.leading, 16)
+
+                        Spacer()
+
+                        // Trailing buttons: 44×44 frame matches iOS standard tap target
+                        Button {
+                            showBookmarks = true
+                        } label: {
+                            Image(systemName: "bookmark")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(Color.primary.opacity(0.85))
+                                .frame(width: 44, height: 44)
+                        }
+                        .accessibilityLabel(l10n.savedPostsA11y(count: bookmarkStore.count))
+
+                        Spacer().frame(width: 8)
+                    }
+                    .frame(height: 44) // standard iOS nav bar height
+                    .background(.bar)   // same material as InlineTasteBar → seamless unity
+
+                    InlineTasteBar(
+                        allInterests: allInterests,
+                        activeInterests: $activeInterests,
+                        onAddInterest: { addInterest($0) },
+                        onRemoveInterest: { removeInterest($0) },
+                        isLetterboxdActive: $isLetterboxdActive,
+                        onLetterboxdToggle: { handleLetterboxdToggle($0) }
+                    )
+                    .environment(\.appLanguage, appLanguage)
+                }
+
             }
             .alert(
                 l10n.errorSomethingWrong,

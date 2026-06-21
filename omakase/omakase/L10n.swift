@@ -11,7 +11,7 @@ struct L10n {
 
     // MARK: - Shared chrome
 
-    var appTitle: String { "Omakase" }
+    var appTitle: String { "omakase" }
 
     var languageMenuAccessibility: String {
         switch lang {
@@ -618,6 +618,27 @@ struct L10n {
         switch lang {
         case .english: "My Profile"
         case .turkish: "Profilim"
+        }
+    }
+
+    var profilePreferences: String {
+        switch lang {
+        case .english: "Preferences"
+        case .turkish: "Tercihler"
+        }
+    }
+
+    var profilePosts: String {
+        switch lang {
+        case .english: "Posts"
+        case .turkish: "Gönderiler"
+        }
+    }
+
+    var profileAccount: String {
+        switch lang {
+        case .english: "Account"
+        case .turkish: "Hesap"
         }
     }
 

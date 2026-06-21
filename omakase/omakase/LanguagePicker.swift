@@ -31,11 +31,12 @@ struct LanguagePicker: View {
             if isSubmenu {
                 Label(L10n(lang: resolved).languageMenuAccessibility, systemImage: "globe")
             } else {
-                Image(systemName: "globe")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(Color.primary.opacity(0.85))
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
+                HStack(spacing: 4) {
+                    Image(systemName: "globe")
+                    Text(L10n(lang: resolved).languageMenuAccessibility)
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             }
         }
         .menuActionDismissBehavior(.automatic)

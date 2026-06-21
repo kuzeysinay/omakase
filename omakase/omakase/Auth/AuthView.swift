@@ -20,10 +20,10 @@ struct AuthView: View {
 
             // App branding
             VStack(spacing: 12) {
-                Image(systemName: "fork.knife.circle.fill")
-                    .font(.system(size: 72, weight: .light))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.tint)
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
 
                 Text(l10n.appTitle)
                     .font(.largeTitle.bold())

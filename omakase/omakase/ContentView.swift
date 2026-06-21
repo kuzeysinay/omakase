@@ -15,23 +15,47 @@ struct ContentView: View {
         AppLanguage(rawValue: languageCode) ?? .english
     }
 
+    @State private var showSplash = true
+
     var body: some View {
-        Group {
-            if !authService.isAuthenticated {
-                // Step 1: Sign in with Google
-                AuthView(authService: authService)
-            } else if !hasOnboarded {
-                // Step 2: Onboarding (pick interests)
-                OnboardingView()
-            } else {
-                // Step 3: Main app with tab bar
-                MainTabView(authService: authService)
+        ZStack {
+            Group {
+                if !authService.isAuthenticated {
+                    // Step 1: Sign in with Google
+                    AuthView(authService: authService)
+                } else if !hasOnboarded {
+                    // Step 2: Onboarding (pick interests)
+                    OnboardingView()
+                } else {
+                    // Step 3: Main app with tab bar
+                    MainTabView(authService: authService)
+                }
+            }
+            .animation(.default, value: authService.isAuthenticated)
+            .animation(.default, value: hasOnboarded)
+            .environment(\.locale, Locale(identifier: resolvedLanguage.localeIdentifier))
+            .environment(\.appLanguage, resolvedLanguage)
+
+            if showSplash {
+                ZStack {
+                    Color(UIColor.systemBackground)
+                        .ignoresSafeArea()
+                    Image("AppLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 150, height: 150)
+                }
+                .transition(.opacity)
+                .zIndex(100)
             }
         }
-        .animation(.default, value: authService.isAuthenticated)
-        .animation(.default, value: hasOnboarded)
-        .environment(\.locale, Locale(identifier: resolvedLanguage.localeIdentifier))
-        .environment(\.appLanguage, resolvedLanguage)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                withAnimation(.easeOut(duration: 0.4)) {
+                    showSplash = false
+                }
+            }
+        }
     }
 }
 

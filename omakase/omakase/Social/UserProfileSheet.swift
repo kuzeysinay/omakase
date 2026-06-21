@@ -171,7 +171,7 @@ struct UserProfileSheet: View {
     }
 }
 
-/// My own profile sheet with sign-out.
+/// My own profile sheet — clean grouped-list layout matching iOS Settings conventions.
 struct MyProfileSheet: View {
 
     let authService: AuthService
@@ -186,6 +186,7 @@ struct MyProfileSheet: View {
     @State private var isLoadingPosts = true
 
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
+    @AppStorage("omakase.language") private var languageCode: String = AppLanguage.english.rawValue
     @State private var isShowingLetterboxdPrompt = false
     @State private var tempLetterboxdUsername = ""
 
@@ -193,78 +194,95 @@ struct MyProfileSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    Spacer().frame(height: 20)
+            List {
 
-                if let urlStr = profile?.photoURL, let url = URL(string: urlStr) {
-                    AsyncImage(url: url) { phase in
-                        if let img = phase.image {
-                            img.resizable().scaledToFill()
-                                .frame(width: 80, height: 80).clipShape(Circle())
-                        } else { defaultAvatar }
+                // MARK: - Profile Header
+                Section {
+                    VStack(spacing: 16) {
+                        Spacer().frame(height: 8)
+
+                        avatarView
+
+                        VStack(spacing: 4) {
+                            Text(profile?.displayName ?? authService.displayName ?? "")
+                                .font(.title2.bold())
+                                .multilineTextAlignment(.center)
+                            Text(profile?.email ?? authService.email ?? "")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        // Stats pill
+                        HStack(spacing: 0) {
+                            statCell(value: followerCount, label: l10n.followers)
+                            Divider().frame(height: 32)
+                            statCell(value: followingCount, label: l10n.followingLabel)
+                        }
+                        .background(Color(.tertiarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 12))
+
+                        Spacer().frame(height: 8)
                     }
-                } else { defaultAvatar }
-
-                Text(profile?.displayName ?? authService.displayName ?? "")
-                    .font(.title2.bold())
-
-                Text(profile?.email ?? authService.email ?? "")
-                    .font(.subheadline).foregroundStyle(.secondary)
-
-                HStack(spacing: 32) {
-                    VStack(spacing: 2) {
-                        Text("\(followerCount)").font(.headline)
-                        Text(l10n.followers).font(.caption).foregroundStyle(.secondary)
-                    }
-                    VStack(spacing: 2) {
-                        Text("\(followingCount)").font(.headline)
-                        Text(l10n.followingLabel).font(.caption).foregroundStyle(.secondary)
-                    }
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.bottom, 8)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
 
-                Button {
-                    tempLetterboxdUsername = storedLetterboxdUsername
-                    isShowingLetterboxdPrompt = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "film")
-                        if storedLetterboxdUsername.isEmpty {
-                            Text(l10n.updateLetterboxdButton)
-                        } else {
-                            Text("Letterboxd: @\(storedLetterboxdUsername)")
+                // MARK: - Preferences
+                Section(l10n.profilePreferences) {
+
+                    // Language — native Picker renders as a menu row automatically
+                    Picker(selection: $languageCode) {
+                        ForEach(AppLanguage.allCases) { lang in
+                            Text(lang.pickerLabel).tag(lang.rawValue)
+                        }
+                    } label: {
+                        Label {
+                            Text(l10n.languageMenuAccessibility)
+                        } icon: {
+                            Image(systemName: "globe")
+                                .foregroundStyle(.blue)
                         }
                     }
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+
+                    // Letterboxd integration
+                    Button {
+                        tempLetterboxdUsername = storedLetterboxdUsername
+                        isShowingLetterboxdPrompt = true
+                    } label: {
+                        HStack {
+                            Label {
+                                if storedLetterboxdUsername.isEmpty {
+                                    Text(l10n.updateLetterboxdButton)
+                                        .foregroundStyle(.primary)
+                                } else {
+                                    Text("Letterboxd: @\(storedLetterboxdUsername)")
+                                        .foregroundStyle(.primary)
+                                }
+                            } icon: {
+                                Image(systemName: "film")
+                                    .foregroundStyle(.orange)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.bold())
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
                 }
 
-                Spacer()
-
-
-
-                Button(role: .destructive) {
-                    authService.signOut()
-                    dismiss()
-                } label: {
-                    Text(l10n.signOut)
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: 200)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                
-                Divider().padding(.vertical)
-                
-                if isLoadingPosts {
-                    ProgressView().padding()
-                } else if userPosts.isEmpty {
-                    Text(l10n.noPostsYet)
-                        .foregroundStyle(.secondary)
-                        .padding()
-                } else {
-                    LazyVStack(spacing: 16) {
+                // MARK: - Posts
+                Section(l10n.profilePosts) {
+                    if isLoadingPosts {
+                        HStack { Spacer(); ProgressView(); Spacer() }
+                            .padding(.vertical, 8)
+                    } else if userPosts.isEmpty {
+                        Text(l10n.noPostsYet)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 8)
+                    } else {
                         ForEach(userPosts) { post in
                             TimelinePostCard(
                                 post: post,
@@ -281,14 +299,24 @@ struct MyProfileSheet: View {
                                     }
                                 }
                             )
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
                         }
                     }
-                    .padding(.horizontal)
                 }
-                
-                Spacer().frame(height: 32)
+
+                // MARK: - Account / Sign Out
+                Section(l10n.profileAccount) {
+                    Button(role: .destructive) {
+                        authService.signOut()
+                        dismiss()
+                    } label: {
+                        Label(l10n.signOut, systemImage: "rectangle.portrait.and.arrow.right")
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
             }
-            } // Close ScrollView
+            .listStyle(.insetGrouped)
             .navigationTitle(l10n.myProfile)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -301,10 +329,10 @@ struct MyProfileSheet: View {
             TextField(l10n.letterboxdUsernamePlaceholder, text: $tempLetterboxdUsername)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-            
             Button(l10n.cancel, role: .cancel) { }
             Button(l10n.save) {
-                storedLetterboxdUsername = tempLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+                storedLetterboxdUsername = tempLetterboxdUsername
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
             }
         } message: {
             Text(l10n.letterboxdUsernamePromptMessage)
@@ -314,15 +342,41 @@ struct MyProfileSheet: View {
             profile = try? await FirestoreService.shared.fetchUserProfile(uid: uid)
             followerCount = (try? await FirestoreService.shared.fetchFollowerCount(uid: uid)) ?? 0
             followingCount = (try? await FirestoreService.shared.fetchFollowingCount(uid: uid)) ?? 0
-            
             userPosts = (try? await FirestoreService.shared.fetchUserTimeline(uid: uid)) ?? []
             isLoadingPosts = false
         }
     }
 
+    // MARK: - Helpers
+
+    @ViewBuilder
+    private var avatarView: some View {
+        if let urlStr = profile?.photoURL, let url = URL(string: urlStr) {
+            AsyncImage(url: url) { phase in
+                if let img = phase.image {
+                    img.resizable().scaledToFill()
+                        .frame(width: 80, height: 80)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+                } else { defaultAvatar }
+            }
+        } else { defaultAvatar }
+    }
+
     private var defaultAvatar: some View {
         Image(systemName: "person.circle.fill")
-            .font(.system(size: 72)).symbolRenderingMode(.hierarchical).foregroundStyle(.secondary)
+            .font(.system(size: 80))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(.secondary)
+    }
+
+    private func statCell(value: Int, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text("\(value)").font(.headline.bold())
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
     }
 }
 
