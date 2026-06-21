@@ -16,8 +16,6 @@ final class FeedViewModel {
     private(set) var posts: [Post] = []
     private(set) var isGenerating: Bool = false
     private(set) var errorMessage: String?
-    /// Cycles while ``isGenerating`` so the UI can show rotating “kitchen” lines.
-    private(set) var loadingQuipIndex: Int = 0
 
     // MARK: - Config
 
@@ -43,7 +41,6 @@ final class FeedViewModel {
 
     private var interests: [String]
     private var streamingTask: Task<Void, Never>?
-    private var loadingQuipTask: Task<Void, Never>?
     /// The post the current `streamingTask` is filling; only that task may clear `isGenerating`.
     private var activeStreamPostID: UUID?
 
@@ -89,7 +86,6 @@ final class FeedViewModel {
         let postID = post.id
         isGenerating = true
         activeStreamPostID = postID
-        startLoadingQuipRotation()
 
         // #region agent log
         AgentDebugLog.log(
@@ -220,19 +216,12 @@ final class FeedViewModel {
                     self.activeStreamPostID == streamPostID
                 else { return }
                 self.isGenerating = false
-                self.stopLoadingQuipRotation()
             }
         }
     }
 
     func dismissError() {
         errorMessage = nil
-    }
-
-    func cookingCaption(l10n: L10n) -> String {
-        let quips = l10n.cookingQuips
-        guard !quips.isEmpty else { return "" }
-        return quips[loadingQuipIndex % quips.count]
     }
 
     func reset() {
@@ -242,8 +231,6 @@ final class FeedViewModel {
         posts = []
         isGenerating = false
         errorMessage = nil
-        stopLoadingQuipRotation()
-        loadingQuipIndex = 0
     }
 
     func removePost(id: UUID) {
@@ -327,7 +314,6 @@ final class FeedViewModel {
 
         let deepDiveId = post.id
         activeStreamPostID = deepDiveId
-        startLoadingQuipRotation()
 
         let url = baseURL.appendingPathComponent("feed/deep-dive")
         let requestBody: [String: Any] = [
@@ -397,30 +383,11 @@ final class FeedViewModel {
                     self.activeStreamPostID == streamPostID
                 else { return }
                 self.isGenerating = false
-                self.stopLoadingQuipRotation()
             }
         }
     }
 
     // MARK: - Private
-
-    private func startLoadingQuipRotation() {
-        loadingQuipTask?.cancel()
-        loadingQuipIndex = 0
-        loadingQuipTask = Task { @MainActor in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(2800))
-                guard !Task.isCancelled else { break }
-                guard self.isGenerating else { break }
-                self.loadingQuipIndex += 1
-            }
-        }
-    }
-
-    private func stopLoadingQuipRotation() {
-        loadingQuipTask?.cancel()
-        loadingQuipTask = nil
-    }
 
     private func handle(event: SSEEvent, for postID: UUID) {
         // Each event's `data` is a JSON object. Parse defensively so a single

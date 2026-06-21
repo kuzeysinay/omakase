@@ -251,10 +251,7 @@ struct FeedView: View {
                                     onDelete: {
                                         pendingDeletePostID = post.id
                                         showDeletePostConfirmation = true
-                                    },
-                                    cookingCaption: viewModel.isGenerating && !post.isComplete
-                                        ? viewModel.cookingCaption(l10n: l10n)
-                                        : nil
+                                    }
                                 )
                                 .environment(\.appLanguage, appLanguage)
                                 .id(post.id)
@@ -299,10 +296,8 @@ struct FeedView: View {
         }
     }
 
-    /// The "generate next" card shown as the last page in the Reels feed.
     private var generateNextCard: some View {
         let isDisabled = viewModel.isGenerating || viewModel.isOffline
-        let quip = viewModel.isGenerating ? viewModel.cookingCaption(l10n: l10n) : nil
 
         return VStack(spacing: 20) {
             Image(systemName: viewModel.isGenerating ? "wand.and.stars" : "sparkles")
@@ -313,14 +308,6 @@ struct FeedView: View {
             Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
                 .font(.title3.bold())
                 .multilineTextAlignment(.center)
-
-            if let quip {
-                Text(quip)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
-            }
 
             if viewModel.isOffline && !viewModel.isGenerating {
                 Label(l10n.internetRequired, systemImage: "wifi.slash")
@@ -346,13 +333,10 @@ struct FeedView: View {
             .controlSize(.large)
             .disabled(isDisabled)
         }
-        .animation(.easeInOut(duration: 0.35), value: quip)
         .padding(.horizontal, 32)
     }
 
     private var generateButton: some View {
-        let quip =
-            viewModel.isGenerating ? viewModel.cookingCaption(l10n: l10n) : nil
         let isDisabled = viewModel.isGenerating || viewModel.isOffline
         return Button {
             viewModel.requestNextPost()
@@ -372,20 +356,9 @@ struct FeedView: View {
                             .fontWeight(.semibold)
                     }
                 }
-                if let quip {
-                    Text(quip)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
-                        .foregroundStyle(Color.white.opacity(0.92))
-                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                }
             }
-            .animation(.easeInOut(duration: 0.35), value: quip)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, viewModel.isGenerating && quip != nil ? 10 : 0)
+            .padding(.vertical, 0)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
@@ -410,8 +383,6 @@ private struct ReelsPostCard: View {
     var viewModel: FeedViewModel
     var toastMessage: Binding<String?>
     var onDelete: () -> Void
-    /// Kitchen-style line while Gemini streams (`nil` once the card is idle or finished).
-    var cookingCaption: String?
 
     @Environment(\.appLanguage) private var appLanguage
 
@@ -427,56 +398,52 @@ private struct ReelsPostCard: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Full-screen scrollable content area
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Header: title, timestamp, LIVE badge
-                    postHeader
-                        .padding(.top, 8)
+        // Full-screen scrollable content area
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Header: title, timestamp, LIVE badge
+                postHeader
+                    .padding(.top, 8)
 
-                    // Cooking caption while streaming
-                    if let cookingCaption, !cookingCaption.isEmpty {
-                        Text(cookingCaption)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .italic()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                            .animation(.easeInOut(duration: 0.35), value: cookingCaption)
-                    }
-
-                    // Main post body text
+                // Main post body text
+                if post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !post.isComplete {
+                    skeletonBody
+                        .transition(.opacity)
+                } else {
                     Text(postBody)
                         .font(.body)
                         .fixedSize(horizontal: false, vertical: true)
-
-                    // Deep dive section
-                    if let deepDive = post.deepDiveText, !deepDive.isEmpty {
-                        deepDiveSection(deepDive)
-                    }
-
-                    // Tags
-                    if post.isComplete, !post.tags.isEmpty {
-                        tagChips
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                            .animation(.easeOut(duration: 0.3), value: post.tags)
-                    }
-
-                    // Bottom spacer to ensure content doesn't hide behind action bar
-                    Spacer()
-                        .frame(height: 80)
+                        .contentTransition(.opacity)
+                        .animation(.easeOut(duration: 0.35), value: post.text)
+                        .transition(.opacity)
                 }
-                .padding(.horizontal, 20)
-            }
-            .scrollDisabled(!post.isComplete && post.text.count < 200)
 
-            // Bottom action bar overlay
-            if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                actionBar
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                // Deep dive section
+                if let deepDive = post.deepDiveText, !deepDive.isEmpty {
+                    deepDiveSection(deepDive)
+                }
+
+                // Tags
+                if post.isComplete, !post.tags.isEmpty {
+                    tagChips
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        .animation(.easeOut(duration: 0.3), value: post.tags)
+                }
+
+                if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    actionBar
+                        .transition(.opacity)
+                        .padding(.top, 8)
+                }
+                
+                Spacer()
+                    .frame(height: 20)
             }
+            .padding(.horizontal, 20)
+            .animation(.easeOut(duration: 0.6), value: post.isComplete)
+            .animation(.easeOut(duration: 0.4), value: post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
+        .scrollDisabled(!post.isComplete && post.text.count < 200)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
         .task(id: post.isComplete) {
@@ -559,9 +526,11 @@ private struct ReelsPostCard: View {
                         .font(.caption2)
                 }
                 .foregroundStyle(Color.secondary)
+                .opacity(post.deepDiveText != nil ? 0.4 : 1.0)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(l10n.deepDiveA11y)
+            .disabled(post.deepDiveText != nil)
 
             // Share to timeline button
             Button {
@@ -620,12 +589,7 @@ private struct ReelsPostCard: View {
             .buttonStyle(.plain)
             .accessibilityLabel(isBookmarked ? l10n.removeBookmarkA11y : l10n.bookmarkPostA11y)
         }
-        .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(
-            .ultraThinMaterial,
-            in: RoundedRectangle(cornerRadius: 0)
-        )
     }
 
     // MARK: - Deep Dive Section
@@ -653,11 +617,17 @@ private struct ReelsPostCard: View {
                     }
                 }
                 .padding(.bottom, 8)
-
-                Text(deepDive + (!post.isComplete ? (showCursor ? "▌" : " ") : ""))
-                    .font(.body)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .transition(.opacity)
+                if deepDive.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !post.isComplete {
+                    skeletonBody
+                        .transition(.opacity)
+                } else {
+                    Text(attributedDeepDive(deepDive))
+                        .font(.body)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .contentTransition(.opacity)
+                        .animation(.easeOut(duration: 0.35), value: deepDive)
+                        .transition(.opacity)
+                }
             } else {
                 Button {
                     isDeepDiveExpanded = true
@@ -698,13 +668,25 @@ private struct ReelsPostCard: View {
     }
 
     private var postBody: AttributedString {
-        var attributed = AttributedString(post.text.isEmpty && !post.isComplete ? "…" : post.text)
-        if !post.isComplete && post.deepDiveText == nil {
-            var cursor = AttributedString(showCursor ? "▌" : " ")
-            cursor.foregroundColor = .accentColor
-            attributed.append(cursor)
+        let cleanText = String(post.text.drop(while: { $0.isWhitespace || $0.isNewline }))
+        return AttributedString(cleanText)
+    }
+
+    private func attributedDeepDive(_ deepDive: String) -> AttributedString {
+        let cleanText = String(deepDive.drop(while: { $0.isWhitespace || $0.isNewline }))
+        return AttributedString(cleanText)
+    }
+
+    private var skeletonBody: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("This is a placeholder for the first line to show a skeleton.")
+            Text("Another line of skeleton goes right here.")
+            Text("And a short one.")
         }
-        return attributed
+        .font(.body)
+        .redacted(reason: .placeholder)
+        .opacity(showCursor ? 0.3 : 0.7)
+        .animation(.easeInOut(duration: 0.6), value: showCursor)
     }
 
     private var tagChips: some View {

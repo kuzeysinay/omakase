@@ -40,9 +40,9 @@ logger = logging.getLogger("omakase")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # gemini-3.5-flash is used for feed posts: no thinking phase → instant token streaming.
-# gemini-3.1-pro-preview is kept for deep dives where quality/depth matters more than latency.
+# gemini-3.5-flash is ALSO used for deep dives to keep latency at zero.
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
-GEMINI_DEEP_DIVE_MODEL = os.getenv("GEMINI_DEEP_DIVE_MODEL", "gemini-3.1-pro-preview")
+GEMINI_DEEP_DIVE_MODEL = os.getenv("GEMINI_DEEP_DIVE_MODEL", "gemini-3.5-flash")
 GEMINI_SUGGEST_MODEL = os.getenv("GEMINI_SUGGEST_MODEL", "gemini-3.1-flash-lite")
 
 if GEMINI_API_KEY:
@@ -166,8 +166,7 @@ _DEEP_DIVE_SYSTEM = (
     "detail they didn't know about.\n\n"
     "OUTPUT FORMAT (strictly follow):\n"
     "Line 1: TITLE: <a compelling new headline for this deep dive>\n"
-    "Line 2: TAGS: <comma-separated relevant tags>\n"
-    "Lines 3+: The deep-dive body (150-250 words).\n\n"
+    "Lines 2+: The deep-dive body (150-250 words).\n\n"
     "RULES:\n"
     "- Reveal layers, history, mechanics, or controversy the original post only hinted at.\n"
     "- Do NOT repeat the original post's content verbatim.\n"
@@ -189,6 +188,21 @@ def _feed_language_instruction(language: str) -> str:
         "LANGUAGE: Write the entire post in English. "
         "Both the TITLE: headline (after the prefix TITLE: ) and the body must be English. "
         "Keep the literal ASCII prefixes TITLE: and TAGS: on their respective lines."
+    )
+
+
+def _deep_dive_language_instruction(language: str) -> str:
+    """Tells the model which natural language to use for Deep Dives, avoiding TAGS."""
+    if language == "tr":
+        return (
+            "LANGUAGE: Write the entire post in Turkish (Türkçe). "
+            "Both the TITLE: headline (after the prefix TITLE: ) and every word of the body must be Turkish. "
+            "Keep the literal ASCII prefix TITLE: on its line."
+        )
+    return (
+        "LANGUAGE: Write the entire post in English. "
+        "Both the TITLE: headline (after the prefix TITLE: ) and the body must be English. "
+        "Keep the literal ASCII prefix TITLE: on its line."
     )
 
 
@@ -564,7 +578,7 @@ def _build_deep_dive_prompt(req: DeepDiveRequest) -> str:
     if req.language == "tr":
         lang_note = (
             "\n\nIMPORTANT: Write the TITLE value and body in Turkish. "
-            "Keep the ASCII prefixes TITLE: and TAGS: in English."
+            "Keep the ASCII prefix TITLE: in English."
         )
     return (
         f"The user's interests: {', '.join(req.interests)}\n\n"
@@ -587,7 +601,7 @@ async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
         )
         return
 
-    system = _DEEP_DIVE_SYSTEM + "\n\n" + _feed_language_instruction(req.language)
+    system = _DEEP_DIVE_SYSTEM + "\n\n" + _deep_dive_language_instruction(req.language)
     prompt = _build_deep_dive_prompt(req)
 
     try:
