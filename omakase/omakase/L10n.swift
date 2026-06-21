@@ -725,6 +725,13 @@ struct L10n {
         }
     }
 
+    var updateLetterboxdButton: String {
+        switch lang {
+        case .english: "Update Letterboxd Username"
+        case .turkish: "Letterboxd Kullanıcı Adını Güncelle"
+        }
+    }
+
     var letterboxdUsernamePromptTitle: String {
         switch lang {
         case .english: "Letterboxd Username"

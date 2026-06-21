@@ -185,6 +185,10 @@ struct MyProfileSheet: View {
     @State private var userPosts: [SharedPost] = []
     @State private var isLoadingPosts = true
 
+    @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
+    @State private var isShowingLetterboxdPrompt = false
+    @State private var tempLetterboxdUsername = ""
+
     private var l10n: L10n { L10n(lang: appLanguage) }
 
     var body: some View {
@@ -218,8 +222,27 @@ struct MyProfileSheet: View {
                         Text(l10n.followingLabel).font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                .padding(.bottom, 8)
+
+                Button {
+                    tempLetterboxdUsername = storedLetterboxdUsername
+                    isShowingLetterboxdPrompt = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "film")
+                        if storedLetterboxdUsername.isEmpty {
+                            Text(l10n.updateLetterboxdButton)
+                        } else {
+                            Text("Letterboxd: @\(storedLetterboxdUsername)")
+                        }
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                }
 
                 Spacer()
+
+
 
                 Button(role: .destructive) {
                     authService.signOut()
@@ -273,6 +296,18 @@ struct MyProfileSheet: View {
                     Button(l10n.done) { dismiss() }
                 }
             }
+        }
+        .alert(l10n.letterboxdUsernamePromptTitle, isPresented: $isShowingLetterboxdPrompt) {
+            TextField(l10n.letterboxdUsernamePlaceholder, text: $tempLetterboxdUsername)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            
+            Button(l10n.cancel, role: .cancel) { }
+            Button(l10n.save) {
+                storedLetterboxdUsername = tempLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        } message: {
+            Text(l10n.letterboxdUsernamePromptMessage)
         }
         .task {
             guard let uid = authService.uid else { return }
