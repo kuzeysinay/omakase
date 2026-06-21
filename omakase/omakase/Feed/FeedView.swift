@@ -47,7 +47,7 @@ struct FeedView: View {
                 if viewModel.posts.isEmpty {
                     emptyState
                 } else {
-                    feedList(bookmarkStore: bookmarkStore)
+                    reelsFeed(bookmarkStore: bookmarkStore)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -72,18 +72,6 @@ struct FeedView: View {
                     }
                     .accessibilityLabel(l10n.feedMoreActionsA11y)
                 }
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                VStack(spacing: 0) {
-                    Divider()
-                        .opacity(0.35)
-                    generateButton
-                        .padding(.top, 10)
-                        .padding(.bottom, 10)
-                        .padding(.horizontal, 20)
-                }
-                .frame(maxWidth: .infinity)
-                .background(.bar)
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 InlineTasteBar(
@@ -226,78 +214,139 @@ struct FeedView: View {
     // MARK: - Subviews
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
+            Spacer()
             Image(systemName: "sparkles")
-                .font(.system(size: 44, weight: .light))
+                .font(.system(size: 52, weight: .light))
                 .foregroundStyle(.tint)
             Text(l10n.emptyFeedHeadline)
-                .font(.headline)
+                .font(.title3.bold())
             Text(l10n.emptyFeedDetail)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            Spacer()
+            generateButton
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func feedList(bookmarkStore: BookmarkStore) -> some View {
-        ScrollViewReader { proxy in
-            List {
-                // Offline banner
-                if viewModel.isOffline && viewModel.isShowingCachedContent {
-                    HStack(spacing: 8) {
-                        Image(systemName: "wifi.slash")
-                            .font(.subheadline.weight(.semibold))
-                        Text(l10n.offlineBanner)
-                            .font(.subheadline.weight(.medium))
-                    }
-                    .foregroundStyle(.orange)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                }
-
-                ForEach(viewModel.posts) { post in
-                    PostCard(
-                        post: post,
-                        bookmarkStore: bookmarkStore,
-                        authService: authService,
-                        viewModel: viewModel,
-                        toastMessage: $toastMessage,
-                        cookingCaption: viewModel.isGenerating && !post.isComplete
-                            ? viewModel.cookingCaption(l10n: l10n)
-                            : nil
-                    )
-                    .environment(\.appLanguage, appLanguage)
-                    .id(post.id)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            pendingDeletePostID = post.id
-                            showDeletePostConfirmation = true
-                        } label: {
-                            Label(l10n.remove, systemImage: "trash")
+    /// Instagram Reels-style vertical paging feed. Each post occupies the full screen height.
+    private func reelsFeed(bookmarkStore: BookmarkStore) -> some View {
+        GeometryReader { geo in
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        // Offline banner (sits above the first post)
+                        if viewModel.isOffline && viewModel.isShowingCachedContent {
+                            HStack(spacing: 8) {
+                                Image(systemName: "wifi.slash")
+                                    .font(.subheadline.weight(.semibold))
+                                Text(l10n.offlineBanner)
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            .foregroundStyle(.orange)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 4)
                         }
+
+                        ForEach(viewModel.posts) { post in
+                            ReelsPostCard(
+                                post: post,
+                                bookmarkStore: bookmarkStore,
+                                authService: authService,
+                                viewModel: viewModel,
+                                toastMessage: $toastMessage,
+                                onDelete: {
+                                    pendingDeletePostID = post.id
+                                    showDeletePostConfirmation = true
+                                },
+                                cookingCaption: viewModel.isGenerating && !post.isComplete
+                                    ? viewModel.cookingCaption(l10n: l10n)
+                                    : nil
+                            )
+                            .environment(\.appLanguage, appLanguage)
+                            .id(post.id)
+                            .frame(height: geo.size.height)
+                        }
+
+                        // Generate next post card at the end
+                        VStack {
+                            Spacer()
+                            generateNextCard
+                            Spacer()
+                        }
+                        .frame(height: geo.size.height)
+                        .id("generate-card")
                     }
                 }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .padding(.vertical, 8)
-            .onChange(of: viewModel.posts.first?.id) { _, newID in
-                guard let newID else { return }
-                withAnimation(.easeOut(duration: 0.25)) {
-                    proxy.scrollTo(newID, anchor: .top)
+                .scrollTargetBehavior(.paging)
+                .onChange(of: viewModel.posts.first?.id) { _, newID in
+                    guard let newID else { return }
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        proxy.scrollTo(newID, anchor: .top)
+                    }
                 }
             }
         }
+    }
+
+    /// The "generate next" card shown as the last page in the Reels feed.
+    private var generateNextCard: some View {
+        let isDisabled = viewModel.isGenerating || viewModel.isOffline
+        let quip = viewModel.isGenerating ? viewModel.cookingCaption(l10n: l10n) : nil
+
+        return VStack(spacing: 20) {
+            Image(systemName: viewModel.isGenerating ? "wand.and.stars" : "sparkles")
+                .font(.system(size: 48, weight: .light))
+                .foregroundStyle(.tint)
+                .symbolEffect(.pulse, isActive: viewModel.isGenerating)
+
+            Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
+                .font(.title3.bold())
+                .multilineTextAlignment(.center)
+
+            if let quip {
+                Text(quip)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+
+            if viewModel.isOffline && !viewModel.isGenerating {
+                Label(l10n.internetRequired, systemImage: "wifi.slash")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+            }
+
+            Button {
+                viewModel.requestNextPost()
+            } label: {
+                HStack(spacing: 10) {
+                    if viewModel.isGenerating {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                    }
+                    Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: 280)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(isDisabled)
+        }
+        .animation(.easeInOut(duration: 0.35), value: quip)
+        .padding(.horizontal, 32)
     }
 
     private var generateButton: some View {
@@ -351,14 +400,15 @@ struct FeedView: View {
             .filter { !$0.isEmpty }
     }
 }
-// MARK: - Post card
+// MARK: - Reels-style Post Card (full-screen, one post per page)
 
-private struct PostCard: View {
+private struct ReelsPostCard: View {
     let post: Post
     @Bindable var bookmarkStore: BookmarkStore
     let authService: AuthService
     var viewModel: FeedViewModel
     var toastMessage: Binding<String?>
+    var onDelete: () -> Void
     /// Kitchen-style line while Gemini streams (`nil` once the card is idle or finished).
     var cookingCaption: String?
 
@@ -376,170 +426,58 @@ private struct PostCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 10) {
-                Image(systemName: "fork.knife.circle.fill")
-                    .font(.system(size: 28))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(cardTitle)
-                        .font(.subheadline).bold()
-                        .lineLimit(2)
-                    Text(post.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if !post.isComplete {
-                    Text(l10n.liveBadge)
-                        .font(.caption2.monospaced()).bold()
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(.red.opacity(0.15), in: Capsule())
-                        .foregroundStyle(.red)
-                }
-            }
+        ZStack(alignment: .bottom) {
+            // Full-screen scrollable content area
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Header: title, timestamp, LIVE badge
+                    postHeader
+                        .padding(.top, 8)
 
-            if let cookingCaption, !cookingCaption.isEmpty {
-                Text(cookingCaption)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .italic()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                    .animation(.easeInOut(duration: 0.35), value: cookingCaption)
-            }
-
-            Text(postBody)
-                .font(.body)
-                .fixedSize(horizontal: false, vertical: true)
-                
-            if let deepDive = post.deepDiveText, !deepDive.isEmpty {
-                let expanded = isDeepDiveExpanded || !post.isComplete
-                
-                VStack(spacing: 0) {
-                    if expanded {
-                        Divider().padding(.vertical, 8)
-                        
-                        HStack(spacing: 8) {
-                            Image(systemName: "fish.fill")
-                                .foregroundStyle(.blue)
-                            Text("Derinlemesine İnceleme")
-                                .font(.headline)
-                                .foregroundStyle(.blue)
-                            Spacer()
-                            Button {
-                                isDeepDiveExpanded = false
-                            } label: {
-                                Image(systemName: "chevron.up")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.bottom, 8)
-                        
-                        Text(deepDive + (!post.isComplete ? (showCursor ? "▌" : " ") : ""))
-                            .font(.body)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .transition(.opacity)
-                    } else {
-                        Button {
-                            isDeepDiveExpanded = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "fish")
-                                Text("Derinlemesine İncelemeyi Oku")
-                                Spacer()
-                                Image(systemName: "chevron.down")
-                            }
-                            .font(.subheadline.bold())
-                            .padding()
-                            .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                            .foregroundStyle(.blue)
-                        }
-                        .buttonStyle(.plain)
+                    // Cooking caption while streaming
+                    if let cookingCaption, !cookingCaption.isEmpty {
+                        Text(cookingCaption)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .italic()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .animation(.easeInOut(duration: 0.35), value: cookingCaption)
                     }
-                }
-                .animation(.spring(), value: expanded)
-            }
 
-            if post.isComplete, !post.tags.isEmpty {
-                tagChips
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                    .animation(.easeOut(duration: 0.3), value: post.tags)
-            }
-            
-            if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Divider().padding(.vertical, 4)
-                
-                HStack(spacing: 24) {
-                    // Deep Dive button
-                    Button {
-                        viewModel.requestDeepDive(for: post)
-                    } label: {
-                        Image(systemName: "fish")
-                            .font(.title3)
-                            .foregroundStyle(Color.secondary)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel(l10n.deepDiveA11y)
+                    // Main post body text
+                    Text(postBody)
+                        .font(.body)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    // Share to timeline button
-                    Button {
-                        Task { await toggleShare() }
-                    } label: {
-                        if isSharePending {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Image(systemName: isShared ? "paperplane.fill" : "paperplane")
-                                .font(.title3)
-                                .foregroundStyle(isShared ? Color.accentColor : .secondary)
-                        }
+                    // Deep dive section
+                    if let deepDive = post.deepDiveText, !deepDive.isEmpty {
+                        deepDiveSection(deepDive)
                     }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel(isShared ? l10n.unsharePost : l10n.sharePost)
-                    .disabled(isSharePending)
-                    
-                    // iOS Share Sheet button
-                    Button {
-                        ShareService.presentShareSheet(post: post)
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
-                            .foregroundStyle(Color.secondary)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel(l10n.shareSheetA11y)
 
+                    // Tags
+                    if post.isComplete, !post.tags.isEmpty {
+                        tagChips
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                            .animation(.easeOut(duration: 0.3), value: post.tags)
+                    }
+
+                    // Bottom spacer to ensure content doesn't hide behind action bar
                     Spacer()
-
-                    // Bookmark button
-                    Button {
-                        bookmarkStore.toggle(post)
-                        if bookmarkStore.contains(postId: post.id) {
-                            toastMessage.wrappedValue = "Post bookmarked"
-                        } else {
-                            toastMessage.wrappedValue = "Bookmark removed"
-                        }
-                    } label: {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .font(.title3)
-                            .foregroundStyle(isBookmarked ? Color.accentColor : .secondary)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel(isBookmarked ? l10n.removeBookmarkA11y : l10n.bookmarkPostA11y)
+                        .frame(height: 80)
                 }
-                .padding(.top, 4)
-                .padding(.bottom, 2)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 20)
+            }
+            .scrollDisabled(!post.isComplete && post.text.count < 200)
+
+            // Bottom action bar overlay
+            if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                actionBar
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(.separator, lineWidth: 0.5)
-        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
         .task(id: post.isComplete) {
             guard !post.isComplete else {
                 showCursor = false
@@ -559,6 +497,188 @@ private struct PostCard: View {
             )) ?? false
         }
     }
+
+    // MARK: - Header
+
+    private var postHeader: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "fork.knife.circle.fill")
+                .font(.system(size: 32))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(cardTitle)
+                    .font(.headline)
+                    .lineLimit(2)
+                Text(post.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+
+            if !post.isComplete {
+                Text(l10n.liveBadge)
+                    .font(.caption2.monospaced()).bold()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.red.opacity(0.15), in: Capsule())
+                    .foregroundStyle(.red)
+            }
+
+            // Delete button
+            if post.isComplete {
+                Menu {
+                    Button(role: .destructive) {
+                        onDelete()
+                    } label: {
+                        Label(l10n.remove, systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, height: 32)
+                }
+            }
+        }
+    }
+
+    // MARK: - Action Bar (bottom, horizontal, like Reels)
+
+    private var actionBar: some View {
+        HStack(spacing: 28) {
+            // Deep Dive button
+            Button {
+                viewModel.requestDeepDive(for: post)
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "fish")
+                        .font(.title2)
+                    Text("Dive")
+                        .font(.caption2)
+                }
+                .foregroundStyle(Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(l10n.deepDiveA11y)
+
+            // Share to timeline button
+            Button {
+                Task { await toggleShare() }
+            } label: {
+                VStack(spacing: 4) {
+                    if isSharePending {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: isShared ? "paperplane.fill" : "paperplane")
+                            .font(.title2)
+                    }
+                    Text(isShared ? "Shared" : "Share")
+                        .font(.caption2)
+                }
+                .foregroundStyle(isShared ? Color.accentColor : .secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isShared ? l10n.unsharePost : l10n.sharePost)
+            .disabled(isSharePending)
+
+            // iOS Share Sheet button
+            Button {
+                ShareService.presentShareSheet(post: post)
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.title2)
+                    Text("Export")
+                        .font(.caption2)
+                }
+                .foregroundStyle(Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(l10n.shareSheetA11y)
+
+            Spacer()
+
+            // Bookmark button
+            Button {
+                bookmarkStore.toggle(post)
+                if bookmarkStore.contains(postId: post.id) {
+                    toastMessage.wrappedValue = "Post bookmarked"
+                } else {
+                    toastMessage.wrappedValue = "Bookmark removed"
+                }
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                        .font(.title2)
+                    Text(isBookmarked ? "Saved" : "Save")
+                        .font(.caption2)
+                }
+                .foregroundStyle(isBookmarked ? Color.accentColor : .secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isBookmarked ? l10n.removeBookmarkA11y : l10n.bookmarkPostA11y)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(
+            .ultraThinMaterial,
+            in: RoundedRectangle(cornerRadius: 0)
+        )
+    }
+
+    // MARK: - Deep Dive Section
+
+    @ViewBuilder
+    private func deepDiveSection(_ deepDive: String) -> some View {
+        let expanded = isDeepDiveExpanded || !post.isComplete
+
+        VStack(spacing: 0) {
+            if expanded {
+                Divider().padding(.vertical, 8)
+
+                HStack(spacing: 8) {
+                    Image(systemName: "fish.fill")
+                        .foregroundStyle(.blue)
+                    Text("Derinlemesine İnceleme")
+                        .font(.headline)
+                        .foregroundStyle(.blue)
+                    Spacer()
+                    Button {
+                        isDeepDiveExpanded = false
+                    } label: {
+                        Image(systemName: "chevron.up")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.bottom, 8)
+
+                Text(deepDive + (!post.isComplete ? (showCursor ? "▌" : " ") : ""))
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity)
+            } else {
+                Button {
+                    isDeepDiveExpanded = true
+                } label: {
+                    HStack {
+                        Image(systemName: "fish")
+                        Text("Derinlemesine İncelemeyi Oku")
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                    }
+                    .font(.subheadline.bold())
+                    .padding()
+                    .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                    .foregroundStyle(.blue)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .animation(.spring(), value: expanded)
+    }
+
+    // MARK: - Helpers
 
     private var cardTitle: String {
         let t = post.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -599,52 +719,6 @@ private struct PostCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private func formatBadge(_ format: String) -> some View {
-        let info = formatInfo(format)
-        HStack(spacing: 5) {
-            Image(systemName: info.icon)
-                .font(.caption2.weight(.semibold))
-            Text(info.label)
-                .font(.caption2.weight(.semibold))
-        }
-        .foregroundStyle(info.color)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-        .background(info.color.opacity(0.12), in: Capsule())
-    }
-
-    private func formatInfo(_ format: String) -> (icon: String, label: String, color: Color) {
-        switch format {
-        case "DEBATE":
-            return ("bubble.left.and.bubble.right", "Debate", .orange)
-        case "TIMELINE":
-            return ("clock.arrow.circlepath", "Timeline", .cyan)
-        case "VERSUS":
-            return ("arrow.left.arrow.right", "Versus", .red)
-        case "MYTHBUSTER":
-            return ("xmark.shield", "Mythbuster", .purple)
-        case "IF_YOU_LIKE_X_TRY_Y":
-            return ("arrow.triangle.branch", "If You Like…", .mint)
-        case "FUN FACT DROP":
-            return ("lightbulb", "Fun Fact", .yellow)
-        case "NICHES & NUANCE":
-            return ("magnifyingglass", "Niche", .indigo)
-        case "UNLIKELY CONNECTION":
-            return ("link", "Connection", .pink)
-        case "TINY RECOMMENDATION":
-            return ("star", "Recommendation", .orange)
-        case "REFRAME":
-            return ("arrow.triangle.2.circlepath", "Reframe", .teal)
-        case "THE THING NOBODY TALKS ABOUT":
-            return ("eye.slash", "Underrated", .brown)
-        case "CURSED TRIVIA":
-            return ("exclamationmark.triangle", "Cursed Trivia", .red)
-        default:
-            return ("sparkles", format.capitalized, .secondary)
-        }
     }
 
     // MARK: - Share action
