@@ -637,6 +637,85 @@ struct L10n {
         }
     }
 
+    // MARK: - Reels Actions
+
+    var actionDive: String {
+        switch lang {
+        case .english: "Dive"
+        case .turkish: "İncele"
+        }
+    }
+
+    var actionShare: String {
+        switch lang {
+        case .english: "Share"
+        case .turkish: "Paylaş"
+        }
+    }
+
+    var actionShared: String {
+        switch lang {
+        case .english: "Shared"
+        case .turkish: "Paylaşıldı"
+        }
+    }
+
+    var actionExport: String {
+        switch lang {
+        case .english: "Export"
+        case .turkish: "Dışa Aktar"
+        }
+    }
+
+    var actionSave: String {
+        switch lang {
+        case .english: "Save"
+        case .turkish: "Kaydet"
+        }
+    }
+
+    var actionSaved: String {
+        switch lang {
+        case .english: "Saved"
+        case .turkish: "Kaydedildi"
+        }
+    }
+
+    var toastBookmarked: String {
+        switch lang {
+        case .english: "Post bookmarked"
+        case .turkish: "Gönderi kaydedildi"
+        }
+    }
+
+    var toastBookmarkRemoved: String {
+        switch lang {
+        case .english: "Bookmark removed"
+        case .turkish: "Yer imi kaldırıldı"
+        }
+    }
+
+    var toastPostShared: String {
+        switch lang {
+        case .english: "Post shared to Social Feed"
+        case .turkish: "Gönderi akışta paylaşıldı"
+        }
+    }
+
+    var toastPostUnshared: String {
+        switch lang {
+        case .english: "Post unshared"
+        case .turkish: "Paylaşım kaldırıldı"
+        }
+    }
+
+    var collectionsTitle: String {
+        switch lang {
+        case .english: "Collections"
+        case .turkish: "Yer İşaretleri"
+        }
+    }
+
     // MARK: - Letterboxd
 
     var letterboxdMode: String {

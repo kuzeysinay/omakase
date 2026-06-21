@@ -25,7 +25,8 @@ from typing import AsyncIterator, Optional
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,12 +39,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger("omakase")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-# Default matches current AI Studio model IDs; `gemini-1.5-flash` often 404s on v1beta now.
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+# gemini-3.5-flash is used for feed posts: no thinking phase → instant token streaming.
+# gemini-3.1-pro-preview is kept for deep dives where quality/depth matters more than latency.
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+GEMINI_DEEP_DIVE_MODEL = os.getenv("GEMINI_DEEP_DIVE_MODEL", "gemini-3.1-pro-preview")
 GEMINI_SUGGEST_MODEL = os.getenv("GEMINI_SUGGEST_MODEL", "gemini-3.1-flash-lite")
 
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    genai_client = genai.Client(api_key=GEMINI_API_KEY)
 else:
     logger.warning("GEMINI_API_KEY is not set. The /feed/stream endpoint will return an error until it is configured.")
 
@@ -476,21 +479,24 @@ async def _stream_post(
         )
         return
 
-    model = genai.GenerativeModel(
-        model_name=GEMINI_MODEL,
-        system_instruction=_feed_system_instruction(language),
-    )
     prompt = _build_user_prompt(interests, seen_count, language, letterboxd_films=letterboxd_films)
 
     try:
-        # google-generativeai's streaming API is synchronous; run it in a
+        # The genai SDK's streaming API is synchronous; run it in a
         # worker thread and bridge each chunk to the async generator.
         queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
         loop = asyncio.get_running_loop()
 
         def _produce() -> None:
             try:
-                response = model.generate_content(prompt, stream=True)
+                response = genai_client.models.generate_content_stream(
+                    model=GEMINI_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=_feed_system_instruction(language),
+                        thinking_config=types.ThinkingConfig(thinking_budget=0)
+                    )
+                )
                 _feed_tokens_from_stream_chunks(response, queue, loop)
                 loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
             except Exception as exc:  # noqa: BLE001 — funnel any SDK error to the client
@@ -582,10 +588,6 @@ async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
         return
 
     system = _DEEP_DIVE_SYSTEM + "\n\n" + _feed_language_instruction(req.language)
-    model = genai.GenerativeModel(
-        model_name=GEMINI_MODEL,
-        system_instruction=system,
-    )
     prompt = _build_deep_dive_prompt(req)
 
     try:
@@ -594,7 +596,14 @@ async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
 
         def _produce() -> None:
             try:
-                response = model.generate_content(prompt, stream=True)
+                response = genai_client.models.generate_content_stream(
+                    model=GEMINI_DEEP_DIVE_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system,
+                        thinking_config=types.ThinkingConfig(thinking_budget=0)
+                    )
+                )
                 _feed_tokens_from_stream_chunks(response, queue, loop)
                 loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
             except Exception as exc:  # noqa: BLE001
@@ -758,16 +767,15 @@ async def interests_suggest(req: SuggestRequest) -> dict:
 
     user_prompt = " ".join(parts) + "\n\nRespond with a JSON array only."
 
-    model = genai.GenerativeModel(
-        model_name=GEMINI_SUGGEST_MODEL,
-        system_instruction=_suggest_system_for_language(lang_code),
-    )
-
     try:
         response = await asyncio.to_thread(
-            model.generate_content,
-            user_prompt,
-            # No streaming needed — we want a fast, small response.
+            genai_client.models.generate_content,
+            model=GEMINI_SUGGEST_MODEL,
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=_suggest_system_for_language(lang_code),
+                thinking_config=types.ThinkingConfig(thinking_budget=0)
+            )
         )
         raw = _generative_response_text(response)
         if not raw:

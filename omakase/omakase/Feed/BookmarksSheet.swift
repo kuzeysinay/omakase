@@ -67,7 +67,7 @@ struct BookmarksSheet: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Collections")
+            .navigationTitle(l10n.collectionsTitle)
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: String.self) { collectionName in
                 CollectionEntriesView(
@@ -441,7 +441,7 @@ private struct BookmarkDetailView: View {
                 if !entry.tags.isEmpty {
                     FlowLayoutBookmarks(spacing: 6) {
                         ForEach(entry.tags, id: \.self) { tag in
-                            Text(tag)
+                            Text(tag.capitalized)
                                 .font(.caption)
                                 .fontWeight(.medium)
                                 .padding(.horizontal, 10)
@@ -537,11 +537,11 @@ private struct BookmarkDetailView: View {
             if isShared {
                 try await FirestoreService.shared.unsharePost(text: post.text, authorId: user.uid)
                 isShared = false
-                toastMessage = l10n.lang == .turkish ? "Paylaşım kaldırıldı" : "Post unshared"
+                toastMessage = l10n.toastPostUnshared
             } else {
                 try await FirestoreService.shared.sharePost(post, author: user)
                 isShared = true
-                toastMessage = l10n.lang == .turkish ? "Sosyal akışa paylaşıldı" : "Shared to Social Feed"
+                toastMessage = l10n.toastPostShared
             }
         } catch {
             print("Error toggling share: \(error)")

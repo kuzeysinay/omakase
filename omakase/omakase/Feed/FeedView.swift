@@ -237,62 +237,63 @@ struct FeedView: View {
     /// Instagram Reels-style vertical paging feed. Each post occupies the full screen height.
     private func reelsFeed(bookmarkStore: BookmarkStore) -> some View {
         GeometryReader { geo in
-            ScrollViewReader { proxy in
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 0) {
-                        // Offline banner (sits above the first post)
-                        if viewModel.isOffline && viewModel.isShowingCachedContent {
-                            HStack(spacing: 8) {
-                                Image(systemName: "wifi.slash")
-                                    .font(.subheadline.weight(.semibold))
-                                Text(l10n.offlineBanner)
-                                    .font(.subheadline.weight(.medium))
+            ZStack(alignment: .top) {
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            ForEach(viewModel.posts) { post in
+                                ReelsPostCard(
+                                    post: post,
+                                    bookmarkStore: bookmarkStore,
+                                    authService: authService,
+                                    viewModel: viewModel,
+                                    toastMessage: $toastMessage,
+                                    onDelete: {
+                                        pendingDeletePostID = post.id
+                                        showDeletePostConfirmation = true
+                                    },
+                                    cookingCaption: viewModel.isGenerating && !post.isComplete
+                                        ? viewModel.cookingCaption(l10n: l10n)
+                                        : nil
+                                )
+                                .environment(\.appLanguage, appLanguage)
+                                .id(post.id)
+                                .frame(width: geo.size.width, height: geo.size.height)
                             }
-                            .foregroundStyle(.orange)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 4)
-                        }
 
-                        ForEach(viewModel.posts) { post in
-                            ReelsPostCard(
-                                post: post,
-                                bookmarkStore: bookmarkStore,
-                                authService: authService,
-                                viewModel: viewModel,
-                                toastMessage: $toastMessage,
-                                onDelete: {
-                                    pendingDeletePostID = post.id
-                                    showDeletePostConfirmation = true
-                                },
-                                cookingCaption: viewModel.isGenerating && !post.isComplete
-                                    ? viewModel.cookingCaption(l10n: l10n)
-                                    : nil
-                            )
-                            .environment(\.appLanguage, appLanguage)
-                            .id(post.id)
-                            .frame(height: geo.size.height)
+                            // Generate next post card at the end
+                            VStack {
+                                Spacer()
+                                generateNextCard
+                                Spacer()
+                            }
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .id("generate-card")
                         }
-
-                        // Generate next post card at the end
-                        VStack {
-                            Spacer()
-                            generateNextCard
-                            Spacer()
-                        }
-                        .frame(height: geo.size.height)
-                        .id("generate-card")
                     }
-                }
-                .scrollTargetBehavior(.paging)
-                .onChange(of: viewModel.posts.first?.id) { _, newID in
-                    guard let newID else { return }
-                    withAnimation(.easeOut(duration: 0.3)) {
+                    .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+                    .scrollTargetLayout()
+                    .onChange(of: viewModel.posts.last?.id) { _, newID in
+                        guard let newID else { return }
                         proxy.scrollTo(newID, anchor: .top)
                     }
+                }
+
+                // Offline banner floats above the scroll, doesn't affect paging
+                if viewModel.isOffline && viewModel.isShowingCachedContent {
+                    HStack(spacing: 8) {
+                        Image(systemName: "wifi.slash")
+                            .font(.subheadline.weight(.semibold))
+                        Text(l10n.offlineBanner)
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .foregroundStyle(.orange)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
                 }
             }
         }
@@ -554,7 +555,7 @@ private struct ReelsPostCard: View {
                 VStack(spacing: 4) {
                     Image(systemName: "fish")
                         .font(.title2)
-                    Text("Dive")
+                    Text(l10n.actionDive)
                         .font(.caption2)
                 }
                 .foregroundStyle(Color.secondary)
@@ -573,7 +574,7 @@ private struct ReelsPostCard: View {
                         Image(systemName: isShared ? "paperplane.fill" : "paperplane")
                             .font(.title2)
                     }
-                    Text(isShared ? "Shared" : "Share")
+                    Text(isShared ? l10n.actionShared : l10n.actionShare)
                         .font(.caption2)
                 }
                 .foregroundStyle(isShared ? Color.accentColor : .secondary)
@@ -589,7 +590,7 @@ private struct ReelsPostCard: View {
                 VStack(spacing: 4) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.title2)
-                    Text("Export")
+                    Text(l10n.actionExport)
                         .font(.caption2)
                 }
                 .foregroundStyle(Color.secondary)
@@ -603,15 +604,15 @@ private struct ReelsPostCard: View {
             Button {
                 bookmarkStore.toggle(post)
                 if bookmarkStore.contains(postId: post.id) {
-                    toastMessage.wrappedValue = "Post bookmarked"
+                    toastMessage.wrappedValue = l10n.toastBookmarked
                 } else {
-                    toastMessage.wrappedValue = "Bookmark removed"
+                    toastMessage.wrappedValue = l10n.toastBookmarkRemoved
                 }
             } label: {
                 VStack(spacing: 4) {
                     Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                         .font(.title2)
-                    Text(isBookmarked ? "Saved" : "Save")
+                    Text(isBookmarked ? l10n.actionSaved : l10n.actionSave)
                         .font(.caption2)
                 }
                 .foregroundStyle(isBookmarked ? Color.accentColor : .secondary)
@@ -709,7 +710,7 @@ private struct ReelsPostCard: View {
     private var tagChips: some View {
         FlowLayout(spacing: 6) {
             ForEach(post.tags, id: \.self) { tag in
-                Text(tag)
+                Text(tag.capitalized)
                     .font(.caption)
                     .fontWeight(.medium)
                     .padding(.horizontal, 10)
@@ -730,11 +731,11 @@ private struct ReelsPostCard: View {
             if isShared {
                 try await FirestoreService.shared.unsharePost(text: post.text, authorId: user.uid)
                 isShared = false
-                toastMessage.wrappedValue = "Post unshared"
+                toastMessage.wrappedValue = l10n.toastPostUnshared
             } else {
                 try await FirestoreService.shared.sharePost(post, author: user)
                 isShared = true
-                toastMessage.wrappedValue = "Post shared to Social Feed"
+                toastMessage.wrappedValue = l10n.toastPostShared
             }
         } catch {
             print("Error toggling share: \(error)")

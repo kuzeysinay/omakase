@@ -77,15 +77,15 @@ final class FeedViewModel {
 
     // MARK: - Actions
 
-    /// Append a new post **at the top** and start streaming it. Safe to call while another
+    /// Append a new post **at the end** and start streaming it. Safe to call while another
     /// stream is in flight — the previous one is cancelled.
     func requestNextPost() {
         streamingTask?.cancel()
         errorMessage = nil
 
         let post = Post()
-        // Newest first — prepend so the feed reads top → bottom, latest → older.
-        posts = [post] + posts
+        // Newest last — append so new posts appear below in Reels-style feed.
+        posts.append(post)
         let postID = post.id
         isGenerating = true
         activeStreamPostID = postID
