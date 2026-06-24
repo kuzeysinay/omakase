@@ -4,11 +4,17 @@
 //
 
 import Foundation
+import Observation
 
 /// A single AI-generated post in the feed. `text` grows over time as SSE
 /// tokens stream in, and `isComplete` flips to true when the `done` event
 /// arrives.
-struct Post: Identifiable, Equatable, Sendable {
+///
+/// Uses `@Observable` so SwiftUI can track per-property mutations without
+/// needing to copy the entire `posts` array on every SSE token — the key fix
+/// for scroll-stuttering during streaming.
+@Observable
+final class Post: Identifiable, @unchecked Sendable {
     let id: UUID
     /// Short headline from the model (`TITLE:` line); may be empty until the first SSE `title` event.
     var title: String
@@ -40,5 +46,11 @@ struct Post: Identifiable, Equatable, Sendable {
         self.postFormat = postFormat
         self.deepDiveText = deepDiveText
         self.createdAt = createdAt
+    }
+}
+
+extension Post: Equatable {
+    static func == (lhs: Post, rhs: Post) -> Bool {
+        lhs.id == rhs.id
     }
 }

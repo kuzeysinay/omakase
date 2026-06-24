@@ -737,6 +737,35 @@ struct L10n {
         }
     }
 
+    // MARK: - Appearance
+
+    var appearanceLabel: String {
+        switch lang {
+        case .english: "Appearance"
+        case .turkish: "Görünüm"
+        }
+    }
+
+    func appearanceName(_ mode: AppAppearance) -> String {
+        switch mode {
+        case .system:
+            switch lang {
+            case .english: "System"
+            case .turkish: "Sistem"
+            }
+        case .light:
+            switch lang {
+            case .english: "Light"
+            case .turkish: "Açık"
+            }
+        case .dark:
+            switch lang {
+            case .english: "Dark"
+            case .turkish: "Koyu"
+            }
+        }
+    }
+
     // MARK: - Letterboxd
 
     var letterboxdMode: String {

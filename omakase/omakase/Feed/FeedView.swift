@@ -257,7 +257,7 @@ struct FeedView: View {
             ZStack(alignment: .top) {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 0) {
+                        LazyVStack(spacing: 0) {
                             ForEach(viewModel.posts) { post in
                                 ReelsPostCard(
                                     post: post,
@@ -415,53 +415,51 @@ private struct ReelsPostCard: View {
     }
 
     var body: some View {
-        // Full-screen scrollable content area
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
-                // Header: title, timestamp, LIVE badge
-                postHeader
-                    .padding(.top, 8)
+        // Use a single VStack instead of a nested ScrollView — the outer
+        // paging ScrollView already provides vertical scrolling. Nesting two
+        // vertical ScrollViews caused severe gesture contention and redundant
+        // layout passes, which was the primary source of scroll stutter.
+        VStack(alignment: .leading, spacing: 16) {
+            // Header: title, timestamp, LIVE badge
+            postHeader
+                .padding(.top, 8)
 
-                // Main post body text
-                if post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !post.isComplete {
-                    skeletonBody
-                        .transition(.opacity)
-                } else {
-                    Text(postBody)
-                        .font(.body)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .contentTransition(.opacity)
-                        .animation(.easeOut(duration: 0.35), value: post.text)
-                        .transition(.opacity)
-                }
-
-                // Deep dive section
-                if let deepDive = post.deepDiveText, !deepDive.isEmpty {
-                    deepDiveSection(deepDive)
-                }
-
-                // Tags
-                if post.isComplete, !post.tags.isEmpty {
-                    tagChips
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        .animation(.easeOut(duration: 0.3), value: post.tags)
-                }
-
-                if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    actionBar
-                        .transition(.opacity)
-                        .padding(.top, 8)
-                }
-                
-                Spacer()
-                    .frame(height: 20)
+            // Main post body text
+            if post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !post.isComplete {
+                skeletonBody
+                    .transition(.opacity)
+            } else {
+                Text(postBody)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // Removed per-token .contentTransition/.animation — they
+                    // fired on every SSE token causing continuous animation
+                    // overhead and layout thrashing during streaming.
+                    .transition(.opacity)
             }
-            .padding(.horizontal, 20)
-            .animation(.easeOut(duration: 0.6), value: post.isComplete)
-            .animation(.easeOut(duration: 0.4), value: post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            // Deep dive section
+            if let deepDive = post.deepDiveText, !deepDive.isEmpty {
+                deepDiveSection(deepDive)
+            }
+
+            // Tags
+            if post.isComplete, !post.tags.isEmpty {
+                tagChips
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+
+            if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                actionBar
+                    .transition(.opacity)
+                    .padding(.top, 8)
+            }
+            
+            Spacer(minLength: 20)
         }
-        .scrollDisabled(!post.isComplete && post.text.count < 200)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 20)
+        .animation(.easeOut(duration: 0.6), value: post.isComplete)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color(.systemBackground))
         .task(id: post.isComplete) {
             guard !post.isComplete else {
@@ -474,12 +472,16 @@ private struct ReelsPostCard: View {
             }
             showCursor = false
         }
-        .task {
-            // Check if this post was already shared.
-            guard post.isComplete, let user = authService.currentUser else { return }
-            isShared = (try? await FirestoreService.shared.hasSharedPost(
-                text: post.text, authorId: user.uid
-            )) ?? false
+        .onChange(of: post.isComplete) { _, isComplete in
+            // Only check share status after post finishes streaming.
+            // Running this Firestore query during streaming or mid-scroll
+            // caused hitches from the network roundtrip.
+            guard isComplete, let user = authService.currentUser else { return }
+            Task {
+                isShared = (try? await FirestoreService.shared.hasSharedPost(
+                    text: post.text, authorId: user.uid
+                )) ?? false
+            }
         }
     }
 

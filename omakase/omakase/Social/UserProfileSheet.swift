@@ -187,6 +187,7 @@ struct MyProfileSheet: View {
 
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
     @AppStorage("omakase.language") private var languageCode: String = AppLanguage.english.rawValue
+    @AppStorage("omakase.appearance") private var appearanceCode: String = AppAppearance.system.rawValue
     @State private var isShowingLetterboxdPrompt = false
     @State private var tempLetterboxdUsername = ""
 
@@ -243,6 +244,21 @@ struct MyProfileSheet: View {
                         } icon: {
                             Image(systemName: "globe")
                                 .foregroundStyle(.blue)
+                        }
+                    }
+
+                    // Appearance mode
+                    Picker(selection: $appearanceCode) {
+                        ForEach(AppAppearance.allCases) { mode in
+                            Text(l10n.appearanceName(mode)).tag(mode.rawValue)
+                        }
+                    } label: {
+                        let current = AppAppearance(rawValue: appearanceCode) ?? .system
+                        Label {
+                            Text(l10n.appearanceLabel)
+                        } icon: {
+                            Image(systemName: current.iconName)
+                                .foregroundStyle(current.iconColor)
                         }
                     }
 

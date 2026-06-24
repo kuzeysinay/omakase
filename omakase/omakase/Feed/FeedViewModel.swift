@@ -300,17 +300,15 @@ final class FeedViewModel {
         isGenerating = true
         errorMessage = nil
 
-        guard let idx = posts.firstIndex(where: { $0.id == post.id }) else {
+        guard let targetPost = posts.first(where: { $0.id == post.id }) else {
             isGenerating = false
             return
         }
-        var copy = posts
-        copy[idx].isComplete = false
+        targetPost.isComplete = false
         // Initialize deepDiveText to direct incoming tokens to the deep dive section.
-        if copy[idx].deepDiveText == nil {
-            copy[idx].deepDiveText = ""
+        if targetPost.deepDiveText == nil {
+            targetPost.deepDiveText = ""
         }
-        posts = copy
 
         let deepDiveId = post.id
         activeStreamPostID = deepDiveId
@@ -473,54 +471,42 @@ final class FeedViewModel {
 
     private func setTitle(_ title: String, for postID: UUID) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
+        guard !trimmed.isEmpty, let post = posts.first(where: { $0.id == postID }) else { return }
         // Only set title if it's empty to prevent overwriting existing post titles during deep dives
-        if posts[idx].title.isEmpty || posts[idx].title == "Diving deeper..." {
-            var copy = posts
-            copy[idx].title = trimmed
-            posts = copy
+        if post.title.isEmpty || post.title == "Diving deeper..." {
+            post.title = trimmed
         }
     }
 
     private func setTags(_ tags: [String], for postID: UUID) {
-        guard !tags.isEmpty, let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
-        var copy = posts
-        copy[idx].tags = tags
-        posts = copy
+        guard !tags.isEmpty, let post = posts.first(where: { $0.id == postID }) else { return }
+        post.tags = tags
     }
 
     private func setPostFormat(_ format: String, for postID: UUID) {
-        guard let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
-        var copy = posts
-        copy[idx].postFormat = format
-        posts = copy
+        guard let post = posts.first(where: { $0.id == postID }) else { return }
+        post.postFormat = format
     }
 
     private func appendText(_ text: String, to postID: UUID) {
-        guard let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
-        var copy = self.posts
-        if copy[idx].deepDiveText != nil {
-            copy[idx].deepDiveText! += text
+        guard let post = posts.first(where: { $0.id == postID }) else { return }
+        if post.deepDiveText != nil {
+            post.deepDiveText! += text
         } else {
-            copy[idx].text += text
+            post.text += text
         }
-        self.posts = copy
     }
 
     private func markPostComplete(_ postID: UUID) {
-        guard let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
-        var copy = posts
-        copy[idx].isComplete = true
-        posts = copy
+        guard let post = posts.first(where: { $0.id == postID }) else { return }
+        post.isComplete = true
     }
 
     /// When a stream is superseded (new request) or cancelled, avoid stuck LIVE / empty "…" cards.
     private func handleStreamAbandoned(postID: UUID) {
         guard let idx = posts.firstIndex(where: { $0.id == postID }) else { return }
         if posts[idx].text.isEmpty {
-            var copy = posts
-            copy.remove(at: idx)
-            posts = copy
+            posts.remove(at: idx)
         } else {
             markPostComplete(postID)
         }

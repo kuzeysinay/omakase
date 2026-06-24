@@ -8,11 +8,16 @@ import SwiftUI
 struct ContentView: View {
     @AppStorage("omakase.hasOnboarded") private var hasOnboarded: Bool = false
     @AppStorage("omakase.language") private var languageCode: String = AppLanguage.english.rawValue
+    @AppStorage("omakase.appearance") private var appearanceCode: String = AppAppearance.system.rawValue
 
     @State private var authService = AuthService()
 
     private var resolvedLanguage: AppLanguage {
         AppLanguage(rawValue: languageCode) ?? .english
+    }
+
+    private var resolvedAppearance: AppAppearance {
+        AppAppearance(rawValue: appearanceCode) ?? .system
     }
 
     @State private var showSplash = true
@@ -35,6 +40,7 @@ struct ContentView: View {
             .animation(.default, value: hasOnboarded)
             .environment(\.locale, Locale(identifier: resolvedLanguage.localeIdentifier))
             .environment(\.appLanguage, resolvedLanguage)
+            .preferredColorScheme(resolvedAppearance.colorScheme)
 
             if showSplash {
                 ZStack {

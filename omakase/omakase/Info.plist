@@ -19,6 +19,11 @@
 		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
+			<key>172.20.10.14</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
 			<key>127.0.0.1</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
@@ -34,7 +39,7 @@
 		</dict>
 	</dict>
 	<key>OMAKASE_API_URL</key>
-	<string>http://127.0.0.1:8000</string>
+	<string>http://172.20.10.14:8000</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>
