@@ -398,10 +398,10 @@ private struct BookmarkDetailView: View {
 
                             HStack(spacing: 8) {
                                 Image(systemName: "fish.fill")
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(.primary)
                                 Text(l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive")
                                     .font(.headline)
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                                 Button {
                                     isDeepDiveExpanded = false
@@ -428,8 +428,8 @@ private struct BookmarkDetailView: View {
                                 }
                                 .font(.subheadline.bold())
                                 .padding()
-                                .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                                .foregroundStyle(.blue)
+                                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+                                .foregroundStyle(.primary)
                             }
                             .buttonStyle(.plain)
                         }
@@ -446,8 +446,8 @@ private struct BookmarkDetailView: View {
                                 .fontWeight(.medium)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
-                                .background(Color.accentColor.opacity(0.12), in: Capsule())
-                                .foregroundStyle(Color.accentColor)
+                                .background(Color.primary.opacity(0.08), in: Capsule())
+                                .foregroundStyle(.primary)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -472,7 +472,7 @@ private struct BookmarkDetailView: View {
                                      : (l10n.lang == .turkish ? "Paylaş" : "Share"))
                                     .font(.subheadline.weight(.medium))
                             }
-                            .foregroundStyle(isShared ? Color.accentColor : .secondary)
+                            .foregroundStyle(isShared ? .primary : .secondary)
                         }
                     }
                     .buttonStyle(.borderless)

@@ -149,7 +149,7 @@ struct TimelineView: View {
     private var discoverBanner: some View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles")
-                .foregroundStyle(.tint)
+                .foregroundStyle(.primary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(l10n.discoverBannerTitle)
                     .font(.subheadline.bold())
@@ -160,7 +160,7 @@ struct TimelineView: View {
             Spacer()
         }
         .padding()
-        .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

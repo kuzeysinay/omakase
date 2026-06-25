@@ -146,7 +146,7 @@ struct UserSearchView: View {
             else { Text(isFollowing ? l10n.following : l10n.follow).font(.subheadline.bold()) }
         }
         .buttonStyle(.bordered)
-        .tint(isFollowing ? .secondary : .accentColor)
+        .tint(isFollowing ? .secondary : .primary)
         .disabled(isPending)
     }
 

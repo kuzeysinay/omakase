@@ -148,7 +148,8 @@ final class FirestoreService {
             text: post.text,
             tags: post.tags,
             originalCreatedAt: post.createdAt,
-            sharedAt: .now
+            sharedAt: .now,
+            deepDiveText: post.deepDiveText
         )
         _ = try db.collection("shared_posts").addDocument(from: shared)
     }

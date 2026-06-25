@@ -5,7 +5,10 @@
 
 import SwiftUI
 
-/// A card showing a shared post in the social timeline, with author info.
+/// A card showing a shared post in the social timeline.
+/// Visual style intentionally mirrors the AI feed's ReelsPostCard —
+/// same typography, same action-bar layout — extended with author info,
+/// reactions, comments, and optional deep dive sheet.
 struct TimelinePostCard: View {
 
     let post: SharedPost
@@ -19,78 +22,43 @@ struct TimelinePostCard: View {
     @State private var myReaction: String?
     @State private var localReactionCounts: [String: Int] = [:]
     @State private var showComments = false
+    @State private var showDeepDive = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Author header
-            HStack(spacing: 10) {
-                Button(action: onAuthorTap) {
-                    HStack(spacing: 10) {
-                        authorAvatar
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(post.authorName)
-                                .font(.subheadline).bold()
-                                .foregroundStyle(.primary)
-                            Text(post.sharedAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: 16) {
 
-                Spacer()
+            // MARK: Author header — mirrors postHeader in ReelsPostCard
+            authorHeader
 
-                if post.authorId == authService.uid {
-                    Menu {
-                        Button(role: .destructive) {
-                            onDelete?()
-                        } label: {
-                            Label(l10n.lang == .turkish ? "Gönderiyi Sil" : "Delete Post", systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.body.weight(.medium))
-                            .padding(4)
-                    }
-                    .tint(.primary)
-                    .foregroundStyle(.primary)
-                } else {
-                    Image(systemName: "arrow.up.right.circle")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-
-            // Post title
+            // MARK: Title
             if !post.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text(post.title)
                     .font(.headline)
-                    .lineLimit(2)
+                    .lineLimit(3)
             }
 
-            // Post body
+            // MARK: Body
             Text(post.text)
                 .font(.body)
                 .fixedSize(horizontal: false, vertical: true)
 
-            // Tags
+            // MARK: Tags
             if !post.tags.isEmpty {
                 tagChips
             }
 
-            // Reaction bar
-            reactionBar
+            // MARK: Action bar
+            actionBar
 
-            // Comment button
-            commentButton
         }
-        .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .background(Color(.systemBackground))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(.separator, lineWidth: 0.5)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .onAppear {
             localReactionCounts = post.reactionCounts ?? [:]
         }
@@ -103,9 +71,59 @@ struct TimelinePostCard: View {
             CommentsView(postId: post.id ?? "", authService: authService)
                 .environment(\.appLanguage, appLanguage)
         }
+        .sheet(isPresented: $showDeepDive) {
+            deepDiveSheet
+                .environment(\.appLanguage, appLanguage)
+        }
     }
 
-    // MARK: - Subviews
+    // MARK: - Author header
+
+    private var authorHeader: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Button(action: onAuthorTap) {
+                HStack(spacing: 10) {
+                    authorAvatar
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(post.authorName)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        Text(post.sharedAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            if post.authorId == authService.uid {
+                Menu {
+                    Button(role: .destructive) {
+                        onDelete?()
+                    } label: {
+                        Label(
+                            l10n.lang == .turkish ? "Gönderiyi Sil" : "Delete Post",
+                            systemImage: "trash"
+                        )
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, height: 32)
+                }
+                .tint(.primary)
+            } else {
+                Image(systemName: "arrow.up.right.circle")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    // MARK: - Avatar
 
     @ViewBuilder
     private var authorAvatar: some View {
@@ -116,7 +134,7 @@ struct TimelinePostCard: View {
                     image
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 32, height: 32)
+                        .frame(width: 36, height: 36)
                         .clipShape(Circle())
                 default:
                     avatarPlaceholder
@@ -129,28 +147,69 @@ struct TimelinePostCard: View {
 
     private var avatarPlaceholder: some View {
         Image(systemName: "person.circle.fill")
-            .font(.system(size: 28))
+            .font(.system(size: 32))
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(.secondary)
     }
 
+    // MARK: - Tags
+
     private var tagChips: some View {
         FlowLayout(spacing: 6) {
             ForEach(post.tags, id: \.self) { tag in
-                Text(tag)
+                Text(tag.capitalized)
                     .font(.caption)
                     .fontWeight(.medium)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.12), in: Capsule())
-                    .foregroundStyle(Color.accentColor)
+                    .background(Color.primary.opacity(0.08), in: Capsule())
+                    .foregroundStyle(.primary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    // MARK: - Action bar
+
+    private var actionBar: some View {
+        HStack(spacing: 0) {
+
+            // Deep Dive button — only visible if the shared post has a deep dive
+            if let deepDive = post.deepDiveText, !deepDive.isEmpty {
+                Button {
+                    showDeepDive = true
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "fish.fill")
+                            .font(.title2)
+                        Text(l10n.lang == .turkish ? "İnceleme" : "Deep Dive")
+                            .font(.caption2)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .frame(width: 56)
+                    .foregroundStyle(.primary)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 8)
+                .accessibilityLabel(l10n.lang == .turkish ? "Derinlemesine incelemeyi oku" : "Read deep dive")
+            }
+
+            // Reactions
+            reactionBar
+
+            Spacer()
+
+            // Comments
+            commentButton
+        }
+        .padding(.top, 4)
+    }
+
+    // MARK: - Reactions
+
     private var reactionBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(ReactionEmoji.allCases, id: \.rawValue) { reaction in
                 let emoji = reaction.rawValue
                 let count = localReactionCounts[emoji] ?? 0
@@ -172,31 +231,31 @@ struct TimelinePostCard: View {
                     .padding(.vertical, 4)
                     .background(
                         isSelected
-                            ? Color.accentColor.opacity(0.2)
+                            ? Color.primary.opacity(0.12)
                             : Color.secondary.opacity(0.08),
                         in: Capsule()
                     )
                     .overlay(
                         Capsule().stroke(
-                            isSelected ? Color.accentColor : .clear,
+                            isSelected ? Color.primary.opacity(0.4) : .clear,
                             lineWidth: 1
                         )
                     )
                 }
                 .buttonStyle(.plain)
             }
-
-            Spacer()
         }
     }
+
+    // MARK: - Comments
 
     private var commentButton: some View {
         Button {
             showComments = true
         } label: {
             HStack(spacing: 4) {
-                Text("💬")
-                    .font(.callout)
+                Image(systemName: "bubble.right")
+                    .font(.body)
                 if let count = post.commentCount, count > 0 {
                     Text("\(count)")
                         .font(.caption2).bold()
@@ -206,9 +265,55 @@ struct TimelinePostCard: View {
             .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(l10n.lang == .turkish ? "Yorumlar" : "Comments")
     }
 
-    // MARK: - Reaction Logic
+    // MARK: - Deep Dive Sheet
+    //
+    // Deep dive text is complete (no streaming here),
+    // so no skeleton or LIVE badge is needed.
+
+    private var deepDiveSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if let deepDive = post.deepDiveText, !deepDive.isEmpty {
+                        let clean = String(deepDive.drop(while: { $0.isWhitespace || $0.isNewline }))
+                        Text(clean)
+                            .font(.body)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 12)
+                    }
+                    Spacer(minLength: 48)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .navigationTitle(l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Image(systemName: "fish.fill")
+                        .foregroundStyle(.primary)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showDeepDive = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel(l10n.lang == .turkish ? "Kapat" : "Close")
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    // MARK: - Reaction logic
 
     private func toggleReaction(_ emoji: String) async {
         guard let uid = authService.uid,
@@ -216,7 +321,6 @@ struct TimelinePostCard: View {
 
         do {
             if let current = myReaction {
-                // Remove old reaction
                 localReactionCounts[current, default: 0] -= 1
                 if localReactionCounts[current, default: 0] <= 0 {
                     localReactionCounts.removeValue(forKey: current)
@@ -224,27 +328,23 @@ struct TimelinePostCard: View {
                 try await FirestoreService.shared.removeReaction(postId: postId, emoji: current, uid: uid)
 
                 if current == emoji {
-                    // Tapped the same emoji — just remove
                     myReaction = nil
                     return
                 }
             }
 
-            // Add new reaction
             localReactionCounts[emoji, default: 0] += 1
             myReaction = emoji
             try await FirestoreService.shared.addReaction(postId: postId, emoji: emoji, uid: uid)
         } catch {
-            // Revert optimistic update on failure
             myReaction = await FirestoreService.shared.fetchMyReaction(postId: postId, uid: uid)
             localReactionCounts = post.reactionCounts ?? [:]
         }
     }
 }
 
-/// Simple flow layout that wraps chips onto new rows.
-/// (Duplicated from FeedView to keep the Social module self-contained;
-/// in a production app this would be in a shared package.)
+// MARK: - Flow layout (self-contained copy)
+
 private struct FlowLayout: Layout {
     var spacing: CGFloat = 6
 

@@ -81,7 +81,7 @@ struct InterestsEditorForm: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color.accentColor.opacity(0.15), in: Capsule())
+                    .background(Color.primary.opacity(0.1), in: Capsule())
                 }
                 .buttonStyle(.plain)
             }
@@ -127,7 +127,7 @@ struct InterestsEditorForm: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "sparkle")
                                     .font(.caption2)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(.secondary)
                                 Text(suggestion)
                             }
                         }
@@ -138,11 +138,7 @@ struct InterestsEditorForm: View {
                         .overlay(
                             Capsule()
                                 .stroke(
-                                    LinearGradient(
-                                        colors: [Color.accentColor.opacity(0.5), Color.accentColor.opacity(0.15)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
+                                    Color.primary.opacity(0.2),
                                     lineWidth: 1
                                 )
                         )

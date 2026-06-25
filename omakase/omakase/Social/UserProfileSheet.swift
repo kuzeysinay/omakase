@@ -87,7 +87,7 @@ struct UserProfileSheet: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(isFollowing ? .secondary : .accentColor)
+                .tint(isFollowing ? .secondary : .primary)
                 .controlSize(.large)
                 .disabled(isPending)
             }
@@ -101,8 +101,8 @@ struct UserProfileSheet: View {
                             Text(tag)
                                 .font(.caption).fontWeight(.medium)
                                 .padding(.horizontal, 10).padding(.vertical, 4)
-                                .background(Color.accentColor.opacity(0.12), in: Capsule())
-                                .foregroundStyle(Color.accentColor)
+                                .background(Color.primary.opacity(0.08), in: Capsule())
+                                .foregroundStyle(.primary)
                         }
                     }
                 }
@@ -243,7 +243,7 @@ struct MyProfileSheet: View {
                             Text(l10n.languageMenuAccessibility)
                         } icon: {
                             Image(systemName: "globe")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.primary)
                         }
                     }
 

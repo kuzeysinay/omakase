@@ -438,9 +438,17 @@ private struct ReelsPostCard: View {
                     .transition(.opacity)
             }
 
-            // Deep dive section
-            if let deepDive = post.deepDiveText, !deepDive.isEmpty {
-                deepDiveSection(deepDive)
+            // Deep dive indicator (content shown in sheet, not inline)
+            if post.deepDiveText != nil, !post.isComplete {
+                HStack(spacing: 6) {
+                    Image(systemName: "fish.fill")
+                        .foregroundStyle(.primary)
+                    Text(l10n.lang == .turkish ? "Derinlemesine inceleme yazılıyor…" : "Writing deep dive…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ProgressView().controlSize(.mini)
+                }
+                .transition(.opacity)
             }
 
             // Tags
@@ -482,6 +490,17 @@ private struct ReelsPostCard: View {
                     text: post.text, authorId: user.uid
                 )) ?? false
             }
+        }
+        .onChange(of: post.deepDiveText) { oldValue, newValue in
+            // Auto-open the sheet the moment ViewModel sets deepDiveText
+            // (transitions from nil → "" as streaming starts).
+            if oldValue == nil, newValue != nil {
+                isDeepDiveExpanded = true
+            }
+        }
+        .sheet(isPresented: $isDeepDiveExpanded) {
+            deepDiveSheetContent
+                .environment(\.appLanguage, appLanguage)
         }
     }
 
@@ -534,22 +553,29 @@ private struct ReelsPostCard: View {
 
     private var actionBar: some View {
         HStack(spacing: 28) {
-            // Deep Dive button
+            // Deep Dive button — opens sheet (re-read if already fetched)
             Button {
-                viewModel.requestDeepDive(for: post)
+                if post.deepDiveText == nil {
+                    viewModel.requestDeepDive(for: post)
+                }
+                isDeepDiveExpanded = true
             } label: {
                 VStack(spacing: 4) {
-                    Image(systemName: "fish")
+                    Image(systemName: post.deepDiveText != nil ? "fish.fill" : "fish")
                         .font(.title2)
-                    Text(l10n.actionDive)
+                    Text(post.deepDiveText != nil
+                         ? (l10n.lang == .turkish ? "Yeniden Oku" : "Re-read")
+                         : l10n.actionDive)
                         .font(.caption2)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
-                .foregroundStyle(Color.secondary)
-                .opacity(post.deepDiveText != nil ? 0.4 : 1.0)
+                // Fixed width prevents icon from shifting when label text changes
+                .frame(width: 52)
+                .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(l10n.deepDiveA11y)
-            .disabled(post.deepDiveText != nil)
 
             // Share to timeline button
             Button {
@@ -564,8 +590,11 @@ private struct ReelsPostCard: View {
                     }
                     Text(isShared ? l10n.actionShared : l10n.actionShare)
                         .font(.caption2)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
-                .foregroundStyle(isShared ? Color.accentColor : .secondary)
+                .frame(width: 52)
+                .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isShared ? l10n.unsharePost : l10n.sharePost)
@@ -580,8 +609,11 @@ private struct ReelsPostCard: View {
                         .font(.title2)
                     Text(l10n.actionExport)
                         .font(.caption2)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
-                .foregroundStyle(Color.secondary)
+                .frame(width: 52)
+                .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(l10n.shareSheetA11y)
@@ -602,8 +634,11 @@ private struct ReelsPostCard: View {
                         .font(.title2)
                     Text(isBookmarked ? l10n.actionSaved : l10n.actionSave)
                         .font(.caption2)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
-                .foregroundStyle(isBookmarked ? Color.accentColor : .secondary)
+                .frame(width: 52)
+                .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isBookmarked ? l10n.removeBookmarkA11y : l10n.bookmarkPostA11y)
@@ -611,61 +646,69 @@ private struct ReelsPostCard: View {
         .padding(.vertical, 12)
     }
 
-    // MARK: - Deep Dive Section
+    // MARK: - Deep Dive Sheet
+    //
+    // Presented as a bottom sheet so it never overflows the fixed-height
+    // paging card. The sheet has its own ScrollView to handle arbitrarily
+    // long content without touching the outer layout.
 
-    @ViewBuilder
-    private func deepDiveSection(_ deepDive: String) -> some View {
-        let expanded = isDeepDiveExpanded || !post.isComplete
+    private var deepDiveSheetContent: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if let deepDive = post.deepDiveText {
+                        if deepDive.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            && !post.isComplete {
+                            // Still loading — show animated skeleton
+                            skeletonBody
+                                .padding(.horizontal, 20)
+                                .padding(.top, 8)
+                        } else {
+                            Text(attributedDeepDive(deepDive))
+                                .font(.body)
+                                .lineSpacing(3)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 8)
+                        }
+                    }
 
-        VStack(spacing: 0) {
-            if expanded {
-                Divider().padding(.vertical, 8)
+                    // LIVE streaming indicator while content is arriving
+                    if !post.isComplete {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text(l10n.liveBadge)
+                                .font(.caption2.monospaced()).bold()
+                                .foregroundStyle(.red)
+                        }
+                        .padding(.horizontal, 20)
+                    }
 
-                HStack(spacing: 8) {
+                    Spacer(minLength: 48)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .navigationTitle(l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
                     Image(systemName: "fish.fill")
-                        .foregroundStyle(.blue)
-                    Text("Derinlemesine İnceleme")
-                        .font(.headline)
-                        .foregroundStyle(.blue)
-                    Spacer()
+                        .foregroundStyle(.primary)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         isDeepDiveExpanded = false
                     } label: {
-                        Image(systemName: "chevron.up")
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
                             .foregroundStyle(.secondary)
                     }
+                    .accessibilityLabel(l10n.lang == .turkish ? "Kapat" : "Close")
                 }
-                .padding(.bottom, 8)
-                if deepDive.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !post.isComplete {
-                    skeletonBody
-                        .transition(.opacity)
-                } else {
-                    Text(attributedDeepDive(deepDive))
-                        .font(.body)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .contentTransition(.opacity)
-                        .animation(.easeOut(duration: 0.35), value: deepDive)
-                        .transition(.opacity)
-                }
-            } else {
-                Button {
-                    isDeepDiveExpanded = true
-                } label: {
-                    HStack {
-                        Image(systemName: "fish")
-                        Text("Derinlemesine İncelemeyi Oku")
-                        Spacer()
-                        Image(systemName: "chevron.down")
-                    }
-                    .font(.subheadline.bold())
-                    .padding()
-                    .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                    .foregroundStyle(.blue)
-                }
-                .buttonStyle(.plain)
             }
         }
-        .animation(.spring(), value: expanded)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     // MARK: - Helpers
@@ -716,8 +759,8 @@ private struct ReelsPostCard: View {
                     .fontWeight(.medium)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.12), in: Capsule())
-                    .foregroundStyle(Color.accentColor)
+                    .background(Color.primary.opacity(0.08), in: Capsule())
+                    .foregroundStyle(.primary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -115,10 +115,10 @@ struct InlineTasteBar: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
                 .background(
-                    isActive ? Color.accentColor : Color.clear,
+                    isActive ? Color.primary : Color.clear,
                     in: Capsule()
                 )
-                .foregroundStyle(isActive ? .white : .secondary)
+                .foregroundStyle(isActive ? Color(UIColor.systemBackground) : .secondary)
                 .overlay(
                     Capsule()
                         .stroke(
@@ -226,9 +226,9 @@ struct InlineTasteBar: View {
         } label: {
             Image(systemName: showAddField ? "xmark" : "plus")
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(.primary)
                 .frame(width: 30, height: 30)
-                .background(Color.accentColor.opacity(0.12), in: Circle())
+                .background(Color.primary.opacity(0.08), in: Circle())
                 .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
@@ -249,7 +249,7 @@ struct InlineTasteBar: View {
             Button(action: commitDraft) {
                 Image(systemName: "plus.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.primary)
             }
             .disabled(draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
@@ -333,8 +333,8 @@ fileprivate struct AnimatedSuggestionChip: View {
                 .background(
                     LinearGradient(
                         colors: [
-                            Color.accentColor.opacity(isBreathing ? 0.25 : 0.05),
-                            Color.accentColor.opacity(isBreathing ? 0.05 : 0.25),
+                            Color.primary.opacity(isBreathing ? 0.12 : 0.04),
+                            Color.primary.opacity(isBreathing ? 0.04 : 0.12),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -344,11 +344,11 @@ fileprivate struct AnimatedSuggestionChip: View {
                 .overlay(
                     Capsule()
                         .stroke(
-                            Color.accentColor.opacity(isBreathing ? 0.6 : 0.2),
+                            Color.primary.opacity(isBreathing ? 0.35 : 0.12),
                             lineWidth: 1
                         )
                 )
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(.primary)
                 .offset(y: isBreathing ? -1 : 1)
         }
         .buttonStyle(.plain)
@@ -372,7 +372,7 @@ fileprivate struct ShimmeringPill: View {
                 Capsule()
                     .fill(
                         LinearGradient(
-                            gradient: Gradient(colors: [.clear, Color.accentColor.opacity(0.2), .clear]),
+                            gradient: Gradient(colors: [.clear, Color.primary.opacity(0.15), .clear]),
                             startPoint: .leading,
                             endPoint: .trailing
                         )
