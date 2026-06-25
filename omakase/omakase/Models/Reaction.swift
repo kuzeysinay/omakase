@@ -12,10 +12,7 @@ struct Reaction: Codable, Identifiable, Sendable {
     let reactedAt: Date
 }
 
+/// Single like reaction (Instagram-style). Legacy emoji reactions are still counted.
 enum ReactionEmoji: String, CaseIterable, Sendable {
-    case mindBlown = "🤯"
-    case fire = "🔥"
-    case lightbulb = "💡"
-    case laugh = "😂"
-    case bullseye = "🎯"
+    case like = "like"
 }

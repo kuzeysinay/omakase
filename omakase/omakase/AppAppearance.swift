@@ -31,12 +31,8 @@ enum AppAppearance: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Icon tint color.
+    /// Icon tint color — monochrome, no accent hues.
     var iconColor: Color {
-        switch self {
-        case .system: .purple
-        case .light:  .orange
-        case .dark:   .indigo
-        }
+        .primary
     }
 }

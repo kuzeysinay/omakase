@@ -27,5 +27,6 @@ struct MainTabView: View {
                     Label(l10n.tabTimeline, systemImage: "person.2.fill")
                 }
         }
+        .tint(OmakaseTheme.ink)
     }
 }

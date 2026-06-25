@@ -71,6 +71,7 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
+        .tint(OmakaseTheme.chipActiveFill)
         .controlSize(.large)
         .disabled(interests.isEmpty)
     }

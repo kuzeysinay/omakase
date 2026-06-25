@@ -61,7 +61,7 @@ struct BookmarksSheet: View {
                             } label: {
                                 Label("Rename", systemImage: "pencil")
                             }
-                            .tint(.orange)
+                            .tint(OmakaseTheme.ink)
                         }
                     }
                 }
@@ -358,7 +358,7 @@ private struct BookmarkDetailView: View {
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
-    @State private var isDeepDiveExpanded = false
+    @State private var showDeepDiveSheet = false
     @State private var isShared = false
     @State private var isSharePending = false
     @State private var toastMessage: String?
@@ -390,51 +390,38 @@ private struct BookmarkDetailView: View {
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
 
-                // Deep dive section
+                // Deep dive — opens dedicated reader sheet
                 if let deepDive = entry.deepDiveText, !deepDive.isEmpty {
-                    VStack(spacing: 0) {
-                        if isDeepDiveExpanded {
-                            Divider().padding(.vertical, 8)
-
-                            HStack(spacing: 8) {
-                                Image(systemName: "fish.fill")
-                                    .foregroundStyle(.primary)
+                    Button {
+                        showDeepDiveSheet = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "fish.fill")
+                                .font(.title3)
+                                .foregroundStyle(OmakaseTheme.ink)
+                            VStack(alignment: .leading, spacing: 3) {
                                 Text(l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive")
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                Button {
-                                    isDeepDiveExpanded = false
-                                } label: {
-                                    Image(systemName: "chevron.up")
-                                        .foregroundStyle(.secondary)
-                                }
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(OmakaseTheme.ink)
+                                Text(deepDivePreview(deepDive))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
                             }
-                            .padding(.bottom, 8)
-
-                            Text(deepDive)
-                                .font(.body)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .transition(.opacity)
-                        } else {
-                            Button {
-                                isDeepDiveExpanded = true
-                            } label: {
-                                HStack {
-                                    Image(systemName: "fish")
-                                    Text(l10n.lang == .turkish ? "Derinlemesine İncelemeyi Oku" : "Read Deep Dive")
-                                    Spacer()
-                                    Image(systemName: "chevron.down")
-                                }
-                                .font(.subheadline.bold())
-                                .padding()
-                                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
-                                .foregroundStyle(.primary)
-                            }
-                            .buttonStyle(.plain)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.bold())
+                                .foregroundStyle(.tertiary)
                         }
+                        .padding(14)
+                        .background(OmakaseTheme.wash, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(OmakaseTheme.stroke, lineWidth: 1)
+                        )
                     }
-                    .animation(.spring(), value: isDeepDiveExpanded)
+                    .buttonStyle(.plain)
                 }
 
                 // Tags
@@ -513,6 +500,13 @@ private struct BookmarkDetailView: View {
         }
         .navigationTitle(l10n.lang == .turkish ? "Kayıtlı Gönderi" : "Saved Post")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showDeepDiveSheet) {
+            DeepDiveReaderSheet(
+                text: entry.deepDiveText ?? "",
+                title: l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive"
+            )
+            .environment(\.appLanguage, appLanguage)
+        }
         .toast(message: $toastMessage)
         .task {
             // Check if already shared
@@ -526,6 +520,15 @@ private struct BookmarkDetailView: View {
     private var cardTitle: String {
         let t = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
         return t.isEmpty ? l10n.savedPostFallbackTitle : t
+    }
+
+    private func deepDivePreview(_ text: String) -> String {
+        let clean = String(text.drop(while: { $0.isWhitespace || $0.isNewline }))
+        let snippet = clean.prefix(120)
+        if snippet.count < clean.count {
+            return String(snippet).trimmingCharacters(in: .whitespaces) + "…"
+        }
+        return String(snippet)
     }
 
     // MARK: - Share action

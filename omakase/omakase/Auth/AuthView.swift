@@ -59,6 +59,7 @@ struct AuthView: View {
                     .padding(.vertical, 4)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(OmakaseTheme.chipActiveFill)
                 .controlSize(.large)
                 .disabled(authService.isSigningIn)
 

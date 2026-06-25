@@ -278,7 +278,7 @@ struct MyProfileSheet: View {
                                 }
                             } icon: {
                                 Image(systemName: "film")
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(.primary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")

@@ -99,46 +99,44 @@ struct InlineTasteBar: View {
 
     private func interestChip(_ interest: String) -> some View {
         let isActive = activeInterests.contains(interest)
-        return Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                if isActive {
-                    activeInterests.remove(interest)
-                } else {
-                    activeInterests.insert(interest)
+        return Text(interest)
+            .font(.subheadline.weight(.medium))
+            .lineLimit(1)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(
+                isActive ? OmakaseTheme.chipActiveFill : Color.clear,
+                in: Capsule()
+            )
+            .foregroundStyle(isActive ? OmakaseTheme.chipActiveText : .secondary)
+            .overlay(
+                Capsule()
+                    .stroke(
+                        isActive ? Color.clear : OmakaseTheme.chipInactiveStroke,
+                        lineWidth: 1
+                    )
+            )
+            .contentShape(Capsule())
+            .onTapGesture {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                    if isActive {
+                        activeInterests.remove(interest)
+                    } else {
+                        activeInterests.insert(interest)
+                    }
                 }
             }
-        } label: {
-            Text(interest)
-                .font(.subheadline.weight(.medium))
-                .lineLimit(1)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(
-                    isActive ? Color.primary : Color.clear,
-                    in: Capsule()
-                )
-                .foregroundStyle(isActive ? Color(UIColor.systemBackground) : .secondary)
-                .overlay(
-                    Capsule()
-                        .stroke(
-                            isActive ? Color.clear : Color.secondary.opacity(0.3),
-                            lineWidth: 1
-                        )
-                )
-        }
-        .buttonStyle(.plain)
-        .contentShape(Capsule())
-        .contextMenu {
-            Button(role: .destructive) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    onRemoveInterest(interest)
+            .contextMenu {
+                Button(role: .destructive) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        onRemoveInterest(interest)
+                    }
+                } label: {
+                    Label(l10n.remove, systemImage: "trash")
                 }
-            } label: {
-                Label(l10n.remove, systemImage: "trash")
             }
-        }
-        .transition(.scale(scale: 0.85).combined(with: .opacity))
+            .transition(.scale(scale: 0.85).combined(with: .opacity))
     }
 
     private func suggestionChip(_ suggestion: String) -> some View {
@@ -189,24 +187,16 @@ struct InlineTasteBar: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background(
-                isLetterboxdActive
-                    ? AnyShapeStyle(
-                        LinearGradient(
-                            colors: [Color.orange.opacity(0.8), Color.green.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                      )
-                    : AnyShapeStyle(Color.clear),
+                isLetterboxdActive ? OmakaseTheme.chipActiveFill : Color.clear,
                 in: Capsule()
             )
-            .foregroundStyle(isLetterboxdActive ? .white : .secondary)
+            .foregroundStyle(isLetterboxdActive ? OmakaseTheme.chipActiveText : .secondary)
             .overlay(
                 Capsule()
                     .stroke(
                         isLetterboxdActive
                             ? Color.clear
-                            : Color.secondary.opacity(0.3),
+                            : OmakaseTheme.chipInactiveStroke,
                         lineWidth: 1
                     )
             )

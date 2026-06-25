@@ -235,7 +235,7 @@ struct FeedView: View {
             Spacer()
             Image(systemName: "sparkles")
                 .font(.system(size: 52, weight: .light))
-                .foregroundStyle(.tint)
+                .foregroundStyle(OmakaseTheme.ink)
             Text(l10n.emptyFeedHeadline)
                 .font(.title3.bold())
             Text(l10n.emptyFeedDetail)
@@ -301,11 +301,11 @@ struct FeedView: View {
                         Text(l10n.offlineBanner)
                             .font(.subheadline.weight(.medium))
                     }
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(OmakaseTheme.ink)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(OmakaseTheme.wash, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
                 }
@@ -319,7 +319,7 @@ struct FeedView: View {
         return VStack(spacing: 20) {
             Image(systemName: viewModel.isGenerating ? "wand.and.stars" : "sparkles")
                 .font(.system(size: 48, weight: .light))
-                .foregroundStyle(.tint)
+                .foregroundStyle(OmakaseTheme.ink)
                 .symbolEffect(.pulse, isActive: viewModel.isGenerating)
 
             Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
@@ -329,7 +329,7 @@ struct FeedView: View {
             if viewModel.isOffline && !viewModel.isGenerating {
                 Label(l10n.internetRequired, systemImage: "wifi.slash")
                     .font(.subheadline)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.secondary)
             }
 
             Button {
@@ -339,7 +339,7 @@ struct FeedView: View {
                     if viewModel.isGenerating {
                         ProgressView()
                             .controlSize(.small)
-                            .tint(.white)
+                            .tint(OmakaseTheme.chipActiveText)
                     }
                     Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
                         .fontWeight(.semibold)
@@ -347,6 +347,7 @@ struct FeedView: View {
                 .frame(maxWidth: 280)
             }
             .buttonStyle(.borderedProminent)
+            .tint(OmakaseTheme.chipActiveFill)
             .controlSize(.large)
             .disabled(isDisabled)
         }
@@ -363,7 +364,7 @@ struct FeedView: View {
                     if viewModel.isGenerating {
                         ProgressView()
                             .controlSize(.small)
-                            .tint(.white)
+                            .tint(OmakaseTheme.chipActiveText)
                     }
                     if viewModel.isOffline && !viewModel.isGenerating {
                         Text(l10n.internetRequired)
@@ -378,6 +379,7 @@ struct FeedView: View {
             .padding(.vertical, 0)
         }
         .buttonStyle(.borderedProminent)
+        .tint(OmakaseTheme.chipActiveFill)
         .controlSize(.large)
         .disabled(isDisabled)
     }

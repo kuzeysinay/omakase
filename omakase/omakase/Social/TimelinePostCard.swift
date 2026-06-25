@@ -195,8 +195,8 @@ struct TimelinePostCard: View {
                 .accessibilityLabel(l10n.lang == .turkish ? "Derinlemesine incelemeyi oku" : "Read deep dive")
             }
 
-            // Reactions
-            reactionBar
+            // Like button (Instagram-style)
+            likeButton
 
             Spacer()
 
@@ -206,48 +206,37 @@ struct TimelinePostCard: View {
         .padding(.top, 4)
     }
 
-    // MARK: - Reactions
+    // MARK: - Like
 
-    private var reactionBar: some View {
-        HStack(spacing: 6) {
-            ForEach(ReactionEmoji.allCases, id: \.rawValue) { reaction in
-                let emoji = reaction.rawValue
-                let count = localReactionCounts[emoji] ?? 0
-                let isSelected = myReaction == emoji
-
-                Button {
-                    Task { await toggleReaction(emoji) }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.callout)
-                        if count > 0 {
-                            Text("\(count)")
-                                .font(.caption2).bold()
-                                .monospacedDigit()
-                        }
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        isSelected
-                            ? Color.primary.opacity(0.12)
-                            : Color.secondary.opacity(0.08),
-                        in: Capsule()
-                    )
-                    .overlay(
-                        Capsule().stroke(
-                            isSelected ? Color.primary.opacity(0.4) : .clear,
-                            lineWidth: 1
-                        )
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-        }
+    private var likeCount: Int {
+        localReactionCounts.values.reduce(0, +)
     }
 
-    // MARK: - Comments
+    private var isLiked: Bool {
+        myReaction != nil
+    }
+
+    private var likeButton: some View {
+        Button {
+            Task { await toggleLike() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: isLiked ? "heart.fill" : "heart")
+                    .font(.title3)
+                    .symbolEffect(.bounce, value: isLiked)
+                if likeCount > 0 {
+                    Text("\(likeCount)")
+                        .font(.subheadline.bold())
+                        .monospacedDigit()
+                }
+            }
+            .foregroundStyle(isLiked ? OmakaseTheme.ink : .secondary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(l10n.lang == .turkish ? "Beğen" : "Like")
+    }
+
+    // MARK: - Comments (replaces old reactionBar)
 
     private var commentButton: some View {
         Button {
@@ -274,50 +263,20 @@ struct TimelinePostCard: View {
     // so no skeleton or LIVE badge is needed.
 
     private var deepDiveSheet: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let deepDive = post.deepDiveText, !deepDive.isEmpty {
-                        let clean = String(deepDive.drop(while: { $0.isWhitespace || $0.isNewline }))
-                        Text(clean)
-                            .font(.body)
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 12)
-                    }
-                    Spacer(minLength: 48)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .navigationTitle(l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Image(systemName: "fish.fill")
-                        .foregroundStyle(.primary)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showDeepDive = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
-                    }
-                    .accessibilityLabel(l10n.lang == .turkish ? "Kapat" : "Close")
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
+        DeepDiveReaderSheet(
+            text: post.deepDiveText ?? "",
+            title: l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive"
+        )
+        .environment(\.appLanguage, appLanguage)
     }
 
-    // MARK: - Reaction logic
+    // MARK: - Like logic
 
-    private func toggleReaction(_ emoji: String) async {
+    private func toggleLike() async {
         guard let uid = authService.uid,
               let postId = post.id else { return }
+
+        let likeKey = ReactionEmoji.like.rawValue
 
         do {
             if let current = myReaction {
@@ -326,16 +285,12 @@ struct TimelinePostCard: View {
                     localReactionCounts.removeValue(forKey: current)
                 }
                 try await FirestoreService.shared.removeReaction(postId: postId, emoji: current, uid: uid)
-
-                if current == emoji {
-                    myReaction = nil
-                    return
-                }
+                myReaction = nil
+            } else {
+                localReactionCounts[likeKey, default: 0] += 1
+                myReaction = likeKey
+                try await FirestoreService.shared.addReaction(postId: postId, emoji: likeKey, uid: uid)
             }
-
-            localReactionCounts[emoji, default: 0] += 1
-            myReaction = emoji
-            try await FirestoreService.shared.addReaction(postId: postId, emoji: emoji, uid: uid)
         } catch {
             myReaction = await FirestoreService.shared.fetchMyReaction(postId: postId, uid: uid)
             localReactionCounts = post.reactionCounts ?? [:]

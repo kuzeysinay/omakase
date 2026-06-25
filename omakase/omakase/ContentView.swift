@@ -41,6 +41,7 @@ struct ContentView: View {
             .environment(\.locale, Locale(identifier: resolvedLanguage.localeIdentifier))
             .environment(\.appLanguage, resolvedLanguage)
             .preferredColorScheme(resolvedAppearance.colorScheme)
+            .tint(OmakaseTheme.ink)
 
             if showSplash {
                 ZStack {

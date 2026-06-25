@@ -18,6 +18,7 @@ struct CommentsView: View {
     @State private var newCommentText = ""
     @State private var isLoading = true
 
+    private var l10n: L10n { L10n(lang: appLanguage) }
     private let maxCharacters = 280
 
     var body: some View {
@@ -36,7 +37,7 @@ struct CommentsView: View {
 
                 composerBar
             }
-            .navigationTitle("\(comments.count) Comments")
+            .navigationTitle(commentsTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -55,6 +56,12 @@ struct CommentsView: View {
         }
     }
 
+    private var commentsTitle: String {
+        l10n.lang == .turkish
+            ? "\(comments.count) Yorum"
+            : "\(comments.count) Comments"
+    }
+
     // MARK: - Subviews
 
     private var emptyState: some View {
@@ -62,7 +69,7 @@ struct CommentsView: View {
             Image(systemName: "bubble.left")
                 .font(.system(size: 40, weight: .light))
                 .foregroundStyle(.secondary)
-            Text("No comments yet")
+            Text(l10n.lang == .turkish ? "Henüz yorum yok" : "No comments yet")
                 .font(.headline)
                 .foregroundStyle(.secondary)
         }
@@ -70,15 +77,24 @@ struct CommentsView: View {
     }
 
     private var commentList: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
-                ForEach(comments) { comment in
-                    commentRow(comment)
-                }
+        List {
+            ForEach(comments) { comment in
+                commentRow(comment)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        if comment.authorId == authService.uid {
+                            Button(role: .destructive) {
+                                Task { await deleteComment(comment) }
+                            } label: {
+                                Label(l10n.remove, systemImage: "trash")
+                            }
+                        }
+                    }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
+        .listStyle(.plain)
     }
 
     private func commentRow(_ comment: Comment) -> some View {
@@ -92,6 +108,18 @@ struct CommentsView: View {
                     Text(comment.createdAt.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    if comment.authorId == authService.uid {
+                        Button {
+                            Task { await deleteComment(comment) }
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(l10n.remove)
+                    }
                 }
 
                 Text(comment.text)
@@ -101,26 +129,23 @@ struct CommentsView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(OmakaseTheme.wash, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(.separator, lineWidth: 0.5)
+                .stroke(OmakaseTheme.stroke, lineWidth: 1)
         )
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+        .contextMenu {
             if comment.authorId == authService.uid {
                 Button(role: .destructive) {
                     Task { await deleteComment(comment) }
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(l10n.remove, systemImage: "trash")
                 }
-            }
-        }
-        .contextMenu {
-            if comment.authorId != authService.uid {
+            } else {
                 Button {
                     Task { await reportComment(comment) }
                 } label: {
-                    Label("Report", systemImage: "exclamationmark.triangle")
+                    Label(l10n.lang == .turkish ? "Bildir" : "Report", systemImage: "exclamationmark.triangle")
                 }
             }
         }
@@ -155,14 +180,18 @@ struct CommentsView: View {
 
     private var composerBar: some View {
         HStack(spacing: 8) {
-            TextField("Add a comment…", text: $newCommentText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...4)
-                .onChange(of: newCommentText) { _, newValue in
-                    if newValue.count > maxCharacters {
-                        newCommentText = String(newValue.prefix(maxCharacters))
-                    }
+            TextField(
+                l10n.lang == .turkish ? "Yorum ekle…" : "Add a comment…",
+                text: $newCommentText,
+                axis: .vertical
+            )
+            .textFieldStyle(.plain)
+            .lineLimit(1...4)
+            .onChange(of: newCommentText) { _, newValue in
+                if newValue.count > maxCharacters {
+                    newCommentText = String(newValue.prefix(maxCharacters))
                 }
+            }
 
             if remainingCharacters < 50 {
                 Text("\(remainingCharacters)")
@@ -177,7 +206,7 @@ struct CommentsView: View {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(OmakaseTheme.ink)
             }
             .disabled(newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
@@ -219,7 +248,6 @@ struct CommentsView: View {
             )
             await loadComments()
         } catch {
-            // Restore text on failure
             newCommentText = text
         }
     }
@@ -228,7 +256,9 @@ struct CommentsView: View {
         guard let commentId = comment.id else { return }
         do {
             try await FirestoreService.shared.deleteComment(postId: postId, commentId: commentId)
-            comments.removeAll { $0.id == commentId }
+            withAnimation {
+                comments.removeAll { $0.id == commentId }
+            }
         } catch {
             // Silently fail
         }

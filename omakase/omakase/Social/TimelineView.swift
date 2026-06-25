@@ -108,6 +108,7 @@ struct TimelineView: View {
                     .fontWeight(.semibold)
             }
             .buttonStyle(.borderedProminent)
+            .tint(OmakaseTheme.chipActiveFill)
             .controlSize(.large)
             .padding(.top, 8)
         }

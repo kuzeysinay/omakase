@@ -11,11 +11,8 @@ struct ShareCardView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(hex: 0x0a0f1e), Color(hex: 0x1a0a2e)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            // Paper background — Hidden Folks ink-on-paper aesthetic
+            Color(hex: 0xF5F0E8)
 
             VStack(spacing: 0) {
                 // MARK: - Branding
@@ -23,7 +20,7 @@ struct ShareCardView: View {
                     .font(.system(size: 32, weight: .light))
                     .textCase(.uppercase)
                     .tracking(4)
-                    .foregroundStyle(.white.opacity(0.40))
+                    .foregroundStyle(Color(hex: 0x1A1A1A).opacity(0.35))
                     .padding(.top, 80)
 
                 Spacer()
@@ -33,13 +30,13 @@ struct ShareCardView: View {
                     Text(post.title)
                         .font(.system(size: 64, weight: .bold))
                         .minimumScaleFactor(0.7)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color(hex: 0x1A1A1A))
                         .lineLimit(4)
 
                     Text(post.text)
                         .font(.system(size: 40, weight: .regular))
                         .minimumScaleFactor(0.6)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(Color(hex: 0x1A1A1A).opacity(0.85))
                         .lineLimit(30)
                 }
                 .padding(.horizontal, 48)
@@ -54,7 +51,7 @@ struct ShareCardView: View {
 
                     Text(post.createdAt.formatted(date: .abbreviated, time: .omitted))
                         .font(.system(size: 24, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.45))
+                        .foregroundStyle(Color(hex: 0x1A1A1A).opacity(0.45))
                 }
                 .padding(.horizontal, 48)
                 .padding(.bottom, 80)
@@ -68,12 +65,12 @@ struct ShareCardView: View {
             ForEach(post.tags.prefix(5), id: \.self) { tag in
                 Text(tag)
                     .font(.system(size: 24, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.70))
+                    .foregroundStyle(Color(hex: 0x1A1A1A).opacity(0.70))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .overlay(
                         Capsule()
-                            .stroke(.white.opacity(0.20), lineWidth: 1.5)
+                            .stroke(Color(hex: 0x1A1A1A).opacity(0.25), lineWidth: 1.5)
                     )
             }
         }
