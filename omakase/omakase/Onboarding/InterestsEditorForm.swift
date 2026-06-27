@@ -23,6 +23,15 @@ struct InterestsEditorForm: View {
     @State private var debounceTask: Task<Void, Never>? = nil
     @State private var refreshTask: Task<Void, Never>? = nil
 
+    private let suggestionLimit = 3
+
+    private enum SuggestionRefreshReason: Equatable {
+        case initial
+        case draftChange
+        case interestsChange
+        case manualRefresh
+    }
+
     private var visibleSuggestions: [String] {
         aiSuggestions.filter { suggestion in
             !interests.contains { $0.caseInsensitiveCompare(suggestion) == .orderedSame }
@@ -40,10 +49,10 @@ struct InterestsEditorForm: View {
             suggestionSection
         }
         .onAppear {
-            scheduleSuggestion()
+            scheduleSuggestion(reason: .initial)
         }
-        .onChange(of: draft) { _, _ in scheduleSuggestion() }
-        .onChange(of: interests) { _, _ in scheduleSuggestion() }
+        .onChange(of: draft) { _, _ in scheduleSuggestion(reason: .draftChange) }
+        .onChange(of: interests) { _, _ in scheduleSuggestion(reason: .interestsChange) }
     }
 
     private var inputField: some View {
@@ -172,16 +181,38 @@ struct InterestsEditorForm: View {
         isFieldFocused = true
     }
 
-    private func scheduleSuggestion() {
+    private func scheduleSuggestion(reason: SuggestionRefreshReason) {
         debounceTask?.cancel()
+        refreshTask?.cancel()
         debounceTask = Task {
-            try? await Task.sleep(for: .milliseconds(600))
+            if reason != .initial {
+                try? await Task.sleep(for: .milliseconds(600))
+            }
             guard !Task.isCancelled else { return }
 
-            let (snapshotInterests, snapshotDraft, snapshotLang) = await MainActor.run {
-                (interests, trimmedDraft, appLanguage)
+            switch reason {
+            case .draftChange, .initial:
+                await loadFreshSuggestions()
+            case .interestsChange:
+                await appendReplacementSuggestion()
+            case .manualRefresh:
+                await loadFreshSuggestions()
             }
+        }
+    }
 
+    private func refreshIdeas() {
+        debounceTask?.cancel()
+        refreshTask?.cancel()
+        scheduleSuggestion(reason: .manualRefresh)
+    }
+
+    private func loadFreshSuggestions() async {
+        let snapshotInterests = await MainActor.run { interests }
+        let snapshotDraft = await MainActor.run { trimmedDraft }
+        let snapshotLang = await MainActor.run { appLanguage }
+
+        refreshTask = Task {
             await MainActor.run {
                 isSuggesting = true
                 suggestionFootnote = nil
@@ -201,25 +232,24 @@ struct InterestsEditorForm: View {
                 await MainActor.run { isSuggesting = false }
                 return
             }
-
             await MainActor.run {
                 applySuggestOutcome(outcome)
             }
         }
     }
 
-    private func refreshIdeas() {
-        debounceTask?.cancel()
-        refreshTask?.cancel()
-        let exclude = aiSuggestions
-        let snapshotInterests = interests
-        let snapshotDraft = trimmedDraft
-        let snapshotLang = appLanguage
+    private func appendReplacementSuggestion() async {
+        let snapshotInterests = await MainActor.run { interests }
+        let snapshotDraft = await MainActor.run { trimmedDraft }
+        let snapshotLang = await MainActor.run { appLanguage }
+        let exclude = await MainActor.run { aiSuggestions }
+
         refreshTask = Task {
             await MainActor.run {
                 isSuggesting = true
                 suggestionFootnote = nil
             }
+
             let outcome: InterestSuggestResponse
             do {
                 outcome = try await Task.detached {
@@ -234,8 +264,22 @@ struct InterestsEditorForm: View {
                 await MainActor.run { isSuggesting = false }
                 return
             }
+
             await MainActor.run {
-                applySuggestOutcome(outcome)
+                if let next = outcome.suggestions.first,
+                   !aiSuggestions.contains(where: { $0.caseInsensitiveCompare(next) == .orderedSame }) {
+                    aiSuggestions.append(next)
+                    if aiSuggestions.count > suggestionLimit * 2 {
+                        aiSuggestions = Array(aiSuggestions.suffix(suggestionLimit * 2))
+                    }
+                    suggestionFootnote = nil
+                } else if aiSuggestions.isEmpty {
+                    applySuggestOutcome(outcome)
+                    return
+                } else if let loadingIssue = outcome.loadingIssue {
+                    suggestionFootnote = loadingIssue
+                }
+                isSuggesting = false
             }
         }
     }

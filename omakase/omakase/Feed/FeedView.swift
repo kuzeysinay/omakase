@@ -17,6 +17,7 @@ struct FeedView: View {
     @State private var pendingDeletePostID: UUID?
     @State private var showDeletePostConfirmation = false
     @State private var toastMessage: String?
+    @State private var generateTriggerCardID: UUID?
 
     // Letterboxd
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
@@ -278,17 +279,19 @@ struct FeedView: View {
                             // Generate next post card at the end
                             VStack {
                                 Spacer()
-                                generateNextCard
+                                generateNextCard(triggerCardID: viewModel.posts.last?.id)
                                 Spacer()
                             }
                             .frame(width: geo.size.width, height: geo.size.height)
                             .id("generate-card")
                         }
                     }
+                    .coordinateSpace(name: "feed-scroll")
                     .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                     .scrollTargetLayout()
                     .onChange(of: viewModel.posts.last?.id) { _, newID in
                         guard let newID else { return }
+                        generateTriggerCardID = nil
                         proxy.scrollTo(newID, anchor: .top)
                     }
                 }
@@ -313,9 +316,7 @@ struct FeedView: View {
         }
     }
 
-    private var generateNextCard: some View {
-        let isDisabled = viewModel.isGenerating || viewModel.isOffline
-
+    private func generateNextCard(triggerCardID: UUID?) -> some View {
         return VStack(spacing: 20) {
             Image(systemName: viewModel.isGenerating ? "wand.and.stars" : "sparkles")
                 .font(.system(size: 48, weight: .light))
@@ -331,27 +332,25 @@ struct FeedView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-
-            Button {
-                viewModel.requestNextPost()
-            } label: {
-                HStack(spacing: 10) {
-                    if viewModel.isGenerating {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(OmakaseTheme.chipActiveText)
-                    }
-                    Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: 280)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(OmakaseTheme.chipActiveFill)
-            .controlSize(.large)
-            .disabled(isDisabled)
         }
         .padding(.horizontal, 32)
+        .contentShape(Rectangle())
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(
+                        key: GenerateNextCardFrameKey.self,
+                        value: proxy.frame(in: .named("feed-scroll"))
+                    )
+            }
+        )
+        .onPreferenceChange(GenerateNextCardFrameKey.self) { frame in
+            guard let triggerCardID else { return }
+            guard frame.intersects(CGRect(origin: .zero, size: CGSize(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))) else {
+                return
+            }
+            triggerGenerateNextPostIfNeeded(for: triggerCardID)
+        }
     }
 
     private var generateButton: some View {
@@ -384,6 +383,14 @@ struct FeedView: View {
         .disabled(isDisabled)
     }
 
+    private func triggerGenerateNextPostIfNeeded(for cardID: UUID) {
+        guard generateTriggerCardID != cardID else { return }
+        guard !viewModel.isGenerating, !viewModel.isOffline else { return }
+        generateTriggerCardID = cardID
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        viewModel.requestNextPost()
+    }
+
     // MARK: - Helpers
 
     static func parse(interests raw: String) -> [String] {
@@ -391,6 +398,14 @@ struct FeedView: View {
             .split(whereSeparator: { $0 == "," || $0 == "\n" })
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+    }
+}
+
+private struct GenerateNextCardFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
     }
 }
 // MARK: - Reels-style Post Card (full-screen, one post per page)

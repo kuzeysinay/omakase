@@ -28,6 +28,8 @@ struct InlineTasteBar: View {
     @State private var suggestionTask: Task<Void, Never>?
     @State private var rotationAngle: Double = 0
 
+    private let suggestionLimit = 3
+
     private var l10n: L10n { L10n(lang: appLanguage) }
 
     private var visibleSuggestions: [String] {
@@ -55,8 +57,8 @@ struct InlineTasteBar: View {
         }
         .background(.bar)
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showAddField)
-        .task { fetchSuggestions() }
-        .onChange(of: allInterests) { _, _ in fetchSuggestions() }
+        .task { resetSuggestions() }
+        .onChange(of: allInterests) { _, _ in requestReplacementSuggestion() }
     }
 
     // MARK: - Chip row
@@ -127,6 +129,7 @@ struct InlineTasteBar: View {
                     }
                 }
             }
+            .highPriorityGesture(rejectSwipeGesture(for: interest))
             .contextMenu {
                 Button(role: .destructive) {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -146,6 +149,13 @@ struct InlineTasteBar: View {
                 onAddInterest(suggestion)
             }
         }
+        .contextMenu {
+            Button(role: .destructive) {
+                dismissSuggestion(suggestion)
+            } label: {
+                Label(l10n.remove, systemImage: "trash")
+            }
+        }
         .transition(.scale(scale: 0.85).combined(with: .opacity))
     }
 
@@ -155,7 +165,7 @@ struct InlineTasteBar: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                 rotationAngle += 360
             }
-            fetchSuggestions()
+            resetSuggestions()
         } label: {
             Image(systemName: "arrow.triangle.2.circlepath")
                 .font(.caption.weight(.bold))
@@ -261,19 +271,47 @@ struct InlineTasteBar: View {
         isFieldFocused = true
     }
 
-    private func fetchSuggestions() {
+    private func rejectSwipeGesture(for interest: String) -> some Gesture {
+        DragGesture(minimumDistance: 18, coordinateSpace: .local)
+            .onEnded { value in
+                let vertical = value.predictedEndTranslation.height
+                let horizontal = abs(value.predictedEndTranslation.width)
+                guard abs(vertical) > 60, abs(vertical) > horizontal else { return }
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    onRemoveInterest(interest)
+                }
+            }
+    }
+
+    private func resetSuggestions() {
+        suggestionTask?.cancel()
+        aiSuggestions.removeAll()
+        requestReplacementSuggestion(reset: true)
+    }
+
+    private func dismissSuggestion(_ suggestion: String) {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            aiSuggestions.removeAll { candidate in
+                candidate.caseInsensitiveCompare(suggestion) == .orderedSame
+            }
+        }
+        requestReplacementSuggestion(additionalExclusions: [suggestion])
+    }
+
+    private func requestReplacementSuggestion(reset: Bool = false, additionalExclusions: [String] = []) {
         suggestionTask?.cancel()
         let snapshot = allInterests
         let lang = appLanguage
-        let exclude = aiSuggestions
-        
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            aiSuggestions.removeAll()
-            isFetchingSuggestions = true
-        }
-        
+        let exclude = reset ? additionalExclusions : aiSuggestions + additionalExclusions
+
         suggestionTask = Task {
             guard !Task.isCancelled else { return }
+            await MainActor.run {
+                isFetchingSuggestions = true
+            }
+
             do {
                 let result = try await Task.detached {
                     try await InterestSuggestor.suggest(
@@ -283,22 +321,23 @@ struct InlineTasteBar: View {
                         language: lang
                     )
                 }.value
+
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
-                    if !result.suggestions.isEmpty {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                            aiSuggestions = result.suggestions
+                    if reset {
+                        aiSuggestions = Array(result.suggestions.prefix(suggestionLimit))
+                    } else if let next = result.suggestions.first,
+                              !aiSuggestions.contains(where: { $0.caseInsensitiveCompare(next) == .orderedSame }) {
+                        aiSuggestions.append(next)
+                        if aiSuggestions.count > suggestionLimit * 2 {
+                            aiSuggestions = Array(aiSuggestions.suffix(suggestionLimit * 2))
                         }
                     }
-                    withAnimation {
-                        isFetchingSuggestions = false
-                    }
+                    isFetchingSuggestions = false
                 }
-            } catch is CancellationError {
-                // Cancelled — nothing to do.
             } catch {
-                await MainActor.run { 
-                    withAnimation { isFetchingSuggestions = false }
+                await MainActor.run {
+                    isFetchingSuggestions = false
                 }
             }
         }

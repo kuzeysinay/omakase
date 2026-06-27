@@ -271,15 +271,13 @@ struct MyProfileSheet: View {
                             Label {
                                 if storedLetterboxdUsername.isEmpty {
                                     Text(l10n.updateLetterboxdButton)
-                                        .foregroundStyle(.primary)
                                 } else {
                                     Text("Letterboxd: @\(storedLetterboxdUsername)")
-                                        .foregroundStyle(.primary)
                                 }
                             } icon: {
                                 Image(systemName: "film")
-                                    .foregroundStyle(.primary)
                             }
+                            .foregroundStyle(.secondary)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption.bold())
