@@ -57,7 +57,7 @@ struct InlineTasteBar: View {
         }
         .background(.bar)
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showAddField)
-        .task { resetSuggestions() }
+        .task { fetchInitialSuggestionsIfNeeded() }
         .onChange(of: allInterests) { _, _ in requestReplacementSuggestion() }
     }
 
@@ -90,7 +90,7 @@ struct InlineTasteBar: View {
                 addButton
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 16)
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: allInterests)
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: activeInterests)
             .animation(.spring(response: 0.4, dampingFraction: 0.75), value: visibleSuggestions)
@@ -101,45 +101,48 @@ struct InlineTasteBar: View {
 
     private func interestChip(_ interest: String) -> some View {
         let isActive = activeInterests.contains(interest)
-        return Text(interest)
-            .font(.subheadline.weight(.medium))
-            .lineLimit(1)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
-            .background(
-                isActive ? OmakaseTheme.chipActiveFill : Color.clear,
-                in: Capsule()
-            )
-            .foregroundStyle(isActive ? OmakaseTheme.chipActiveText : .secondary)
-            .overlay(
-                Capsule()
-                    .stroke(
-                        isActive ? Color.clear : OmakaseTheme.chipInactiveStroke,
-                        lineWidth: 1
-                    )
-            )
-            .contentShape(Capsule())
-            .onTapGesture {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                    if isActive {
-                        activeInterests.remove(interest)
-                    } else {
-                        activeInterests.insert(interest)
-                    }
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                if isActive {
+                    activeInterests.remove(interest)
+                } else {
+                    activeInterests.insert(interest)
                 }
             }
-            .highPriorityGesture(rejectSwipeGesture(for: interest))
-            .contextMenu {
-                Button(role: .destructive) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        onRemoveInterest(interest)
-                    }
-                } label: {
-                    Label(l10n.remove, systemImage: "trash")
+        } label: {
+            Text(interest)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(1)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(
+                    isActive ? OmakaseTheme.chipActiveFill : Color.clear,
+                    in: Capsule()
+                )
+                .foregroundStyle(isActive ? OmakaseTheme.chipActiveText : .secondary)
+                .overlay(
+                    Capsule()
+                        .strokeBorder(
+                            isActive ? Color.clear : OmakaseTheme.chipInactiveStroke,
+                            lineWidth: 1
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Capsule())
+        .simultaneousGesture(rejectSwipeGesture(for: interest))
+        .floatingEffect()
+        .contextMenu {
+            Button(role: .destructive) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    onRemoveInterest(interest)
                 }
+            } label: {
+                Label(l10n.remove, systemImage: "trash")
             }
-            .transition(.scale(scale: 0.85).combined(with: .opacity))
+        }
+        .transition(.scale(scale: 0.85).combined(with: .opacity))
     }
 
     private func suggestionChip(_ suggestion: String) -> some View {
@@ -149,6 +152,8 @@ struct InlineTasteBar: View {
                 onAddInterest(suggestion)
             }
         }
+        .simultaneousGesture(dismissSwipeGesture(for: suggestion))
+        .floatingEffect()
         .contextMenu {
             Button(role: .destructive) {
                 dismissSuggestion(suggestion)
@@ -171,7 +176,7 @@ struct InlineTasteBar: View {
                 .font(.caption.weight(.bold))
                 .foregroundStyle(Color.secondary)
                 .rotationEffect(.degrees(rotationAngle))
-                .frame(width: 30, height: 30)
+                .frame(width: 36, height: 36)
                 .background(Color.secondary.opacity(0.12), in: Circle())
         }
         .buttonStyle(.plain)
@@ -195,7 +200,7 @@ struct InlineTasteBar: View {
                     .lineLimit(1)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 7)
+            .padding(.vertical, 12)
             .background(
                 isLetterboxdActive ? OmakaseTheme.chipActiveFill : Color.clear,
                 in: Capsule()
@@ -203,7 +208,7 @@ struct InlineTasteBar: View {
             .foregroundStyle(isLetterboxdActive ? OmakaseTheme.chipActiveText : .secondary)
             .overlay(
                 Capsule()
-                    .stroke(
+                    .strokeBorder(
                         isLetterboxdActive
                             ? Color.clear
                             : OmakaseTheme.chipInactiveStroke,
@@ -213,6 +218,7 @@ struct InlineTasteBar: View {
         }
         .buttonStyle(.plain)
         .contentShape(Capsule())
+        .floatingEffect()
     }
 
     private var addButton: some View {
@@ -221,13 +227,15 @@ struct InlineTasteBar: View {
                 showAddField.toggle()
                 if showAddField {
                     isFieldFocused = true
+                } else {
+                    isFieldFocused = false
                 }
             }
         } label: {
             Image(systemName: showAddField ? "xmark" : "plus")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.primary)
-                .frame(width: 30, height: 30)
+                .frame(width: 36, height: 36)
                 .background(Color.primary.opacity(0.08), in: Circle())
                 .contentTransition(.symbolEffect(.replace))
         }
@@ -282,6 +290,22 @@ struct InlineTasteBar: View {
                     onRemoveInterest(interest)
                 }
             }
+    }
+
+    private func dismissSwipeGesture(for suggestion: String) -> some Gesture {
+        DragGesture(minimumDistance: 18, coordinateSpace: .local)
+            .onEnded { value in
+                let vertical = value.predictedEndTranslation.height
+                let horizontal = abs(value.predictedEndTranslation.width)
+                guard abs(vertical) > 60, abs(vertical) > horizontal else { return }
+                dismissSuggestion(suggestion)
+            }
+    }
+
+    private func fetchInitialSuggestionsIfNeeded() {
+        if aiSuggestions.isEmpty {
+            resetSuggestions()
+        }
     }
 
     private func resetSuggestions() {
@@ -358,7 +382,7 @@ fileprivate struct AnimatedSuggestionChip: View {
                 .lineLimit(1)
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 16)
-                .padding(.vertical, 7)
+                .padding(.vertical, 12)
                 .background(
                     LinearGradient(
                         colors: [
@@ -372,13 +396,12 @@ fileprivate struct AnimatedSuggestionChip: View {
                 )
                 .overlay(
                     Capsule()
-                        .stroke(
+                        .strokeBorder(
                             Color.primary.opacity(isBreathing ? 0.35 : 0.12),
                             lineWidth: 1
                         )
                 )
                 .foregroundStyle(.primary)
-                .offset(y: isBreathing ? -1 : 1)
         }
         .buttonStyle(.plain)
         .onAppear {
@@ -396,7 +419,7 @@ fileprivate struct ShimmeringPill: View {
     var body: some View {
         Capsule()
             .fill(Color.secondary.opacity(0.1))
-            .frame(width: width, height: 32)
+            .frame(width: width, height: 42)
             .overlay(
                 Capsule()
                     .fill(
@@ -415,5 +438,28 @@ fileprivate struct ShimmeringPill: View {
                     isShimmering = true
                 }
             }
+    }
+}
+
+fileprivate struct FloatingEffect: ViewModifier {
+    @State private var isBreathing = false
+    
+    func body(content: Content) -> some View {
+        let offset = isBreathing ? -1.5 : 1.5
+        content
+            .offset(y: offset)
+            .contentShape(.contextMenuPreview, Capsule().offset(y: offset))
+            .onAppear {
+                let delay = Double.random(in: 0...1.0)
+                withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true).delay(delay)) {
+                    isBreathing = true
+                }
+            }
+    }
+}
+
+fileprivate extension View {
+    func floatingEffect() -> some View {
+        self.modifier(FloatingEffect())
     }
 }

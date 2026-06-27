@@ -18,6 +18,7 @@ struct FeedView: View {
     @State private var showDeletePostConfirmation = false
     @State private var toastMessage: String?
     @State private var generateTriggerCardID: UUID?
+    @State private var feedScrollPosition: AnyHashable?
 
     // Letterboxd
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
@@ -168,10 +169,13 @@ struct FeedView: View {
             activeInterests = Set(parsed)
             viewModel.setContentLanguage(appLanguage)
             viewModel.updateInterests(parsed)
-            if viewModel.isOffline && viewModel.posts.isEmpty {
+            if viewModel.posts.isEmpty {
                 await viewModel.loadCachedPosts()
-            } else if viewModel.posts.isEmpty {
-                viewModel.requestNextPost()
+                if viewModel.posts.isEmpty {
+                    viewModel.requestNextPost()
+                } else {
+                    feedScrollPosition = viewModel.posts.last?.id
+                }
             }
         }
         .onChange(of: appLanguage) { _, newLang in
@@ -279,20 +283,37 @@ struct FeedView: View {
                             // Generate next post card at the end
                             VStack {
                                 Spacer()
-                                generateNextCard(triggerCardID: viewModel.posts.last?.id)
+                                generateNextCard(triggerCardID: viewModel.posts.last?.id, containerHeight: geo.size.height)
                                 Spacer()
                             }
                             .frame(width: geo.size.width, height: geo.size.height)
                             .id("generate-card")
                         }
                     }
-                    .coordinateSpace(name: "feed-scroll")
+                    .scrollPosition(id: $feedScrollPosition)
                     .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                     .scrollTargetLayout()
+                    .task(id: feedScrollPosition) {
+                        guard let str = feedScrollPosition as? String, str == "generate-card" else { return }
+                        do {
+                            // Debounce to ignore momentary scroll jumps during layout animations (e.g. TasteBar expanding)
+                            try await Task.sleep(for: .milliseconds(250))
+                            guard !Task.isCancelled else { return }
+                            
+                            if let lastID = viewModel.posts.last?.id {
+                                triggerGenerateNextPostIfNeeded(for: lastID)
+                            }
+                        } catch { }
+                    }
                     .onChange(of: viewModel.posts.last?.id) { _, newID in
                         guard let newID else { return }
                         generateTriggerCardID = nil
                         proxy.scrollTo(newID, anchor: .top)
+                    }
+                    .onChange(of: viewModel.isGenerating) { _, generating in
+                        if !generating, let pos = feedScrollPosition as? String, pos == "generate-card", let id = viewModel.posts.last?.id {
+                            triggerGenerateNextPostIfNeeded(for: id)
+                        }
                     }
                 }
 
@@ -316,7 +337,7 @@ struct FeedView: View {
         }
     }
 
-    private func generateNextCard(triggerCardID: UUID?) -> some View {
+    private func generateNextCard(triggerCardID: UUID?, containerHeight: CGFloat) -> some View {
         return VStack(spacing: 20) {
             Image(systemName: viewModel.isGenerating ? "wand.and.stars" : "sparkles")
                 .font(.system(size: 48, weight: .light))
@@ -335,21 +356,10 @@ struct FeedView: View {
         }
         .padding(.horizontal, 32)
         .contentShape(Rectangle())
-        .background(
-            GeometryReader { proxy in
-                Color.clear
-                    .preference(
-                        key: GenerateNextCardFrameKey.self,
-                        value: proxy.frame(in: .named("feed-scroll"))
-                    )
+        .onTapGesture {
+            if let triggerCardID {
+                triggerGenerateNextPostIfNeeded(for: triggerCardID)
             }
-        )
-        .onPreferenceChange(GenerateNextCardFrameKey.self) { frame in
-            guard let triggerCardID else { return }
-            guard frame.intersects(CGRect(origin: .zero, size: CGSize(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))) else {
-                return
-            }
-            triggerGenerateNextPostIfNeeded(for: triggerCardID)
         }
     }
 
@@ -401,13 +411,6 @@ struct FeedView: View {
     }
 }
 
-private struct GenerateNextCardFrameKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        value = nextValue()
-    }
-}
 // MARK: - Reels-style Post Card (full-screen, one post per page)
 
 private struct ReelsPostCard: View {
@@ -426,6 +429,7 @@ private struct ReelsPostCard: View {
     @State private var isShared: Bool = false
     @State private var isSharePending: Bool = false
     @State private var isDeepDiveExpanded: Bool = false
+    @State private var swipeOffset: CGFloat = 0
 
     private var isBookmarked: Bool {
         bookmarkStore.contains(postId: post.id)
@@ -436,7 +440,20 @@ private struct ReelsPostCard: View {
         // paging ScrollView already provides vertical scrolling. Nesting two
         // vertical ScrollViews caused severe gesture contention and redundant
         // layout passes, which was the primary source of scroll stutter.
-        VStack(alignment: .leading, spacing: 16) {
+        ZStack(alignment: .trailing) {
+            if post.isComplete {
+                ZStack(alignment: .trailing) {
+                    Color.red
+                    Image(systemName: "trash.fill")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.trailing, 40)
+                        .scaleEffect(swipeOffset < -100 ? 1.2 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: swipeOffset)
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 16) {
             // Header: title, timestamp, LIVE badge
             postHeader
                 .padding(.top, 8)
@@ -486,6 +503,28 @@ private struct ReelsPostCard: View {
         .animation(.easeOut(duration: 0.6), value: post.isComplete)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color(.systemBackground))
+        .offset(x: swipeOffset)
+        .gesture(
+            DragGesture(minimumDistance: 30)
+                .onChanged { value in
+                    guard post.isComplete else { return }
+                    if value.translation.width < 0 {
+                        swipeOffset = value.translation.width
+                    }
+                }
+                .onEnded { value in
+                    guard post.isComplete else { return }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        if value.translation.width < -120 || value.predictedEndTranslation.width < -200 {
+                            swipeOffset = 0
+                            onDelete()
+                        } else {
+                            swipeOffset = 0
+                        }
+                    }
+                }
+        )
+        }
         .task(id: post.isComplete) {
             guard !post.isComplete else {
                 showCursor = false
@@ -747,13 +786,32 @@ private struct ReelsPostCard: View {
     }
 
     private var postBody: AttributedString {
-        let cleanText = String(post.text.drop(while: { $0.isWhitespace || $0.isNewline }))
-        return AttributedString(cleanText)
+        parseMarkdown(text: post.text)
     }
 
     private func attributedDeepDive(_ deepDive: String) -> AttributedString {
-        let cleanText = String(deepDive.drop(while: { $0.isWhitespace || $0.isNewline }))
-        return AttributedString(cleanText)
+        parseMarkdown(text: deepDive)
+    }
+    
+    private func parseMarkdown(text: String) -> AttributedString {
+        let cleanText = String(text.drop(while: { $0.isWhitespace || $0.isNewline }))
+        // Normalize ** to * so all asterisk wrappers are parsed uniformly
+        let normalizedText = cleanText.replacingOccurrences(of: "**", with: "*")
+        
+        var attrStr = (try? AttributedString(markdown: normalizedText, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(cleanText)
+        
+        for run in attrStr.runs {
+            if let intent = run.inlinePresentationIntent {
+                if intent.contains(.emphasized) || intent.contains(.stronglyEmphasized) {
+                    var newIntent = intent
+                    newIntent.remove(.emphasized)
+                    newIntent.remove(.stronglyEmphasized)
+                    attrStr[run.range].inlinePresentationIntent = newIntent.isEmpty ? nil : newIntent
+                    attrStr[run.range].font = .body.weight(.semibold)
+                }
+            }
+        }
+        return attrStr
     }
 
     private var skeletonBody: some View {

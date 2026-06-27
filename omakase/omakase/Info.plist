@@ -39,7 +39,7 @@
 		</dict>
 	</dict>
 	<key>OMAKASE_API_URL</key>
-	<string>http://172.20.10.14:8000</string>
+	<string>https://omakase-backend-20235796246.us-central1.run.app</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

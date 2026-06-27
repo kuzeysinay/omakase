@@ -33,7 +33,7 @@ class PostCacheService {
         descriptor.fetchLimit = limit
         do {
             let cached = try context.fetch(descriptor)
-            return cached.map { $0.toPost() }
+            return cached.map { $0.toPost() }.reversed()
         } catch {
             return []
         }
