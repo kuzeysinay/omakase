@@ -517,6 +517,13 @@ struct L10n {
         }
     }
 
+    var tabProfile: String {
+        switch lang {
+        case .english: "Profile"
+        case .turkish: "Profil"
+        }
+    }
+
     // MARK: - Timeline
 
     var loadingTimeline: String {
@@ -727,6 +734,94 @@ struct L10n {
         switch lang {
         case .english: "Post unshared"
         case .turkish: "Paylaşım kaldırıldı"
+        }
+    }
+
+    var toastInappropriateInterest: String {
+        switch lang {
+        case .english: "Inappropriate interest cannot be added"
+        case .turkish: "Uygunsuz ilgi alanı eklenemez"
+        }
+    }
+
+    // MARK: - Interest Discovery
+
+    var orTypeYourOwn: String {
+        switch lang {
+        case .english: "Or type your own…"
+        case .turkish: "Ya da kendi ilgini yaz…"
+        }
+    }
+
+    var exploreCategoriesTitle: String {
+        switch lang {
+        case .english: "Explore"
+        case .turkish: "Keşfet"
+        }
+    }
+
+    var tapToExplore: String {
+        switch lang {
+        case .english: "Tap to explore"
+        case .turkish: "Keşfetmek için dokun"
+        }
+    }
+
+    // MARK: - Bento Box Interest Discovery
+
+    var bentoAllCategories: String {
+        switch lang {
+        case .english: "All Topics"
+        case .turkish: "Tüm Konular"
+        }
+    }
+
+    var bentoAiSynthesizing: String {
+        switch lang {
+        case .english: "AI is synthesizing…"
+        case .turkish: "Gemini üretiyor…"
+        }
+    }
+
+    var bentoShuffle: String {
+        switch lang {
+        case .english: "Shuffle"
+        case .turkish: "Karıştır"
+        }
+    }
+
+    var bentoAdded: String {
+        switch lang {
+        case .english: "Added"
+        case .turkish: "Eklendi"
+        }
+    }
+
+    var bentoDeepDive: String {
+        switch lang {
+        case .english: "Deep dive"
+        case .turkish: "Derine in"
+        }
+    }
+
+    var bentoTapToSelect: String {
+        switch lang {
+        case .english: "Tap to pick"
+        case .turkish: "Seçmek için dokun"
+        }
+    }
+
+    var bentoCollapse: String {
+        switch lang {
+        case .english: "Collapse"
+        case .turkish: "Daralt"
+        }
+    }
+
+    var bentoExpand: String {
+        switch lang {
+        case .english: "Explore"
+        case .turkish: "Keşfet"
         }
     }
 

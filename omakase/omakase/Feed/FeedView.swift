@@ -19,6 +19,7 @@ struct FeedView: View {
     @State private var toastMessage: String?
     @State private var generateTriggerCardID: UUID?
     @State private var feedScrollPosition: AnyHashable?
+    @State private var isBentoExpanded: Bool = true
 
     // Letterboxd
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
@@ -34,6 +35,13 @@ struct FeedView: View {
         L10n(lang: appLanguage)
     }
 
+    private func toggleBentoExpanded() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+            isBentoExpanded.toggle()
+        }
+    }
+
     init(authService: AuthService) {
         self.authService = authService
         let raw = UserDefaults.standard.string(forKey: "omakase.interests") ?? ""
@@ -45,20 +53,37 @@ struct FeedView: View {
         @Bindable var viewModel = viewModel
         @Bindable var bookmarkStore = bookmarkStore
         return NavigationStack {
-            Group {
-                if viewModel.posts.isEmpty {
-                    emptyState
-                } else {
-                    reelsFeed(bookmarkStore: bookmarkStore)
+            ZStack(alignment: .bottom) {
+                Group {
+                    if viewModel.posts.isEmpty {
+                        emptyState
+                            .padding(.bottom, 80)
+                    } else {
+                        reelsFeed(bookmarkStore: bookmarkStore)
+                            .padding(.bottom, 80)
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                BentoTasteBox(
+                    allInterests: allInterests,
+                    activeInterests: $activeInterests,
+                    onAddInterest: { addInterest($0) },
+                    onRemoveInterest: { removeInterest($0) },
+                    isLetterboxdActive: $isLetterboxdActive,
+                    isExpanded: $isBentoExpanded,
+                    onToggleExpand: {
+                        toggleBentoExpanded()
+                    }
+                )
+                .environment(\.appLanguage, appLanguage)
+                .shadow(color: Color.black.opacity(isBentoExpanded ? 0.08 : 0.02), radius: 8, x: 0, y: -3)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(uiColor: .systemBackground))
             .toolbar(.hidden, for: .navigationBar)
             .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
-                    // Custom nav header — avoids iOS's automatic circular button
-                    // decoration that UINavigationBar applies to non-SF-Symbol images.
-                    // Uses .bar material (same as InlineTasteBar) for visual unity.
                     HStack(spacing: 0) {
                         HStack(spacing: 7) {
                             Image("AppLogo")
@@ -89,19 +114,11 @@ struct FeedView: View {
                         Spacer().frame(width: 8)
                     }
                     .frame(height: 44) // standard iOS nav bar height
-                    .background(.bar)   // same material as InlineTasteBar → seamless unity
+                    .background(Color(uiColor: .systemBackground))
 
-                    InlineTasteBar(
-                        allInterests: allInterests,
-                        activeInterests: $activeInterests,
-                        onAddInterest: { addInterest($0) },
-                        onRemoveInterest: { removeInterest($0) },
-                        isLetterboxdActive: $isLetterboxdActive,
-                        onLetterboxdToggle: { handleLetterboxdToggle($0) }
-                    )
-                    .environment(\.appLanguage, appLanguage)
+                    Divider().opacity(0.12)
                 }
-
+                .background(Color(uiColor: .systemBackground))
             }
             .alert(
                 l10n.errorSomethingWrong,
@@ -120,8 +137,24 @@ struct FeedView: View {
                 }
                 Button(l10n.remove, role: .destructive) {
                     if let id = pendingDeletePostID {
+                        let fallbackID: AnyHashable?
+                        if let idx = viewModel.posts.firstIndex(where: { $0.id == id }) {
+                            if idx > 0 {
+                                fallbackID = viewModel.posts[idx - 1].id
+                            } else if viewModel.posts.count > 1 {
+                                fallbackID = viewModel.posts[idx + 1].id
+                            } else {
+                                fallbackID = nil
+                            }
+                        } else {
+                            fallbackID = nil
+                        }
+
                         withAnimation {
                             viewModel.removePost(id: id)
+                            if let fallbackID {
+                                feedScrollPosition = fallbackID
+                            }
                         }
                     }
                     pendingDeletePostID = nil
@@ -165,7 +198,11 @@ struct FeedView: View {
             .toast(message: $toastMessage)
         }
         .task {
-            let parsed = Self.parse(interests: storedInterests)
+            let rawParsed = Self.parse(interests: storedInterests)
+            let parsed = ContentModerationService.filterAppropriate(rawParsed)
+            if parsed != rawParsed {
+                storedInterests = parsed.joined(separator: ", ")
+            }
             activeInterests = Set(parsed)
             viewModel.setContentLanguage(appLanguage)
             viewModel.updateInterests(parsed)
@@ -173,8 +210,8 @@ struct FeedView: View {
                 await viewModel.loadCachedPosts()
                 if viewModel.posts.isEmpty {
                     viewModel.requestNextPost()
-                } else {
-                    feedScrollPosition = viewModel.posts.last?.id
+                } else if let lastID = viewModel.posts.last?.id {
+                    feedScrollPosition = lastID
                 }
             }
         }
@@ -202,6 +239,11 @@ struct FeedView: View {
     }
 
     private func addInterest(_ interest: String) {
+        guard ContentModerationService.isAppropriate(interest) else {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            toastMessage = l10n.toastInappropriateInterest
+            return
+        }
         var list = allInterests
         guard !list.contains(where: { $0.caseInsensitiveCompare(interest) == .orderedSame }) else { return }
         list.append(interest)
@@ -258,62 +300,70 @@ struct FeedView: View {
 
     /// Instagram Reels-style vertical paging feed. Each post occupies the full screen height.
     private func reelsFeed(bookmarkStore: BookmarkStore) -> some View {
-        GeometryReader { geo in
+        ScrollViewReader { proxy in
+            GeometryReader { geo in
             ZStack(alignment: .top) {
-                ScrollViewReader { proxy in
-                    ScrollView(.vertical, showsIndicators: false) {
-                        LazyVStack(spacing: 0) {
-                            ForEach(viewModel.posts) { post in
-                                ReelsPostCard(
-                                    post: post,
-                                    bookmarkStore: bookmarkStore,
-                                    authService: authService,
-                                    viewModel: viewModel,
-                                    toastMessage: $toastMessage,
-                                    onDelete: {
-                                        pendingDeletePostID = post.id
-                                        showDeletePostConfirmation = true
-                                    }
-                                )
-                                .environment(\.appLanguage, appLanguage)
-                                .id(post.id)
-                                .frame(width: geo.size.width, height: geo.size.height)
-                            }
-
-                            // Generate next post card at the end
-                            VStack {
-                                Spacer()
-                                generateNextCard(triggerCardID: viewModel.posts.last?.id, containerHeight: geo.size.height)
-                                Spacer()
-                            }
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(viewModel.posts) { post in
+                            ReelsPostCard(
+                                post: post,
+                                bookmarkStore: bookmarkStore,
+                                authService: authService,
+                                viewModel: viewModel,
+                                toastMessage: $toastMessage,
+                                onDelete: {
+                                    pendingDeletePostID = post.id
+                                    showDeletePostConfirmation = true
+                                }
+                            )
+                            .environment(\.appLanguage, appLanguage)
+                            .id(post.id)
                             .frame(width: geo.size.width, height: geo.size.height)
-                            .id("generate-card")
                         }
+
+                        // Generate next post card at the end
+                        VStack {
+                            Spacer()
+                            generateNextCard(triggerCardID: viewModel.posts.last?.id, containerHeight: geo.size.height)
+                            Spacer()
+                        }
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .id("generate-card")
                     }
-                    .scrollPosition(id: $feedScrollPosition)
-                    .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                     .scrollTargetLayout()
-                    .task(id: feedScrollPosition) {
-                        guard let str = feedScrollPosition as? String, str == "generate-card" else { return }
-                        do {
-                            // Debounce to ignore momentary scroll jumps during layout animations (e.g. TasteBar expanding)
-                            try await Task.sleep(for: .milliseconds(250))
-                            guard !Task.isCancelled else { return }
-                            
-                            if let lastID = viewModel.posts.last?.id {
-                                triggerGenerateNextPostIfNeeded(for: lastID)
-                            }
-                        } catch { }
-                    }
-                    .onChange(of: viewModel.posts.last?.id) { _, newID in
-                        guard let newID else { return }
-                        generateTriggerCardID = nil
-                        proxy.scrollTo(newID, anchor: .top)
-                    }
-                    .onChange(of: viewModel.isGenerating) { _, generating in
-                        if !generating, let pos = feedScrollPosition as? String, pos == "generate-card", let id = viewModel.posts.last?.id {
-                            triggerGenerateNextPostIfNeeded(for: id)
+                }
+                .scrollPosition(id: $feedScrollPosition, anchor: .top)
+                .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+                .scrollDismissesKeyboard(.interactively)
+                .onAppear {
+                    if let lastID = viewModel.posts.last?.id {
+                        feedScrollPosition = lastID
+                        DispatchQueue.main.async {
+                            proxy.scrollTo(lastID, anchor: .top)
                         }
+                    }
+                }
+                .task(id: feedScrollPosition) {
+                    guard let str = feedScrollPosition as? String, str == "generate-card" else { return }
+                    do {
+                        // Debounce to ignore momentary scroll jumps during layout animations (e.g. TasteBar expanding)
+                        try await Task.sleep(for: .milliseconds(250))
+                        guard !Task.isCancelled else { return }
+                        
+                        if let lastID = viewModel.posts.last?.id {
+                            triggerGenerateNextPostIfNeeded(for: lastID)
+                        }
+                    } catch { }
+                }
+                .onChange(of: viewModel.posts.last?.id) { _, newID in
+                    guard let newID else { return }
+                    generateTriggerCardID = nil
+                    proxy.scrollTo(newID, anchor: .top)
+                }
+                .onChange(of: viewModel.isGenerating) { _, generating in
+                    if !generating, let pos = feedScrollPosition as? String, pos == "generate-card", let id = viewModel.posts.last?.id {
+                        triggerGenerateNextPostIfNeeded(for: id)
                     }
                 }
 
@@ -335,6 +385,7 @@ struct FeedView: View {
                 }
             }
         }
+    }
     }
 
     private func generateNextCard(triggerCardID: UUID?, containerHeight: CGFloat) -> some View {

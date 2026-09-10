@@ -26,6 +26,11 @@ struct MainTabView: View {
                 .tabItem {
                     Label(l10n.tabTimeline, systemImage: "person.2.fill")
                 }
+
+            ProfileTabView(authService: authService)
+                .tabItem {
+                    Label(l10n.tabProfile, systemImage: "person.crop.circle")
+                }
         }
         .tint(OmakaseTheme.ink)
     }

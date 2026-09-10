@@ -175,6 +175,7 @@ struct UserProfileSheet: View {
 struct MyProfileSheet: View {
 
     let authService: AuthService
+    var isTab: Bool = false
 
     @Environment(\.appLanguage) private var appLanguage
     @Environment(\.dismiss) private var dismiss
@@ -334,8 +335,10 @@ struct MyProfileSheet: View {
             .navigationTitle(l10n.myProfile)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(l10n.done) { dismiss() }
+                if !isTab {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(l10n.done) { dismiss() }
+                    }
                 }
             }
         }

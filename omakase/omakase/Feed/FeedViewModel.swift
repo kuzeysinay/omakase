@@ -235,6 +235,9 @@ final class FeedViewModel {
 
     func removePost(id: UUID) {
         posts.removeAll { $0.id == id }
+        Task {
+            await PostCacheService.shared.deleteCachedPost(id: id)
+        }
     }
 
     // MARK: - Network monitoring

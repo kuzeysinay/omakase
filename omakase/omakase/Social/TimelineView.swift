@@ -13,7 +13,6 @@ struct TimelineView: View {
 
     @State private var viewModel: TimelineViewModel
     @State private var showUserSearch = false
-    @State private var showProfile = false
     @State private var selectedAuthorId: String?
 
     private var l10n: L10n { L10n(lang: appLanguage) }
@@ -38,7 +37,7 @@ struct TimelineView: View {
             .navigationTitle(l10n.tabTimeline)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showUserSearch = true
                     } label: {
@@ -47,15 +46,6 @@ struct TimelineView: View {
                             .foregroundStyle(Color.primary.opacity(0.85))
                     }
                     .accessibilityLabel(l10n.findPeople)
-
-                    Button {
-                        showProfile = true
-                    } label: {
-                        Image(systemName: "person.circle")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Color.primary.opacity(0.85))
-                    }
-                    .accessibilityLabel(l10n.myProfile)
                 }
             }
             .refreshable {
@@ -67,12 +57,6 @@ struct TimelineView: View {
             .sheet(isPresented: $showUserSearch) {
                 UserSearchView(authService: authService)
                     .environment(\.appLanguage, appLanguage)
-            }
-            .sheet(isPresented: $showProfile) {
-                if let uid = authService.uid {
-                    MyProfileSheet(authService: authService)
-                        .environment(\.appLanguage, appLanguage)
-                }
             }
             .sheet(item: $selectedAuthorId) { authorId in
                 UserProfileSheet(

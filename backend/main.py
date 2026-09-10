@@ -53,10 +53,18 @@ GEMINI_SUGGEST_MODEL = os.getenv("GEMINI_SUGGEST_MODEL", "gemini-3.1-flash-lite"
 
 _BLOCKLIST_RE = re.compile(
     r"(?i)\b("
-    r"porn|pornography|hentai|xxx|nsfw|nude|naked|sexting|"
-    r"child\s*abuse|rape|snuff|murder\s*tutorial|kill\s*(?:my)?self|"
-    r"bomb\s*making|terrorist|drug\s*deal|buy\s*(?:guns?|weapons?)|"
-    r"hack\s*(?:into|account|password)"
+    # Adult / NSFW / Sexual (EN & TR stems)
+    r"porn\w*|porno\w*|hentai|xxx|nsfw|nude\w*|naked|sext\w*|erotik\w*|erotic\w*|"
+    r"seks\w*|sex\w*|cinsel|masturbat\w*|mastürbat\w*|orgasm\w*|vajina|penis|"
+    # Violence / Abuse / Illegal (EN & TR)
+    r"child\s*abuse|cocuk\s*istismar\w*|çocuk\s*istismar\w*|pedofil\w*|pedophil\w*|"
+    r"rape|tecavuz\w*|tecavüz\w*|snuff|murder\s*tutorial|cinayet\s*egitim\w*|"
+    r"kill\s*(?:my)?self|intihar\w*|suicide\w*|"
+    r"bomb\s*making|bomba\s*yap\w*|terrorist|terör\w*|teror\w*|"
+    r"drug\s*deal|uyusturucu\w*|uyuşturucu\w*|kokain\w*|eroin\w*|meth\w*|"
+    r"buy\s*(?:guns?|weapons?)|silah\s*sat\w*|"
+    r"hack\s*(?:into|account|password)|hesap\s*cal\w*|hesap\s*çal\w*|"
+    r"kumar|bahis|betting|casino"
     r")\b"
 )
 _MAX_INTEREST_LEN = 100
@@ -185,6 +193,41 @@ class SuggestRequest(BaseModel):
         v = v.strip()[:200]
         if _BLOCKLIST_RE.search(v):
             raise ValueError("Draft contains inappropriate content.")
+        return v
+
+
+class ExpandCategoryRequest(BaseModel):
+    """Payload for the category-expansion endpoint."""
+
+    category: str = Field(
+        ...,
+        description="Category name to expand (e.g. 'Film', 'Music').",
+    )
+    existing_interests: list[str] = Field(
+        default_factory=list,
+        description="Interests the user already has — so we don't repeat them.",
+    )
+    language: str = Field(
+        default="en",
+        description="BCP-47 language tag for suggestion strings (en or tr).",
+    )
+
+    @field_validator("language")
+    @classmethod
+    def _normalize_language_expand(cls, v: str) -> str:
+        s = (v or "en").strip().lower()
+        if s not in ("en", "tr"):
+            return "en"
+        return s
+
+    @field_validator("category")
+    @classmethod
+    def _check_category(cls, v: str) -> str:
+        v = v.strip()[:100]
+        if not v:
+            raise ValueError("Category must not be empty.")
+        if _BLOCKLIST_RE.search(v):
+            raise ValueError("Category contains inappropriate content.")
         return v
 
 
@@ -884,6 +927,78 @@ async def interests_suggest(req: SuggestRequest) -> dict:
     except Exception as exc:  # noqa: BLE001
         logger.warning("Interest suggestion failed: %s", exc)
         raise HTTPException(status_code=502, detail=f"Suggestion generation failed: {exc}") from exc
+
+    return {"suggestions": suggestions}
+
+
+# ---------------------------------------------------------------------------
+# Category Expansion
+# ---------------------------------------------------------------------------
+
+_EXPAND_CATEGORY_SYSTEM = (
+    "You are an interest-discovery assistant. The user has tapped a broad category "
+    "(e.g. 'Film', 'Music', 'Science'). Your job is to return specific, exciting "
+    "sub-interests within that category that will make the user curious.\n"
+    "Rules:\n"
+    "1. Return ONLY a JSON array of strings — no markdown, no explanation.\n"
+    "2. Return exactly 10 suggestions.\n"
+    "3. Prefer SPECIFIC topics over generic labels: 'Wong Kar-wai' > 'Asian Cinema', "
+    "'CRISPR' > 'Biology', 'Sourdough Bread' > 'Baking'.\n"
+    "4. Mix well-known crowd-pleasers (~5) with surprising niche gems (~5) "
+    "that a curious person would love to discover.\n"
+    "5. Keep each suggestion short: 1-4 words, title-cased.\n"
+    "6. Never repeat any item from the user's existing interests.\n"
+    "7. SAFETY: Never suggest harmful, explicit, illegal, offensive, or adult content."
+)
+
+
+def _expand_system_for_language(language: str) -> str:
+    lang_rule = (
+        "\n8. Write all 10 strings in natural Turkish (Türkçe), using culturally normal "
+        "spelling and title-style capitalization suitable for Turkish."
+        if language == "tr"
+        else "\n8. Write all 10 strings in English."
+    )
+    return _EXPAND_CATEGORY_SYSTEM + lang_rule
+
+
+@app.post("/interests/expand-category")
+async def expand_category(req: ExpandCategoryRequest) -> dict:
+    """Return ~10 specific interest suggestions within a broad category.
+
+    Response: ``{ "suggestions": ["...", ...] }``
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=503, detail="Server is missing GEMINI_API_KEY.")
+
+    parts: list[str] = [f'Category tapped: "{req.category}".']
+    if req.existing_interests:
+        parts.append(
+            "User already has these interests (do NOT repeat): "
+            + ", ".join(req.existing_interests) + "."
+        )
+    user_prompt = " ".join(parts) + "\n\nRespond with a JSON array only."
+
+    try:
+        response = await asyncio.to_thread(
+            genai_client.models.generate_content,
+            model=GEMINI_SUGGEST_MODEL,
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=_expand_system_for_language(req.language),
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
+                safety_settings=_SAFETY_SETTINGS,
+            )
+        )
+        raw = _generative_response_text(response)
+        if not raw:
+            raise ValueError("Model returned no text.")
+        suggestions = _parse_suggestion_strings(raw)[:12]
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Category expansion failed: %s", exc)
+        raise HTTPException(
+            status_code=502, detail=f"Category expansion failed: {exc}"
+        ) from exc
 
     return {"suggestions": suggestions}
 

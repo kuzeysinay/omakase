@@ -39,6 +39,23 @@ class PostCacheService {
         }
     }
 
+    func deleteCachedPost(id: UUID) async {
+        guard let container = modelContainer else { return }
+        let context = container.mainContext
+        let descriptor = FetchDescriptor<CachedPost>(
+            predicate: #Predicate { $0.postId == id }
+        )
+        do {
+            let matched = try context.fetch(descriptor)
+            for post in matched {
+                context.delete(post)
+            }
+            try? context.save()
+        } catch {
+            print("Failed to delete cached post: \(error)")
+        }
+    }
+
     func clearOldPosts(olderThan days: Int = 30) async {
         guard let container = modelContainer else { return }
         let context = container.mainContext

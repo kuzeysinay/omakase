@@ -20,6 +20,7 @@ struct InlineTasteBar: View {
     @Environment(\.appLanguage) private var appLanguage
 
     @State private var showAddField = false
+    @State private var showExplorer = false
     @State private var draftText = ""
     @FocusState private var isFieldFocused: Bool
 
@@ -36,6 +37,7 @@ struct InlineTasteBar: View {
         Array(
             aiSuggestions
                 .filter { suggestion in
+                    ContentModerationService.isAppropriate(suggestion) &&
                     !allInterests.contains {
                         $0.caseInsensitiveCompare(suggestion) == .orderedSame
                     }
@@ -48,17 +50,65 @@ struct InlineTasteBar: View {
         VStack(spacing: 0) {
             chipRow
 
-            if showAddField {
-                addField
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            if showExplorer {
+                VStack(spacing: 0) {
+                    // Tap-first category strip
+                    CategoryStripView(
+                        existingInterests: allInterests,
+                        onAddInterest: { interest in
+                            onAddInterest(interest)
+                        }
+                    )
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+
+                    // Small text field below
+                    if showAddField {
+                        addField
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+
+                    // Toggle for manual text input
+                    Button {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                            showAddField.toggle()
+                            if showAddField {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                                    isFieldFocused = true
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: showAddField ? "keyboard.chevron.compact.down" : "keyboard")
+                                .font(.caption2.weight(.medium))
+                            Text(showAddField
+                                 ? (l10n.lang == .turkish ? "Klavyeyi gizle" : "Hide keyboard")
+                                 : l10n.orTypeYourOwn)
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.tertiary)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.bottom, 4)
             }
 
             Divider().opacity(0.35)
         }
         .background(.bar)
-        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showAddField)
+        .clipped()
         .task { fetchInitialSuggestionsIfNeeded() }
         .onChange(of: allInterests) { _, _ in requestReplacementSuggestion() }
+        .onChange(of: isFieldFocused) { _, focused in
+            if !focused && draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && showAddField {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                    showAddField = false
+                }
+            }
+        }
     }
 
     // MARK: - Chip row
@@ -223,16 +273,16 @@ struct InlineTasteBar: View {
 
     private var addButton: some View {
         Button {
-            withAnimation {
-                showAddField.toggle()
-                if showAddField {
-                    isFieldFocused = true
-                } else {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                showExplorer.toggle()
+                if !showExplorer {
+                    showAddField = false
                     isFieldFocused = false
                 }
             }
         } label: {
-            Image(systemName: showAddField ? "xmark" : "plus")
+            Image(systemName: showExplorer ? "xmark" : "plus")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.primary)
                 .frame(width: 36, height: 36)
@@ -246,6 +296,10 @@ struct InlineTasteBar: View {
 
     private var addField: some View {
         HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
             TextField(l10n.addTastePlaceholder, text: $draftText)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
@@ -257,12 +311,15 @@ struct InlineTasteBar: View {
             Button(action: commitDraft) {
                 Image(systemName: "plus.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary.opacity(0.35) : Color.primary)
             }
             .disabled(draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 10)
     }
 
     // MARK: - Actions

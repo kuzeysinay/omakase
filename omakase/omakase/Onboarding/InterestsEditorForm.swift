@@ -34,19 +34,29 @@ struct InterestsEditorForm: View {
 
     private var visibleSuggestions: [String] {
         aiSuggestions.filter { suggestion in
+            ContentModerationService.isAppropriate(suggestion) &&
             !interests.contains { $0.caseInsensitiveCompare(suggestion) == .orderedSame }
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            inputField
-
             if !interests.isEmpty {
                 chips
             }
 
+            // Primary: tap-first category grid
+            CategoryGridView(interests: $interests)
+
             suggestionSection
+
+            // Secondary: manual text input (small, for power users)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(l10n.orTypeYourOwn)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                inputField
+            }
         }
         .onAppear {
             scheduleSuggestion(reason: .initial)
@@ -174,6 +184,12 @@ struct InterestsEditorForm: View {
     private func commitDraft() {
         let value = trimmedDraft
         guard !value.isEmpty else { return }
+        guard ContentModerationService.isAppropriate(value) else {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            draft = ""
+            isFieldFocused = true
+            return
+        }
         if !interests.contains(where: { $0.caseInsensitiveCompare(value) == .orderedSame }) {
             interests.append(value)
         }

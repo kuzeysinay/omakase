@@ -30,6 +30,7 @@ final class CachedPost {
 
     func toPost() -> Post {
         Post(
+            id: postId,
             title: title,
             text: text,
             isComplete: true,
