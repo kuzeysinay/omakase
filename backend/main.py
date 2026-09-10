@@ -45,6 +45,52 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 GEMINI_DEEP_DIVE_MODEL = os.getenv("GEMINI_DEEP_DIVE_MODEL", "gemini-3.5-flash")
 GEMINI_SUGGEST_MODEL = os.getenv("GEMINI_SUGGEST_MODEL", "gemini-3.1-flash-lite")
 
+# ---------------------------------------------------------------------------
+# Content moderation — first-pass guard at the API boundary.
+# Gemini's built-in safety filters handle the heavy lifting; this blocklist
+# catches obviously harmful / spam input before it ever reaches the model.
+# ---------------------------------------------------------------------------
+
+_BLOCKLIST_RE = re.compile(
+    r"(?i)\b("
+    r"porn|pornography|hentai|xxx|nsfw|nude|naked|sexting|"
+    r"child\s*abuse|rape|snuff|murder\s*tutorial|kill\s*(?:my)?self|"
+    r"bomb\s*making|terrorist|drug\s*deal|buy\s*(?:guns?|weapons?)|"
+    r"hack\s*(?:into|account|password)"
+    r")\b"
+)
+_MAX_INTEREST_LEN = 100
+_MAX_INTERESTS = 30
+
+
+def _validate_interests(interests: list[str]) -> list[str]:
+    """Sanitize and validate a list of interest strings.
+
+    Strips whitespace, enforces length limits, and rejects blocklisted content.
+    Raises ValueError so Pydantic surfaces it as a 422 response.
+    """
+    cleaned: list[str] = []
+    for raw in interests:
+        item = raw.strip()[:_MAX_INTEREST_LEN]
+        if not item:
+            continue
+        if _BLOCKLIST_RE.search(item):
+            raise ValueError(f"Interest contains inappropriate content: {item!r}")
+        cleaned.append(item)
+    if len(cleaned) > _MAX_INTERESTS:
+        raise ValueError(f"Too many interests (max {_MAX_INTERESTS}).")
+    return cleaned
+
+
+# Gemini built-in safety settings applied to every model call.
+# BLOCK_MEDIUM_AND_ABOVE blocks content that is likely or highly likely harmful.
+_SAFETY_SETTINGS = [
+    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+    types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+    types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+    types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+]
+
 if GEMINI_API_KEY:
     genai_client = genai.Client(api_key=GEMINI_API_KEY)
 else:
@@ -94,6 +140,11 @@ class FeedRequest(BaseModel):
             return "en"
         return s
 
+    @field_validator("interests")
+    @classmethod
+    def _check_interests(cls, v: list[str]) -> list[str]:
+        return _validate_interests(v)
+
 
 class SuggestRequest(BaseModel):
     """Payload for the interest-suggestion endpoint."""
@@ -122,6 +173,19 @@ class SuggestRequest(BaseModel):
         if s not in ("en", "tr"):
             return "en"
         return s
+
+    @field_validator("interests")
+    @classmethod
+    def _check_interests_suggest(cls, v: list[str]) -> list[str]:
+        return _validate_interests(v)
+
+    @field_validator("draft")
+    @classmethod
+    def _check_draft(cls, v: str) -> str:
+        v = v.strip()[:200]
+        if _BLOCKLIST_RE.search(v):
+            raise ValueError("Draft contains inappropriate content.")
+        return v
 
 
 class DeepDiveRequest(BaseModel):
@@ -157,7 +221,15 @@ SYSTEM_PROMPT = (
     "The title must preview the specific information inside; do not use generic labels. "
     "Do not repeat 'TITLE' or the headline inside the body. Do not repeat 'TAGS' or any tag inside the body. "
     "Avoid hashtags, emoji, and filler words like 'interestingly' or 'surprisingly'. "
-    "Get straight to the point. Do not greet the reader. Do not mention you are an AI."
+    "Get straight to the point. Do not greet the reader. Do not mention you are an AI.\n"
+    "\nACCURACY RULES (non-negotiable):\n"
+    "- NEVER invent facts, statistics, dates, names, or events. If you are not 100% certain something "
+    "is true, do not write it — omit it entirely and build the post around what you do know.\n"
+    "- Do NOT force a connection between the user's interests if a real, verifiable one does not exist. "
+    "Pick ONE interest and write an excellent post about it alone rather than fabricating a link.\n"
+    "- Only reference works, people, and events that genuinely exist and that you can accurately describe.\n"
+    "- If a format template asks for a surprising connection or trivia but you cannot verify one with "
+    "certainty, ignore the template and write a straightforward FUN FACT DROP instead."
 )
 
 _DEEP_DIVE_SYSTEM = (
@@ -227,7 +299,9 @@ _POST_FORMATS = [
     (
         "UNLIKELY CONNECTION",
         "Find a surprising, counterintuitive connection between two things in the user's interest world. "
-        "The weirder and more accurate the link, the better. Make the reader think 'wait, really?'",
+        "The weirder and more accurate the link, the better. Make the reader think 'wait, really?' "
+        "CRITICAL: Only write this if the connection is real and 100% verifiable. "
+        "If you cannot confirm the link with certainty, skip this format entirely and write a FUN FACT DROP instead.",
     ),
     (
         "TINY RECOMMENDATION",
@@ -247,7 +321,9 @@ _POST_FORMATS = [
     (
         "CURSED TRIVIA",
         "Share a piece of trivia that is so odd, ironic, or absurd that it's almost offensive to know. "
-        "Keep it true and accurate. Write with dry humor.",
+        "Keep it true and accurate. Write with dry humor. "
+        "CRITICAL: Triple-check accuracy — if you are even slightly unsure the trivia is correct, "
+        "skip this format and write a FUN FACT DROP instead.",
     ),
     (
         "DEBATE",
@@ -508,7 +584,8 @@ async def _stream_post(
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=_feed_system_instruction(language),
-                        thinking_config=types.ThinkingConfig(thinking_budget=0)
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                        safety_settings=_SAFETY_SETTINGS,
                     )
                 )
                 _feed_tokens_from_stream_chunks(response, queue, loop)
@@ -615,7 +692,8 @@ async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=system,
-                        thinking_config=types.ThinkingConfig(thinking_budget=0)
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                        safety_settings=_SAFETY_SETTINGS,
                     )
                 )
                 _feed_tokens_from_stream_chunks(response, queue, loop)
@@ -736,7 +814,10 @@ _SUGGEST_SYSTEM = (
     "probably hasn't considered but might love once they discover them.\n"
     "5. Never repeat an interest the user already has, nor any item listed as an excluded suggestion.\n"
     "6. Keep each suggestion short: 1-4 words, title-cased.\n"
-    "7. Prioritise specificity over genre labels (e.g. prefer 'Wong Kar-wai' over 'Arthouse Cinema')."
+    "7. Prioritise specificity over genre labels (e.g. prefer 'Wong Kar-wai' over 'Arthouse Cinema').\n"
+    "8. SAFETY: Never suggest harmful, explicit, illegal, offensive, or adult content. "
+    "If the user's existing interests contain problematic content, ignore those and suggest safe, "
+    "culturally enriching alternatives instead."
 )
 
 
@@ -788,7 +869,8 @@ async def interests_suggest(req: SuggestRequest) -> dict:
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=_suggest_system_for_language(lang_code),
-                thinking_config=types.ThinkingConfig(thinking_budget=0)
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
+                safety_settings=_SAFETY_SETTINGS,
             )
         )
         raw = _generative_response_text(response)
