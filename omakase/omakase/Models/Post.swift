@@ -47,6 +47,32 @@ final class Post: Identifiable, @unchecked Sendable {
         self.deepDiveText = deepDiveText
         self.createdAt = createdAt
     }
+
+    /// Formatted display text with any legacy robotic template labels (e.g. "SIDE A:", "SIDE B:") removed.
+    var cleanDisplayBody: String {
+        Self.sanitizeTemplateLabels(from: text)
+    }
+
+    static func sanitizeTemplateLabels(from rawText: String) -> String {
+        var clean = rawText
+        let patterns = [
+            #"(?i)\*?\*?SIDE\s*A\s*:\*?\*?\s*"#,
+            #"(?i)\*?\*?SIDE\s*B\s*:\*?\*?\s*"#,
+            #"(?i)\*?\*?TARAF\s*A\s*:\*?\*?\s*"#,
+            #"(?i)\*?\*?TARAF\s*B\s*:\*?\*?\s*"#
+        ]
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                clean = regex.stringByReplacingMatches(
+                    in: clean,
+                    options: [],
+                    range: NSRange(location: 0, length: clean.utf16.count),
+                    withTemplate: ""
+                )
+            }
+        }
+        return clean
+    }
 }
 
 extension Post: Equatable {

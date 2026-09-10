@@ -33,7 +33,7 @@ struct ShareCardView: View {
                         .foregroundStyle(Color(hex: 0x1A1A1A))
                         .lineLimit(4)
 
-                    Text(post.text)
+                    Text(post.cleanDisplayBody)
                         .font(.system(size: 40, weight: .regular))
                         .minimumScaleFactor(0.6)
                         .foregroundStyle(Color(hex: 0x1A1A1A).opacity(0.85))

@@ -38,7 +38,7 @@ struct TimelinePostCard: View {
             }
 
             // MARK: Body
-            Text(post.text)
+            Text(Post.sanitizeTemplateLabels(from: post.text))
                 .font(.body)
                 .fixedSize(horizontal: false, vertical: true)
 

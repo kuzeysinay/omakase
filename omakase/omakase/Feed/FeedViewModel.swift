@@ -54,8 +54,30 @@ final class FeedViewModel {
     var letterboxdUsername: String = ""
     private(set) var isFetchingLetterboxd: Bool = false
     private(set) var letterboxdError: String?
-    
-    // Typewriter effect state removed (handled by backend token drip)
+
+    // MARK: - Reading Cooldown
+    var readingCooldownRemaining: Int = 0
+    var readingCooldownTotal: Int = 0
+    var isCooldownActive: Bool { readingCooldownRemaining > 0 }
+    private var cooldownTimerTask: Task<Void, Never>? = nil
+
+    func startReadingCooldown(for text: String) {
+        cooldownTimerTask?.cancel()
+        // Calculate reading time based on word count (~200 words/min = ~3.3 words/sec)
+        let words = text.split { $0.isWhitespace }.count
+        // Ensure reading cooldown is between 15s and 25s
+        let seconds = max(15, min(25, words / 3))
+        readingCooldownTotal = seconds
+        readingCooldownRemaining = seconds
+
+        cooldownTimerTask = Task { @MainActor in
+            while readingCooldownRemaining > 0 {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { break }
+                readingCooldownRemaining -= 1
+            }
+        }
+    }
 
     // MARK: - Init
 
@@ -216,6 +238,115 @@ final class FeedViewModel {
                     self.activeStreamPostID == streamPostID
                 else { return }
                 self.isGenerating = false
+                if let post = self.posts.first(where: { $0.id == streamPostID }), post.isComplete, !post.text.isEmpty {
+                    self.startReadingCooldown(for: post.text)
+                }
+            }
+        }
+    }
+
+    /// Generate a single post specifically and exclusively focused on the tapped topic,
+    /// without mutating the user's persistent interests list in memory.
+    func requestDedicatedPost(topic: String) {
+        guard !isGenerating && !isCooldownActive else { return }
+        streamingTask?.cancel()
+        errorMessage = nil
+
+        let post = Post()
+        posts.append(post)
+        let postID = post.id
+        isGenerating = true
+        activeStreamPostID = postID
+
+        let url = baseURL.appendingPathComponent("feed/stream")
+        var requestBody: [String: Any] = [
+            "interests": [topic],
+            "seen_count": max(posts.count - 1, 0),
+            "language": contentLanguage.rawValue,
+        ]
+
+        if isLetterboxdActive, !letterboxdFilms.isEmpty {
+            requestBody["letterboxd_films"] = letterboxdFilms.map { $0.asDictionary }
+        }
+
+        let bodyData = (try? JSONSerialization.data(withJSONObject: requestBody)) ?? Data()
+        let streamURL = url
+        let streamBody = bodyData
+        let streamPostID = postID
+        let apiBaseForErrors = baseURL
+
+        streamingTask = Task.detached(priority: .userInitiated) {
+            let stream = SSEClient.events(
+                from: streamURL,
+                method: "POST",
+                headers: ["Content-Type": "application/json"],
+                body: streamBody
+            )
+
+            do {
+                for try await event in stream {
+                    if Task.isCancelled { break }
+                    let isBodyToken = (event.event == "token")
+                    let isTitleToken = (event.event == "title")
+                    let isDeepDiveToken = (event.event == "deep_dive")
+                    let isTagsToken = (event.event == "tags")
+                    let isFormatToken = (event.event == "format")
+
+                    if isBodyToken || isTitleToken || isDeepDiveToken || isTagsToken || isFormatToken {
+                        if let data = event.data.data(using: .utf8),
+                           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                        {
+                            await MainActor.run { [weak self] in
+                                guard let self else { return }
+                                let p = self.posts.first { $0.id == streamPostID }
+                                if isTitleToken, let text = json["text"] as? String {
+                                    p?.title += text
+                                } else if isBodyToken, let text = json["text"] as? String {
+                                    p?.text += text
+                                } else if isDeepDiveToken, let text = json["text"] as? String {
+                                    p?.deepDiveText = (p?.deepDiveText ?? "") + text
+                                } else if isTagsToken, let tags = json["tags"] as? [String] {
+                                    p?.tags = tags
+                                } else if isFormatToken, let fmt = json["format"] as? String {
+                                    p?.postFormat = fmt
+                                }
+                            }
+                        }
+                    } else if event.event == "done" {
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            self.markPostComplete(streamPostID)
+                            if let idx = self.posts.firstIndex(where: { $0.id == streamPostID }) {
+                                Task {
+                                    await PostCacheService.shared.cachePost(self.posts[idx])
+                                    await PostCacheService.shared.clearOldPosts()
+                                }
+                            }
+                        }
+                        break
+                    }
+                }
+            } catch {
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.errorMessage = Self.friendlyStreamError(
+                        error,
+                        apiBase: apiBaseForErrors,
+                        l10n: L10n(lang: self.contentLanguage)
+                    )
+                    self.markPostComplete(streamPostID)
+                }
+            }
+
+            await MainActor.run { [weak self] in
+                guard
+                    let self,
+                    self.activeStreamPostID == streamPostID
+                else { return }
+                self.isGenerating = false
+                if let post = self.posts.first(where: { $0.id == streamPostID }), post.isComplete, !post.text.isEmpty {
+                    self.startReadingCooldown(for: post.text)
+                }
             }
         }
     }

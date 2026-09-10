@@ -21,7 +21,7 @@ import os
 import re
 import uuid
 import xml.etree.ElementTree as ET
-from typing import AsyncIterator, Optional
+from typing import Any, AsyncIterator, Optional
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -93,10 +93,10 @@ def _validate_interests(interests: list[str]) -> list[str]:
 # Gemini built-in safety settings applied to every model call.
 # BLOCK_MEDIUM_AND_ABOVE blocks content that is likely or highly likely harmful.
 _SAFETY_SETTINGS = [
-    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
-    types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_MEDIUM_AND_ABOVE"),
-    types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
-    types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="BLOCK_MEDIUM_AND_ABOVE"),
+    types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE),
+    types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE),
+    types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE),
+    types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE),
 ]
 
 if GEMINI_API_KEY:
@@ -370,9 +370,11 @@ _POST_FORMATS = [
     ),
     (
         "DEBATE",
-        "Present two opposing sides of a topic related to the user's interests. "
-        "Label them SIDE A and SIDE B. Keep each side to 2-3 sentences. "
-        "Don't pick a winner—let the reader decide.",
+        "Explore a compelling debate or two contrasting viewpoints on a topic related to the user's interests. "
+        "Present the first perspective in 2-3 sentences, then present the opposing perspective in 2-3 sentences in a separate paragraph. "
+        "CRITICAL: Do NOT use crude or robotic labels like 'SIDE A:', 'SIDE B:', 'Taraf A:', or 'Taraf B:'. "
+        "Weave both sides into natural, intellectual, and engaging prose. "
+        "Never pick a winner—leave the tension open for the reader to contemplate.",
     ),
     (
         "TIMELINE",
@@ -503,7 +505,7 @@ def _enqueue_stream_body_fragment(
         loop.call_soon_threadsafe(queue.put_nowait, ("token", piece))
 
 
-def _feed_tokens_from_stream_chunks(response: object, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop) -> None:
+def _feed_tokens_from_stream_chunks(response: Any, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop) -> None:
     """Turn Gemini stream chunks into queue items.
 
     Emits ('title', str), then ('tags', list[str]), then body ('token', str) events.
@@ -617,7 +619,7 @@ async def _stream_post(
     try:
         # The genai SDK's streaming API is synchronous; run it in a
         # worker thread and bridge each chunk to the async generator.
-        queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
+        queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
         loop = asyncio.get_running_loop()
 
         def _produce() -> None:
@@ -725,7 +727,7 @@ async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
     prompt = _build_deep_dive_prompt(req)
 
     try:
-        queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
+        queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
         loop = asyncio.get_running_loop()
 
         def _produce() -> None:
@@ -919,8 +921,9 @@ async def interests_suggest(req: SuggestRequest) -> dict:
         raw = _generative_response_text(response)
         if not raw:
             fr = None
-            if getattr(response, "candidates", None):
-                fr = getattr(response.candidates[0], "finish_reason", None)
+            candidates = getattr(response, "candidates", None)
+            if candidates:
+                fr = getattr(candidates[0], "finish_reason", None)
             logger.warning("Interest suggestion: empty model text (finish_reason=%s)", fr)
             raise ValueError("Model returned no text (blocked, empty, or unsupported response).")
         suggestions = _parse_suggestion_strings(raw)[:10]

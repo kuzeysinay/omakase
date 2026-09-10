@@ -19,6 +19,11 @@ struct BentoTasteBox: View {
     var onResetInterests: (() -> Void)? = nil
     @Binding var isExpanded: Bool
     var onToggleExpand: (() -> Void)? = nil
+    var isGenerating: Bool = false
+    var isCooldownActive: Bool = false
+    var cooldownRemaining: Int = 0
+    var cooldownTotal: Int = 0
+    var onSelectDedicatedTopic: ((String) -> Void)? = nil
 
     @Environment(\.appLanguage) private var appLanguage
 
@@ -26,7 +31,6 @@ struct BentoTasteBox: View {
     enum BoxMode: Equatable {
         case rootCategories
         case subInterests(category: InterestCategory)
-        case deepDive(topic: String, parentCategory: InterestCategory)
     }
 
     @State private var mode: BoxMode = .rootCategories
@@ -46,6 +50,11 @@ struct BentoTasteBox: View {
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
+    private var cooldownProgress: CGFloat {
+        guard cooldownTotal > 0 else { return 0 }
+        return max(0, min(1, CGFloat(cooldownRemaining) / CGFloat(cooldownTotal)))
+    }
+
     // Visible root categories in the Bento (6 categories at a time)
     private var visibleCategories: [InterestCategory] {
         let all = InterestCategory.presets
@@ -60,8 +69,8 @@ struct BentoTasteBox: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Divider()
-                .opacity(0.12)
+            // Full-width Edge-to-Edge Decreasing Reading Cooldown Bar / Hairline Divider
+            topProgressBar
 
             // Mini Header Bar (Mode title, Back/Shuffle, Collapse toggle)
             headerBar
@@ -102,19 +111,61 @@ struct BentoTasteBox: View {
         .animation(.spring(response: 0.28, dampingFraction: 0.82), value: showManualInput)
     }
 
+    // MARK: - Top Edge Progress Bar (Reading Cooldown & Hairline Divider)
+
+    private var topProgressBar: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                if isCooldownActive {
+                    // Dimmed track
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.08))
+                    // Active decreasing progress bar
+                    Rectangle()
+                        .fill(OmakaseTheme.ink)
+                        .frame(width: max(0, geo.size.width * cooldownProgress))
+                        .animation(.linear(duration: 0.95), value: cooldownRemaining)
+                } else {
+                    // Minimalist, razor-clean hairline separator
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.1))
+                        .frame(height: 0.5)
+                }
+            }
+        }
+        .frame(height: isCooldownActive ? 3.5 : 0.5)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isCooldownActive)
+    }
+
     // MARK: - Header Bar
 
     private var headerBar: some View {
         HStack(spacing: 8) {
             switch mode {
             case .rootCategories:
-                HStack(spacing: 5) {
-                    Image(systemName: "square.grid.2x2.fill")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.secondary)
-                    Text(l10n.bentoAllCategories)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.primary)
+                // Reading cooldown or generation indicator on the left
+                if isCooldownActive {
+                    HStack(spacing: 5) {
+                        Image(systemName: "book.pages")
+                            .font(.caption2.weight(.bold))
+                        Text(appLanguage == .turkish ? "Okuma süresi: \(cooldownRemaining)s" : "Reading: \(cooldownRemaining)s")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.secondary)
+                } else if isGenerating {
+                    HStack(spacing: 5) {
+                        ProgressView()
+                            .controlSize(.mini)
+                        Text(appLanguage == .turkish ? "Post hazırlanıyor…" : "Cooking post…")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -149,10 +200,12 @@ struct BentoTasteBox: View {
                         currentSubInterests = []
                     }
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: "chevron.left")
                             .font(.caption.weight(.bold))
-                        Text(category.emoji + " " + category.localizedName(for: appLanguage))
+                        Image(systemName: category.iconName)
+                            .font(.caption.weight(.semibold))
+                        Text(category.localizedName(for: appLanguage))
                             .font(.caption.weight(.semibold))
                     }
                     .foregroundStyle(.primary)
@@ -161,30 +214,62 @@ struct BentoTasteBox: View {
 
                 Spacer()
 
-                // AI Live Synthesis Indicator
-                aiStatusBadge
-
-            case .deepDive(let topic, let parent):
+                // Refresh Button (regenerates 10 topics)
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
-                        mode = .subInterests(category: parent)
-                        loadCategory(parent)
-                    }
+                    loadCategory(category, refresh: true)
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.caption.weight(.bold))
-                        Text(topic)
-                            .font(.caption.weight(.semibold))
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption2.weight(.bold))
+                            .rotationEffect(.degrees(isSynthesizing ? 360 : 0))
+                            .animation(isSynthesizing ? .linear(duration: 0.8).repeatForever(autoreverses: false) : .default, value: isSynthesizing)
+                        Text(appLanguage == .turkish ? "Yenile" : "Refresh")
+                            .font(.caption2.weight(.medium))
                     }
-                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(uiColor: .systemBackground), in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+                    .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .disabled(isSynthesizing || isGenerating || isCooldownActive)
 
-                Spacer()
-
-                aiStatusBadge
+                // Cooldown / AI Live Synthesis Indicator
+                if isCooldownActive {
+                    HStack(spacing: 4) {
+                        Image(systemName: "book.pages")
+                            .font(.caption2)
+                        Text("\(cooldownRemaining)s")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.secondary)
+                } else if isGenerating {
+                    HStack(spacing: 4) {
+                        ProgressView().controlSize(.mini)
+                        Text(appLanguage == .turkish ? "Üretiliyor" : "Generating")
+                            .font(.caption2)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.secondary)
+                } else if isSynthesizing {
+                    HStack(spacing: 4) {
+                        ProgressView().controlSize(.mini)
+                        Text(l10n.bentoAiSynthesizing)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.secondary)
+                }
             }
 
             // Keyboard Toggle Button
@@ -243,32 +328,6 @@ struct BentoTasteBox: View {
         .padding(.bottom, isExpanded ? 4 : 8)
     }
 
-    // MARK: - AI Status Badge
-
-    @ViewBuilder
-    private var aiStatusBadge: some View {
-        HStack(spacing: 5) {
-            if isSynthesizing {
-                ProgressView()
-                    .scaleEffect(0.6)
-                Text(l10n.bentoAiSynthesizing)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            } else {
-                Image(systemName: "sparkles")
-                    .font(.caption2)
-                    .foregroundStyle(.primary)
-                Text("\(currentSubInterests.count) \(l10n.bentoTapToSelect)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(Color(uiColor: .systemBackground), in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
-    }
-
     // MARK: - Bento Grid Canvas (2048-Style)
 
     private var bentoGridCanvas: some View {
@@ -305,15 +364,8 @@ struct BentoTasteBox: View {
                     ))
 
                 case .subInterests(let category):
-                    // Sub-interests 2048-style grid (Horizontal scrollable 2 rows)
-                    subInterestsBentoGrid(tileW: max(tileW, 110), tileH: tileH, category: category)
-                        .transition(.asymmetric(
-                            insertion: .scale(scale: 1.05).combined(with: .opacity),
-                            removal: .scale(scale: 0.94).combined(with: .opacity)
-                        ))
-
-                case .deepDive(let topic, let parent):
-                    subInterestsBentoGrid(tileW: max(tileW, 110), tileH: tileH, category: parent, deepTopic: topic)
+                    // Sub-interests 2048-style grid (Horizontal scrollable 2 rows x 5 items = 10 items)
+                    subInterestsBentoGrid(tileW: max(tileW, 120), tileH: tileH, category: category)
                         .transition(.asymmetric(
                             insertion: .scale(scale: 1.05).combined(with: .opacity),
                             removal: .scale(scale: 0.94).combined(with: .opacity)
@@ -323,9 +375,9 @@ struct BentoTasteBox: View {
         }
     }
 
-    // MARK: - Sub-Interests Bento Grid
+    // MARK: - Sub-Interests Bento Grid (10 Items)
 
-    private func subInterestsBentoGrid(tileW: CGFloat, tileH: CGFloat, category: InterestCategory, deepTopic: String? = nil) -> some View {
+    private func subInterestsBentoGrid(tileW: CGFloat, tileH: CGFloat, category: InterestCategory) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHGrid(
                 rows: [
@@ -334,21 +386,15 @@ struct BentoTasteBox: View {
                 ],
                 spacing: 8
             ) {
-                ForEach(Array(currentSubInterests.enumerated()), id: \.element) { index, topic in
-                    let isAdded = allInterests.contains { $0.caseInsensitiveCompare(topic) == .orderedSame }
-                    let isJustAdded = justAddedInterest == topic
-
+                ForEach(Array(currentSubInterests.prefix(10).enumerated()), id: \.element) { index, topic in
                     SubInterestBentoTile(
                         title: topic,
-                        isAdded: isAdded || isJustAdded,
                         isRevealed: index < revealedTilesCount,
+                        isDisabled: isGenerating || isCooldownActive,
                         width: tileW,
                         height: tileH,
                         onTap: {
-                            collectInterest(topic)
-                        },
-                        onDeepDive: {
-                            deepDiveInto(topic: topic, parentCategory: category)
+                            selectDedicatedTopic(topic)
                         }
                     )
                 }
@@ -515,14 +561,18 @@ struct BentoTasteBox: View {
         loadCategory(category)
     }
 
-    private func loadCategory(_ category: InterestCategory) {
-        let fallbacks = category.fallbackInterests(for: appLanguage)
-        currentSubInterests = fallbacks
+    private func loadCategory(_ category: InterestCategory, refresh: Bool = false) {
+        var fallbacks = category.fallbackInterests(for: appLanguage)
+        if refresh {
+            fallbacks.shuffle()
+        }
+        let initial10 = Array(fallbacks.prefix(10))
+        currentSubInterests = initial10
         revealedTilesCount = 0
         isSynthesizing = true
 
-        // Reveal fallback tiles with rapid cascading stagger (2048 tile drop)
-        animateStaggeredTiles(total: fallbacks.count)
+        // Reveal fallback tiles with rapid cascading stagger
+        animateStaggeredTiles(total: initial10.count)
 
         // Live AI expansion from backend
         let taskId = UUID()
@@ -532,7 +582,7 @@ struct BentoTasteBox: View {
             do {
                 let aiResults = try await CategoryExpansionService.expand(
                     category: category.localizedName(for: appLanguage),
-                    existingInterests: allInterests,
+                    existingInterests: refresh ? [] : allInterests,
                     language: appLanguage
                 )
                 guard synthesisTaskId == taskId else { return }
@@ -540,10 +590,11 @@ struct BentoTasteBox: View {
                 await MainActor.run {
                     if !aiResults.isEmpty {
                         let filtered = aiResults.filter { ContentModerationService.isAppropriate($0) }
-                        if !filtered.isEmpty {
+                        if filtered.count >= 6 {
+                            let top10 = Array(filtered.prefix(10))
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                currentSubInterests = filtered
-                                revealedTilesCount = filtered.count
+                                currentSubInterests = top10
+                                revealedTilesCount = top10.count
                                 isSynthesizing = false
                             }
                             return
@@ -560,42 +611,10 @@ struct BentoTasteBox: View {
         }
     }
 
-    private func deepDiveInto(topic: String, parentCategory: InterestCategory) {
-        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-            mode = .deepDive(topic: topic, parentCategory: parentCategory)
-            currentSubInterests = ["\(topic) I", "\(topic) II", "\(topic) III"]
-            revealedTilesCount = 3
-            isSynthesizing = true
-        }
-
-        let taskId = UUID()
-        synthesisTaskId = taskId
-
-        Task {
-            do {
-                let deepResults = try await CategoryExpansionService.expand(
-                    category: topic,
-                    existingInterests: allInterests,
-                    language: appLanguage
-                )
-                guard synthesisTaskId == taskId else { return }
-
-                await MainActor.run {
-                    let filtered = deepResults.filter { ContentModerationService.isAppropriate($0) }
-                    if !filtered.isEmpty {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            currentSubInterests = filtered
-                            revealedTilesCount = filtered.count
-                        }
-                    }
-                    isSynthesizing = false
-                }
-            } catch {
-                guard synthesisTaskId == taskId else { return }
-                await MainActor.run { isSynthesizing = false }
-            }
-        }
+    private func selectDedicatedTopic(_ topic: String) {
+        guard !isGenerating && !isCooldownActive else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        onSelectDedicatedTopic?(topic)
     }
 
     private func animateStaggeredTiles(total: Int) {
@@ -668,21 +687,29 @@ private struct RootBentoTile: View {
     @State private var isPressed: Bool = false
 
     var body: some View {
-        Button(action: onTap) {
+        Button {
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+            onTap()
+        } label: {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .top) {
-                    Text(category.emoji)
-                        .font(.title3)
+                    Image(systemName: category.iconName)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(OmakaseTheme.ink)
+                        .scaleEffect(isPressed ? 1.12 : 1.0)
+                        .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(isPressed ? Color.primary : Color.secondary.opacity(0.6))
+                        .offset(x: isPressed ? 2.5 : 0)
+                        .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
                 }
 
                 Spacer(minLength: 0)
 
                 Text(category.localizedName(for: language))
-                    .font(.caption.weight(.semibold))
+                    .font(.caption.weight(isPressed ? .bold : .semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
             }
@@ -691,98 +718,93 @@ private struct RootBentoTile: View {
             .frame(width: width, height: height, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(Color(uiColor: .systemBackground))
-                    .shadow(color: .black.opacity(0.03), radius: 2, y: 1)
+                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .systemBackground))
+                    .shadow(
+                        color: .black.opacity(isPressed ? 0.01 : 0.04),
+                        radius: isPressed ? 0.5 : 3,
+                        y: isPressed ? 0.5 : 1.5
+                    )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                    .strokeBorder(
+                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(0.12),
+                        lineWidth: isPressed ? 1.5 : 1
+                    )
             )
+            .offset(y: isPressed ? 1.5 : 0)
             .scaleEffect(isPressed ? 0.94 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.7), value: isPressed)
+            .animation(.spring(response: 0.2, dampingFraction: 0.68), value: isPressed)
         }
         .buttonStyle(BentoPressButtonStyle(isPressed: $isPressed))
     }
 }
 
-// MARK: - Sub-Interest Bento Tile (Level 1: 2048-Style)
+// MARK: - Sub-Interest Bento Tile (Single-Shot Dedicated Post Generator)
 
 private struct SubInterestBentoTile: View {
     let title: String
-    let isAdded: Bool
     let isRevealed: Bool
+    let isDisabled: Bool
     let width: CGFloat
     let height: CGFloat
     let onTap: () -> Void
-    let onDeepDive: () -> Void
 
     @State private var isPressed: Bool = false
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Main Tap Area (Collect into Interests)
-            Button(action: onTap) {
-                HStack(spacing: 6) {
-                    if isAdded {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(OmakaseTheme.chipActiveText)
-                            .transition(.scale.combined(with: .opacity))
-                    } else {
-                        Image(systemName: "plus")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.secondary)
-                    }
+        Button {
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+            onTap()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(isDisabled ? Color.secondary.opacity(0.6) : OmakaseTheme.ink)
+                    .scaleEffect(isPressed ? 1.15 : 1.0)
+                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
 
-                    Text(title)
-                        .font(.caption.weight(isAdded ? .semibold : .medium))
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                        .foregroundStyle(isAdded ? OmakaseTheme.chipActiveText : Color.primary)
+                Text(title)
+                    .font(.caption.weight(isPressed ? .semibold : .medium))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .foregroundStyle(isDisabled ? Color.secondary : Color.primary)
 
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 9)
-                .frame(maxHeight: .infinity)
+                Spacer(minLength: 0)
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(isDisabled ? Color.secondary.opacity(0.3) : Color.secondary.opacity(0.6))
+                    .offset(x: isPressed ? 1.5 : 0, y: isPressed ? -1.5 : 0)
+                    .scaleEffect(isPressed ? 1.15 : 1.0)
+                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
             }
-            .buttonStyle(BentoPressButtonStyle(isPressed: $isPressed))
-
-            // Micro "Deep Dive" trigger button (2048 Branching Game)
-            if isAdded {
-                Button(action: onDeepDive) {
-                    Image(systemName: "arrow.down.right.and.arrow.up.left")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(OmakaseTheme.chipActiveText.opacity(0.8))
-                        .padding(.trailing, 8)
-                        .frame(maxHeight: .infinity)
-                }
-                .buttonStyle(.plain)
-                .transition(.scale.combined(with: .opacity))
-            }
+            .padding(.horizontal, 10)
+            .frame(width: max(width, 130), height: height)
+            .background(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .systemBackground))
+                    .shadow(
+                        color: .black.opacity(isPressed ? 0.01 : 0.03),
+                        radius: isPressed ? 0.5 : 2.5,
+                        y: isPressed ? 0.5 : 1.5
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .strokeBorder(
+                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(isDisabled ? 0.06 : 0.12),
+                        lineWidth: isPressed ? 1.5 : 1
+                    )
+            )
+            .offset(y: isPressed ? 1.5 : 0)
+            .scaleEffect(isRevealed ? (isPressed ? 0.94 : 1.0) : 0.75)
+            .opacity(isRevealed ? (isDisabled ? 0.45 : 1.0) : 0.0)
+            .animation(.spring(response: 0.32, dampingFraction: 0.75), value: isRevealed)
+            .animation(.spring(response: 0.2, dampingFraction: 0.68), value: isPressed)
         }
-        .frame(width: max(width, 120), height: height)
-        .background(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .fill(
-                    isAdded
-                        ? OmakaseTheme.chipActiveFill
-                        : Color(uiColor: .systemBackground)
-                )
-                .shadow(color: .black.opacity(isAdded ? 0.08 : 0.02), radius: 2, y: 1)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .strokeBorder(
-                    isAdded
-                        ? Color.clear
-                        : Color.primary.opacity(0.12),
-                    lineWidth: 1
-                )
-        )
-        .scaleEffect(isRevealed ? (isPressed ? 0.94 : 1.0) : 0.75)
-        .opacity(isRevealed ? 1.0 : 0.0)
-        .animation(.spring(response: 0.32, dampingFraction: 0.75), value: isRevealed)
-        .animation(.spring(response: 0.22, dampingFraction: 0.7), value: isPressed)
+        .buttonStyle(BentoPressButtonStyle(isPressed: $isPressed))
+        .disabled(isDisabled)
     }
 }
 
@@ -795,6 +817,9 @@ private struct BentoPressButtonStyle: ButtonStyle {
         configuration.label
             .onChange(of: configuration.isPressed) { _, pressed in
                 isPressed = pressed
+                if pressed {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                }
             }
     }
 }

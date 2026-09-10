@@ -74,10 +74,16 @@ struct FeedView: View {
                     isExpanded: $isBentoExpanded,
                     onToggleExpand: {
                         toggleBentoExpanded()
+                    },
+                    isGenerating: viewModel.isGenerating,
+                    isCooldownActive: viewModel.isCooldownActive,
+                    cooldownRemaining: viewModel.readingCooldownRemaining,
+                    cooldownTotal: viewModel.readingCooldownTotal,
+                    onSelectDedicatedTopic: { topic in
+                        viewModel.requestDedicatedPost(topic: topic)
                     }
                 )
                 .environment(\.appLanguage, appLanguage)
-                .shadow(color: Color.black.opacity(isBentoExpanded ? 0.08 : 0.02), radius: 8, x: 0, y: -3)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(uiColor: .systemBackground))
@@ -823,7 +829,7 @@ private struct ReelsPostCard: View {
     private var cardTitle: String {
         let t = post.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !t.isEmpty { return t }
-        return Self.fallbackTitle(from: post.text, isStreaming: !post.isComplete, l10n: l10n)
+        return Self.fallbackTitle(from: post.cleanDisplayBody, isStreaming: !post.isComplete, l10n: l10n)
     }
 
     private static func fallbackTitle(from text: String, isStreaming: Bool, l10n: L10n) -> String {
@@ -837,7 +843,7 @@ private struct ReelsPostCard: View {
     }
 
     private var postBody: AttributedString {
-        parseMarkdown(text: post.text)
+        parseMarkdown(text: post.cleanDisplayBody)
     }
 
     private func attributedDeepDive(_ deepDive: String) -> AttributedString {

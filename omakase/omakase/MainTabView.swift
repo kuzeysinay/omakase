@@ -15,6 +15,16 @@ struct MainTabView: View {
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
+    init(authService: AuthService) {
+        self.authService = authService
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .systemBackground
+        appearance.shadowColor = UIColor.separator.withAlphaComponent(0.12)
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+
     var body: some View {
         TabView {
             FeedView(authService: authService)
