@@ -8,6 +8,7 @@ import SwiftUI
 /// A SwiftUI view rendered as an image for sharing (Instagram story aspect ratio).
 struct ShareCardView: View {
     let post: Post
+    var language: AppLanguage = .english
 
     var body: some View {
         ZStack {
@@ -49,7 +50,7 @@ struct ShareCardView: View {
                         tagChips
                     }
 
-                    Text(post.createdAt.formatted(date: .abbreviated, time: .omitted))
+                    Text(post.createdAt.localizedFormatted(for: language, date: .abbreviated, time: .omitted))
                         .font(.system(size: 24, weight: .medium))
                         .foregroundStyle(Color(hex: 0x1A1A1A).opacity(0.45))
                 }
@@ -62,8 +63,9 @@ struct ShareCardView: View {
 
     private var tagChips: some View {
         HStack(spacing: 12) {
-            ForEach(post.tags.prefix(5), id: \.self) { tag in
-                Text(tag)
+            ForEach(post.tags.prefix(5), id: \.self) { rawTag in
+                let cleanTag = rawTag.trimmingCharacters(in: CharacterSet(charactersIn: "# "))
+                Text(cleanTag)
                     .font(.system(size: 24, weight: .medium))
                     .foregroundStyle(Color(hex: 0x1A1A1A).opacity(0.70))
                     .padding(.horizontal, 16)
@@ -74,19 +76,5 @@ struct ShareCardView: View {
                     )
             }
         }
-    }
-}
-
-// MARK: - Hex color helper
-
-private extension Color {
-    init(hex: UInt, opacity: Double = 1.0) {
-        self.init(
-            .sRGB,
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255,
-            opacity: opacity
-        )
     }
 }

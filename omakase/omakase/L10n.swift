@@ -785,8 +785,8 @@ struct L10n {
 
     var bentoShuffle: String {
         switch lang {
-        case .english: "Shuffle"
-        case .turkish: "Karıştır"
+        case .english: "Spin"
+        case .turkish: "Döndür"
         }
     }
 
@@ -911,6 +911,20 @@ struct L10n {
         switch lang {
         case .english: "Could not load Letterboxd data."
         case .turkish: "Letterboxd verileri yüklenemedi."
+        }
+    }
+
+    var letterboxdRecentFilms: String {
+        switch lang {
+        case .english: "Recent Diary"
+        case .turkish: "Son İzlediklerin"
+        }
+    }
+
+    var letterboxdConnectDiary: String {
+        switch lang {
+        case .english: "Connect Diary"
+        case .turkish: "Günlüğü Bağla"
         }
     }
 }

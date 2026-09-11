@@ -34,7 +34,8 @@ struct TimelinePostCard: View {
             if !post.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text(post.title)
                     .font(.headline)
-                    .lineLimit(3)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             // MARK: Body
@@ -88,7 +89,7 @@ struct TimelinePostCard: View {
                         Text(post.authorName)
                             .font(.headline)
                             .foregroundStyle(.primary)
-                        Text(post.sharedAt.formatted(date: .abbreviated, time: .shortened))
+                        Text(post.sharedAt.localizedFormatted(for: appLanguage))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -156,14 +157,17 @@ struct TimelinePostCard: View {
 
     private var tagChips: some View {
         FlowLayout(spacing: 6) {
-            ForEach(post.tags, id: \.self) { tag in
-                Text(tag.capitalized)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.08), in: Capsule())
-                    .foregroundStyle(.primary)
+            ForEach(post.tags, id: \.self) { rawTag in
+                let cleanTag = rawTag.trimmingCharacters(in: CharacterSet(charactersIn: "# ")).capitalized
+                if !cleanTag.isEmpty {
+                    Text(cleanTag)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.primary.opacity(0.08), in: Capsule())
+                        .foregroundStyle(.primary)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

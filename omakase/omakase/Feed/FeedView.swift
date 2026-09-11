@@ -81,6 +81,14 @@ struct FeedView: View {
                     cooldownTotal: viewModel.readingCooldownTotal,
                     onSelectDedicatedTopic: { topic in
                         viewModel.requestDedicatedPost(topic: topic)
+                    },
+                    onPromptLetterboxdUsername: {
+                        letterboxdDraft = storedLetterboxdUsername
+                        showLetterboxdUsernamePrompt = true
+                    },
+                    onSelectLetterboxdPost: {
+                        let clean = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+                        viewModel.requestLetterboxdDedicatedPost(username: clean)
                     }
                 )
                 .environment(\.appLanguage, appLanguage)
@@ -186,8 +194,9 @@ struct FeedView: View {
                         viewModel.letterboxdUsername = trimmed
                         viewModel.isLetterboxdActive = true
                         isLetterboxdActive = true
-                        viewModel.fetchLetterboxdFilms()
+                        viewModel.requestLetterboxdDedicatedPost(username: trimmed)
                     } else {
+                        storedLetterboxdUsername = ""
                         isLetterboxdActive = false
                         viewModel.isLetterboxdActive = false
                     }
@@ -510,7 +519,7 @@ private struct ReelsPostCard: View {
                 }
             }
             
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
             // Header: title, timestamp, LIVE badge
             postHeader
                 .padding(.top, 8)
@@ -521,7 +530,9 @@ private struct ReelsPostCard: View {
                     .transition(.opacity)
             } else {
                 Text(postBody)
-                    .font(.body)
+                    .font(.system(size: 16.5, weight: .regular))
+                    .lineSpacing(5)
+                    .foregroundStyle(Color.primary.opacity(0.92))
                     .fixedSize(horizontal: false, vertical: true)
                     // Removed per-token .contentTransition/.animation — they
                     // fired on every SSE token causing continuous animation
@@ -542,19 +553,21 @@ private struct ReelsPostCard: View {
                 .transition(.opacity)
             }
 
-            // Tags
-            if post.isComplete, !post.tags.isEmpty {
-                tagChips
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            // Tags and Action Bar grouped under post content with balanced breathing room
+            if post.isComplete {
+                VStack(alignment: .leading, spacing: 10) {
+                    if !post.tags.isEmpty {
+                        tagChips
+                    }
+                    if !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        actionBar
+                            .padding(.top, 2)
+                    }
+                }
+                .transition(.opacity)
             }
 
-            if post.isComplete, !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                actionBar
-                    .transition(.opacity)
-                    .padding(.top, 8)
-            }
-            
-            Spacer(minLength: 20)
+            Spacer(minLength: 16)
         }
         .padding(.horizontal, 20)
         .animation(.easeOut(duration: 0.6), value: post.isComplete)
@@ -620,43 +633,58 @@ private struct ReelsPostCard: View {
     // MARK: - Header
 
     private var postHeader: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Image(systemName: "fork.knife.circle.fill")
-                .font(.system(size: 32))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(cardTitle)
-                    .font(.headline)
-                    .lineLimit(2)
-                Text(post.createdAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
+                    .font(.system(size: 20, weight: .bold))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(.primary)
 
-            if !post.isComplete {
-                Text(l10n.liveBadge)
-                    .font(.caption2.monospaced()).bold()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.red.opacity(0.15), in: Capsule())
-                    .foregroundStyle(.red)
-            }
-
-            // Delete button
-            if post.isComplete {
-                Menu {
-                    Button(role: .destructive) {
-                        onDelete()
-                    } label: {
-                        Label(l10n.remove, systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.body.weight(.medium))
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                    Text(post.createdAt.localizedFormatted(for: appLanguage))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                        .frame(width: 32, height: 32)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 6) {
+                if !post.isComplete {
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 6, height: 6)
+                            .opacity(showCursor ? 1.0 : 0.35)
+                            .animation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true), value: showCursor)
+                        Text(l10n.liveBadge)
+                            .font(.caption2.weight(.bold).monospaced())
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(Color.red.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.red)
+                }
+
+                // Delete button
+                if post.isComplete {
+                    Menu {
+                        Button(role: .destructive) {
+                            onDelete()
+                        } label: {
+                            Label(l10n.remove, systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color.primary.opacity(0.04), in: Circle())
+                    }
                 }
             }
         }
@@ -665,7 +693,7 @@ private struct ReelsPostCard: View {
     // MARK: - Action Bar (bottom, horizontal, like Reels)
 
     private var actionBar: some View {
-        HStack(spacing: 28) {
+        HStack(spacing: 24) {
             // Deep Dive button — opens sheet (re-read if already fetched)
             Button {
                 if post.deepDiveText == nil {
@@ -673,17 +701,17 @@ private struct ReelsPostCard: View {
                 }
                 isDeepDiveExpanded = true
             } label: {
-                VStack(spacing: 4) {
+                VStack(spacing: 3) {
                     Image(systemName: post.deepDiveText != nil ? "fish.fill" : "fish")
-                        .font(.title2)
+                        .font(.title3)
+                        .foregroundStyle(post.deepDiveText != nil ? OmakaseTheme.ink : .primary)
                     Text(post.deepDiveText != nil
                          ? (l10n.lang == .turkish ? "Yeniden Oku" : "Re-read")
                          : l10n.actionDive)
-                        .font(.caption2)
+                        .font(.caption2.weight(post.deepDiveText != nil ? .semibold : .regular))
                         .lineLimit(1)
                         .fixedSize()
                 }
-                // Fixed width prevents icon from shifting when label text changes
                 .frame(width: 52)
                 .foregroundStyle(.primary)
             }
@@ -694,15 +722,16 @@ private struct ReelsPostCard: View {
             Button {
                 Task { await toggleShare() }
             } label: {
-                VStack(spacing: 4) {
+                VStack(spacing: 3) {
                     if isSharePending {
                         ProgressView().controlSize(.small)
                     } else {
                         Image(systemName: isShared ? "paperplane.fill" : "paperplane")
-                            .font(.title2)
+                            .font(.title3)
+                            .foregroundStyle(isShared ? Color.blue : .primary)
                     }
                     Text(isShared ? l10n.actionShared : l10n.actionShare)
-                        .font(.caption2)
+                        .font(.caption2.weight(isShared ? .semibold : .regular))
                         .lineLimit(1)
                         .fixedSize()
                 }
@@ -715,11 +744,11 @@ private struct ReelsPostCard: View {
 
             // iOS Share Sheet button
             Button {
-                ShareService.presentShareSheet(post: post)
+                ShareService.presentShareSheet(post: post, language: appLanguage)
             } label: {
-                VStack(spacing: 4) {
+                VStack(spacing: 3) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.title2)
+                        .font(.title3)
                     Text(l10n.actionExport)
                         .font(.caption2)
                         .lineLimit(1)
@@ -744,9 +773,10 @@ private struct ReelsPostCard: View {
             } label: {
                 VStack(spacing: 4) {
                     Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                        .font(.title2)
+                        .font(.title3)
+                        .foregroundStyle(isBookmarked ? OmakaseTheme.ink : .primary)
                     Text(isBookmarked ? l10n.actionSaved : l10n.actionSave)
-                        .font(.caption2)
+                        .font(.caption2.weight(isBookmarked ? .semibold : .regular))
                         .lineLimit(1)
                         .fixedSize()
                 }
@@ -756,7 +786,8 @@ private struct ReelsPostCard: View {
             .buttonStyle(.plain)
             .accessibilityLabel(isBookmarked ? l10n.removeBookmarkA11y : l10n.bookmarkPostA11y)
         }
-        .padding(.vertical, 12)
+        .padding(.top, 4)
+        .padding(.bottom, 6)
     }
 
     // MARK: - Deep Dive Sheet
@@ -829,17 +860,13 @@ private struct ReelsPostCard: View {
     private var cardTitle: String {
         let t = post.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !t.isEmpty { return t }
-        return Self.fallbackTitle(from: post.cleanDisplayBody, isStreaming: !post.isComplete, l10n: l10n)
-    }
-
-    private static func fallbackTitle(from text: String, isStreaming: Bool, l10n: L10n) -> String {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return isStreaming ? l10n.composingTitle : l10n.untitledBite }
-        let snippet = trimmed.prefix(52)
-        if snippet.count < trimmed.count {
-            return String(snippet).trimmingCharacters(in: .whitespaces) + "…"
+        if !post.isComplete {
+            return l10n.composingTitle
         }
-        return String(snippet)
+        if let firstTag = post.tags.first(where: { !$0.trimmingCharacters(in: CharacterSet(charactersIn: "# ")).isEmpty }) {
+            return firstTag.trimmingCharacters(in: CharacterSet(charactersIn: "# ")).capitalized
+        }
+        return l10n.untitledBite
     }
 
     private var postBody: AttributedString {
@@ -851,7 +878,7 @@ private struct ReelsPostCard: View {
     }
     
     private func parseMarkdown(text: String) -> AttributedString {
-        let cleanText = String(text.drop(while: { $0.isWhitespace || $0.isNewline }))
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         // Normalize ** to * so all asterisk wrappers are parsed uniformly
         let normalizedText = cleanText.replacingOccurrences(of: "**", with: "*")
         
@@ -885,14 +912,17 @@ private struct ReelsPostCard: View {
 
     private var tagChips: some View {
         FlowLayout(spacing: 6) {
-            ForEach(post.tags, id: \.self) { tag in
-                Text(tag.capitalized)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.08), in: Capsule())
-                    .foregroundStyle(.primary)
+            ForEach(post.tags, id: \.self) { rawTag in
+                let cleanTag = rawTag.trimmingCharacters(in: CharacterSet(charactersIn: "# ")).capitalized
+                if !cleanTag.isEmpty {
+                    Text(cleanTag)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4.5)
+                        .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+                        .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.8))
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

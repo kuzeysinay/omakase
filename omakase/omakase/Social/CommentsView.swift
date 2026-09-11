@@ -105,7 +105,7 @@ struct CommentsView: View {
                 HStack(spacing: 6) {
                     Text(comment.authorName)
                         .font(.caption).bold()
-                    Text(comment.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    Text(comment.createdAt.localizedFormatted(for: appLanguage))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 0)

@@ -35,35 +35,79 @@ enum CategoryExpansionService {
         existingInterests: [String],
         language: AppLanguage
     ) async throws -> [String] {
+        // 1. Try dedicated expand-category endpoint
         let url = baseURL.appendingPathComponent("interests/expand-category")
         let body: [String: Any] = [
             "category": category,
             "existing_interests": existingInterests,
             "language": language.rawValue,
         ]
-        guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else {
-            return []
+
+        if let bodyData = try? JSONSerialization.data(withJSONObject: body) {
+            var request = URLRequest(url: url, timeoutInterval: 10)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = bodyData
+
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                if Task.isCancelled { throw CancellationError() }
+
+                if let http = response as? HTTPURLResponse,
+                   (200..<300).contains(http.statusCode),
+                   let decoded = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let list = decoded["suggestions"] as? [String] {
+                    let cleaned = list
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
+                    if cleaned.count >= 6 {
+                        return cleaned
+                    }
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // Proceed to fallback endpoint
+            }
         }
 
-        var request = URLRequest(url: url, timeoutInterval: 30)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = bodyData
+        // 2. Fallback to /interests/suggest with draft and exclude list
+        let fallbackURL = baseURL.appendingPathComponent("interests/suggest")
+        let fallbackBody: [String: Any] = [
+            "interests": [],
+            "draft": category,
+            "exclude_suggestions": existingInterests,
+            "language": language.rawValue,
+        ]
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        if Task.isCancelled { throw CancellationError() }
+        if let fallbackData = try? JSONSerialization.data(withJSONObject: fallbackBody) {
+            var fallbackReq = URLRequest(url: fallbackURL, timeoutInterval: 8)
+            fallbackReq.httpMethod = "POST"
+            fallbackReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            fallbackReq.httpBody = fallbackData
 
-        guard
-            let http = response as? HTTPURLResponse,
-            (200..<300).contains(http.statusCode),
-            let decoded = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let list = decoded["suggestions"] as? [String]
-        else {
-            return []
+            do {
+                let (fData, fResp) = try await URLSession.shared.data(for: fallbackReq)
+                if Task.isCancelled { throw CancellationError() }
+
+                if let fHttp = fResp as? HTTPURLResponse,
+                   (200..<300).contains(fHttp.statusCode),
+                   let fDecoded = try JSONSerialization.jsonObject(with: fData) as? [String: Any],
+                   let fList = fDecoded["suggestions"] as? [String] {
+                    let cleaned = fList
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
+                    if !cleaned.isEmpty {
+                        return cleaned
+                    }
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // Handled below
+            }
         }
 
-        return list
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+        return []
     }
 }

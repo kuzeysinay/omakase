@@ -170,8 +170,9 @@ private struct CollectionEntriesView: View {
                                      ? l10n.savedPostFallbackTitle
                                      : entry.title)
                                     .font(.headline)
-                                    .lineLimit(2)
-                                Text(entry.postCreatedAt.formatted(date: .abbreviated, time: .shortened))
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(entry.postCreatedAt.localizedFormatted(for: appLanguage))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 Text(entry.text)
@@ -369,20 +370,20 @@ private struct BookmarkDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Header
-                HStack(alignment: .center, spacing: 10) {
-                    Image(systemName: "fork.knife.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(cardTitle)
-                            .font(.headline)
-                            .lineLimit(3)
-                        Text(entry.postCreatedAt.formatted(date: .abbreviated, time: .shortened))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(cardTitle)
+                        .font(.system(size: 20, weight: .bold))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(.primary)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                        Text(entry.postCreatedAt.localizedFormatted(for: appLanguage))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Spacer()
                 }
 
                 // Full post body

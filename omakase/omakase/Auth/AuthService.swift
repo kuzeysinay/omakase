@@ -35,7 +35,8 @@ final class AuthService {
 
     // MARK: - Init
 
-    nonisolated(unsafe) private var authStateHandle: AuthStateDidChangeListenerHandle?
+    @ObservationIgnored
+    private var authStateHandle: AuthStateDidChangeListenerHandle?
 
     init() {
         // Listen for Firebase Auth state changes (auto-login on cold launch).

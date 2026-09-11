@@ -83,6 +83,7 @@ final class FeedViewModel {
 
     init(interests: [String]) {
         self.interests = interests
+        self.letterboxdUsername = UserDefaults.standard.string(forKey: "omakase.letterboxd_username") ?? ""
         startNetworkMonitoring()
     }
 
@@ -248,8 +249,9 @@ final class FeedViewModel {
     /// Generate a single post specifically and exclusively focused on the tapped topic,
     /// without mutating the user's persistent interests list in memory.
     func requestDedicatedPost(topic: String) {
-        guard !isGenerating && !isCooldownActive else { return }
+        guard !isGenerating else { return }
         streamingTask?.cancel()
+        readingCooldownRemaining = 0
         errorMessage = nil
 
         let post = Post()
@@ -258,6 +260,11 @@ final class FeedViewModel {
         isGenerating = true
         activeStreamPostID = postID
 
+        streamDedicatedPost(topic: topic, postID: postID)
+    }
+
+    /// Internal helper that initiates SSE streaming for a newly created placeholder post.
+    private func streamDedicatedPost(topic: String, postID: UUID) {
         let url = baseURL.appendingPathComponent("feed/stream")
         var requestBody: [String: Any] = [
             "interests": [topic],
@@ -287,43 +294,12 @@ final class FeedViewModel {
                 for try await event in stream {
                     if Task.isCancelled { break }
                     let isBodyToken = (event.event == "token")
-                    let isTitleToken = (event.event == "title")
-                    let isDeepDiveToken = (event.event == "deep_dive")
-                    let isTagsToken = (event.event == "tags")
-                    let isFormatToken = (event.event == "format")
-
-                    if isBodyToken || isTitleToken || isDeepDiveToken || isTagsToken || isFormatToken {
-                        if let data = event.data.data(using: .utf8),
-                           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-                        {
-                            await MainActor.run { [weak self] in
-                                guard let self else { return }
-                                let p = self.posts.first { $0.id == streamPostID }
-                                if isTitleToken, let text = json["text"] as? String {
-                                    p?.title += text
-                                } else if isBodyToken, let text = json["text"] as? String {
-                                    p?.text += text
-                                } else if isDeepDiveToken, let text = json["text"] as? String {
-                                    p?.deepDiveText = (p?.deepDiveText ?? "") + text
-                                } else if isTagsToken, let tags = json["tags"] as? [String] {
-                                    p?.tags = tags
-                                } else if isFormatToken, let fmt = json["format"] as? String {
-                                    p?.postFormat = fmt
-                                }
-                            }
-                        }
-                    } else if event.event == "done" {
-                        await MainActor.run { [weak self] in
-                            guard let self else { return }
-                            self.markPostComplete(streamPostID)
-                            if let idx = self.posts.firstIndex(where: { $0.id == streamPostID }) {
-                                Task {
-                                    await PostCacheService.shared.cachePost(self.posts[idx])
-                                    await PostCacheService.shared.clearOldPosts()
-                                }
-                            }
-                        }
-                        break
+                    await MainActor.run { [weak self] in
+                        guard let self else { return }
+                        self.handle(event: event, for: streamPostID)
+                    }
+                    if isBodyToken {
+                        await Task.yield()
                     }
                 }
             } catch {
@@ -375,8 +351,10 @@ final class FeedViewModel {
 
     func startNetworkMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
+            guard let self else { return }
+            let isOffline = (path.status != .satisfied)
             Task { @MainActor in
-                self?.isOffline = (path.status != .satisfied)
+                self.isOffline = isOffline
             }
         }
         monitor.start(queue: DispatchQueue(label: "NetworkMonitor"))
@@ -422,6 +400,52 @@ final class FeedViewModel {
                     self.letterboxdError = error.localizedDescription
                     self.isFetchingLetterboxd = false
                 }
+            }
+        }
+    }
+
+    /// Request a cinema post specifically contextualized with the user's Letterboxd watched films.
+    func requestLetterboxdDedicatedPost(username overrideUsername: String? = nil) {
+        guard !isGenerating else { return }
+
+        if let overrideUsername, !overrideUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            self.letterboxdUsername = overrideUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if self.letterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            self.letterboxdUsername = UserDefaults.standard.string(forKey: "omakase.letterboxd_username") ?? ""
+        }
+        let username = letterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !username.isEmpty else { return }
+
+        streamingTask?.cancel()
+        readingCooldownRemaining = 0
+        errorMessage = nil
+        isLetterboxdActive = true
+
+        let post = Post()
+        posts.append(post)
+        let postID = post.id
+        isGenerating = true
+        activeStreamPostID = postID
+
+        if !letterboxdFilms.isEmpty {
+            streamDedicatedPost(topic: "Film", postID: postID)
+            return
+        }
+
+        isFetchingLetterboxd = true
+        Task {
+            var fetched: [LetterboxdFilm] = []
+            do {
+                fetched = try await LetterboxdService.fetchFilms(username: username)
+            } catch {
+                // Non-fatal fallback: stream high-quality Film post even if RSS fails
+            }
+
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.isFetchingLetterboxd = false
+                self.letterboxdFilms = fetched
+                self.streamDedicatedPost(topic: "Film", postID: postID)
             }
         }
     }
@@ -561,7 +585,7 @@ final class FeedViewModel {
                 setPostFormat(format, for: postID)
             }
         case "title":
-            if let title = payload["title"] as? String {
+            if let title = (payload["title"] as? String) ?? (payload["text"] as? String) {
                 setTitle(title, for: postID)
             }
         case "tags":
@@ -672,18 +696,18 @@ final class FeedViewModel {
 }
 
 // #region agent log
-enum AgentDebugLog {
+nonisolated enum AgentDebugLog {
     private static let ingestURL = URL(string: "http://127.0.0.1:7607/ingest/20ae730c-fbc4-40a0-8eec-3e252145ce8f")!
     private static let sessionId = "2ae36b"
 
-    static func log(
+    nonisolated static func log(
         location: String,
         message: String,
         hypothesisId: String,
         data: [String: String] = [:]
     ) {
         let ts = Int64(Date().timeIntervalSince1970 * 1000)
-        var payload: [String: Any] = [
+        let payload: [String: Any] = [
             "sessionId": sessionId,
             "location": location,
             "message": message,

@@ -95,7 +95,7 @@ struct CategoryGridView: View {
                 }
             } catch {
                 await MainActor.run {
-                    loadingCategories.remove(category.id)
+                    _ = loadingCategories.remove(category.id)
                 }
             }
         }

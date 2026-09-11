@@ -38,3 +38,23 @@ extension EnvironmentValues {
         set { self[AppLanguageKey.self] = newValue }
     }
 }
+
+// MARK: - Date Localization Helper
+
+extension Date {
+    /// Formats the date using the specified AppLanguage's locale so date & time strings
+    /// (e.g. month names, 24h clock) correctly respect the in-app language setting.
+    func localizedFormatted(
+        for language: AppLanguage,
+        date: Date.FormatStyle.DateStyle = .abbreviated,
+        time: Date.FormatStyle.TimeStyle = .shortened
+    ) -> String {
+        formatted(
+            Date.FormatStyle(
+                date: date,
+                time: time,
+                locale: Locale(identifier: language.localeIdentifier)
+            )
+        )
+    }
+}

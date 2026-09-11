@@ -56,12 +56,12 @@ enum LetterboxdService {
     /// Fetch the user's recently watched films from Letterboxd via the backend.
     /// - Parameters:
     ///   - username: The Letterboxd username (e.g. "kuzeysinay").
-    ///   - limit: Maximum number of films to return (default 5).
+    ///   - limit: Maximum number of films to return (default 50).
     /// - Returns: An array of `LetterboxdFilm`.
     /// - Throws: `CancellationError` or a descriptive error string.
     static func fetchFilms(
         username: String,
-        limit: Int = 5
+        limit: Int = 50
     ) async throws -> [LetterboxdFilm] {
         let url = baseURL.appendingPathComponent("letterboxd/films")
         let body: [String: Any] = [

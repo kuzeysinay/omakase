@@ -50,7 +50,7 @@ final class Post: Identifiable, @unchecked Sendable {
 
     /// Formatted display text with any legacy robotic template labels (e.g. "SIDE A:", "SIDE B:") removed.
     var cleanDisplayBody: String {
-        Self.sanitizeTemplateLabels(from: text)
+        Self.sanitizeTemplateLabels(from: text).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     static func sanitizeTemplateLabels(from rawText: String) -> String {

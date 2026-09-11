@@ -39,15 +39,15 @@ final class ShareItemSource: NSObject, UIActivityItemSource {
 
 @MainActor
 enum ShareService {
-    static func renderCardImage(for post: Post) -> UIImage? {
-        let view = ShareCardView(post: post)
+    static func renderCardImage(for post: Post, language: AppLanguage = .english) -> UIImage? {
+        let view = ShareCardView(post: post, language: language)
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2.0
         return renderer.uiImage
     }
 
-    static func presentShareSheet(post: Post) {
-        guard let image = renderCardImage(for: post) else { return }
+    static func presentShareSheet(post: Post, language: AppLanguage = .english) {
+        guard let image = renderCardImage(for: post, language: language) else { return }
         
         let itemSource = ShareItemSource(post: post, image: image)
         let activityVC = UIActivityViewController(

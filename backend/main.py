@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 import re
 import uuid
 import xml.etree.ElementTree as ET
@@ -271,6 +272,7 @@ SYSTEM_PROMPT = (
     "- Do NOT force a connection between the user's interests if a real, verifiable one does not exist. "
     "Pick ONE interest and write an excellent post about it alone rather than fabricating a link.\n"
     "- Only reference works, people, and events that genuinely exist and that you can accurately describe.\n"
+    "- STRICT PROHIBITION ON FABRICATED TRIVIA: Never invent behind-the-scenes stories, fictional director inspirations, or cross-movie crossover anecdotes. Every single anecdote must be 100% historically true and documented.\n"
     "- If a format template asks for a surprising connection or trivia but you cannot verify one with "
     "certainty, ignore the template and write a straightforward FUN FACT DROP instead."
 )
@@ -426,22 +428,36 @@ def _build_user_prompt(
     # Letterboxd context — inject recently watched films when available.
     letterboxd_ctx = ""
     if letterboxd_films:
-        film_lines: list[str] = []
-        for f in letterboxd_films:  # include all films
-            line = f.get("title", "Unknown")
-            if f.get("year"):
-                line += f" ({f['year']})"
-            if f.get("rating"):
-                line += f" — rated {f['rating']}/5"
-            film_lines.append(line)
+        # Dynamically pick one target film from the user's full viewing history
+        target_film = random.choice(letterboxd_films)
+        target_title = target_film.get("title", "Unknown")
+        target_year = f" ({target_film['year']})" if target_film.get("year") else ""
+        target_rating = f" — user rating {target_film['rating']}/5" if target_film.get("rating") else ""
+
+        # Dedicated high-density cinema curator mode for Letterboxd:
+        format_name = "CINEMA BEHIND-THE-SCENES & VERIFIED FACTS"
+        format_instruction = (
+            f"Your specifically assigned film for this post is: '{target_title}'{target_year}{target_rating} "
+            "from the user's Letterboxd diary.\n"
+            f"You MUST write exclusively about '{target_title}'. Do NOT write about another film.\n\n"
+            "PRIORITY 1 — VERIFIED FUN-FACT: If there is a genuinely surprising, little-known, and 100% "
+            f"historically verified fun-fact or real production anecdote specifically about '{target_title}' "
+            "(e.g. an authentic casting story, an unscripted moment that made the final cut, an actor's quirky habit on set, "
+            "a real-life set incident, or a documented director commentary revelation), WRITE THAT FUN-FACT! "
+            "Make it engaging, sharp, and delightful to read.\n"
+            "PRIORITY 2 — DIRECTORIAL / CINEMATIC CRAFT: If you do not have a 100% verified quirky trivia fact, "
+            f"focus instead on an authentic, documented technical or stylistic choice in '{target_title}' "
+            "(lenses, lighting, editing rhythm, practical effects, score).\n"
+            "CRITICAL ZERO-HALLUCINATION POLICY:\n"
+            f"• Every single anecdote, quote, or detail MUST be 100% true and verifiable specifically about '{target_title}'.\n"
+            "• You must NEVER fabricate or invent behind-the-scenes trivia, and NEVER claim a director was inspired by an unrelated movie or cartoon.\n"
+            "• If you have even 1% doubt about whether an anecdote actually happened in real life, do NOT write it — switch to an authentic cinematographic or narrative craft insight."
+        )
+
         letterboxd_ctx = (
-            "\n\nLETTERBOXD CONTEXT: The user recently watched these films on Letterboxd "
-            "(most recent first). Use this viewing history to make the post more relevant — "
-            "draw connections, reference directors/genres they clearly enjoy, or surface "
-            "interesting trivia about these specific films:\n"
-            + "\n".join(f"  • {fl}" for fl in film_lines)
-            + "\nCRITICAL: If you write about a specific film from this list, YOU MUST include its exact title in the TAGS line."
-            + "\n"
+            f"\n\nLETTERBOXD TARGET FILM: '{target_title}'{target_year}{target_rating}\n"
+            f"CRITICAL: You MUST put the exact title '{target_title}' in the TAGS line."
+            "\n"
         )
 
     return (
@@ -559,27 +575,29 @@ def _feed_tokens_from_stream_chunks(response: Any, queue: asyncio.Queue, loop: a
 def _stream_chunk_text(chunk: object) -> str:
     """Best-effort text from a streaming chunk (Gemini SDK quirks vary by chunk)."""
     try:
+        cands = getattr(chunk, "candidates", None) or []
+        if cands:
+            content = getattr(cands[0], "content", None)
+            parts = getattr(content, "parts", None) if content is not None else None
+            if parts:
+                pieces: list[str] = []
+                for part in parts:
+                    if getattr(part, "thought", False):
+                        continue
+                    txt = getattr(part, "text", None)
+                    if txt:
+                        pieces.append(str(txt))
+                return "".join(pieces)
+    except (IndexError, AttributeError, TypeError):
+        pass
+
+    try:
         t = getattr(chunk, "text", None)
         if t:
             return str(t)
     except (ValueError, AttributeError):
         pass
-    try:
-        cands = getattr(chunk, "candidates", None) or []
-        if not cands:
-            return ""
-        content = getattr(cands[0], "content", None)
-        parts = getattr(content, "parts", None) if content is not None else None
-        if not parts:
-            return ""
-        pieces: list[str] = []
-        for part in parts:
-            txt = getattr(part, "text", None)
-            if txt:
-                pieces.append(str(txt))
-        return "".join(pieces)
-    except (IndexError, AttributeError, TypeError):
-        return ""
+    return ""
 
 
 def _sse_event(data: dict, *, event: str | None = None) -> str:
@@ -604,7 +622,10 @@ async def _stream_post(
     yield _sse_event({"id": post_id}, event="start")
 
     # Emit the format name so the iOS client can show a visual badge.
-    format_name, _ = _POST_FORMATS[seen_count % len(_POST_FORMATS)]
+    if letterboxd_films:
+        format_name = "LETTERBOXD DIARY"
+    else:
+        format_name, _ = _POST_FORMATS[seen_count % len(_POST_FORMATS)]
     yield _sse_event({"format": format_name}, event="format")
 
     if not GEMINI_API_KEY:
@@ -629,7 +650,7 @@ async def _stream_post(
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=_feed_system_instruction(language),
-                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                        thinking_config=types.ThinkingConfig(thinking_budget=1024),
                         safety_settings=_SAFETY_SETTINGS,
                     )
                 )
@@ -737,7 +758,7 @@ async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=system,
-                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                        thinking_config=types.ThinkingConfig(thinking_budget=1024),
                         safety_settings=_SAFETY_SETTINGS,
                     )
                 )
@@ -859,7 +880,7 @@ _SUGGEST_SYSTEM = (
     "probably hasn't considered but might love once they discover them.\n"
     "5. Never repeat an interest the user already has, nor any item listed as an excluded suggestion.\n"
     "6. Keep each suggestion short: 1-4 words, title-cased.\n"
-    "7. Prioritise specificity over genre labels (e.g. prefer 'Wong Kar-wai' over 'Arthouse Cinema').\n"
+    "7. Prioritise specificity over broad genre labels (e.g. prefer 'Fermentation Science' over 'Cooking' or 'Modular Synthesizers' over 'Music').\n"
     "8. SAFETY: Never suggest harmful, explicit, illegal, offensive, or adult content. "
     "If the user's existing interests contain problematic content, ignore those and suggest safe, "
     "culturally enriching alternatives instead."
@@ -945,13 +966,15 @@ _EXPAND_CATEGORY_SYSTEM = (
     "Rules:\n"
     "1. Return ONLY a JSON array of strings — no markdown, no explanation.\n"
     "2. Return exactly 10 suggestions.\n"
-    "3. Prefer SPECIFIC topics over generic labels: 'Wong Kar-wai' > 'Asian Cinema', "
-    "'CRISPR' > 'Biology', 'Sourdough Bread' > 'Baking'.\n"
+    "3. Prefer SPECIFIC topics over generic labels: 'Fermentation Science' > 'Food', "
+    "'CRISPR Gene Editing' > 'Biology', 'Modular Synthesizers' > 'Music'.\n"
     "4. Mix well-known crowd-pleasers (~5) with surprising niche gems (~5) "
     "that a curious person would love to discover.\n"
     "5. Keep each suggestion short: 1-4 words, title-cased.\n"
     "6. Never repeat any item from the user's existing interests.\n"
-    "7. SAFETY: Never suggest harmful, explicit, illegal, offensive, or adult content."
+    "7. DIVERSITY: Ensure broad, balanced coverage across historical eras, movements, sub-genres, and cultures. "
+    "Never fixate on or over-index on any single recurring director, studio, or creator.\n"
+    "8. SAFETY: Never suggest harmful, explicit, illegal, offensive, or adult content."
 )
 
 
@@ -1072,10 +1095,10 @@ _LETTERBOXD_NS = {
 class LetterboxdFilmsRequest(BaseModel):
     """Payload for fetching a user's recent films from Letterboxd."""
     username: str = Field(..., min_length=1, max_length=100)
-    limit: int = Field(default=20, ge=1, le=20)
+    limit: int = Field(default=50, ge=1, le=50)
 
 
-def _parse_letterboxd_rss(xml_bytes: bytes, *, limit: int = 5) -> list[dict]:
+def _parse_letterboxd_rss(xml_bytes: bytes, *, limit: int = 50) -> list[dict]:
     """Parse Letterboxd RSS XML into a list of film dicts."""
     root = ET.fromstring(xml_bytes)
     channel = root.find("channel")
