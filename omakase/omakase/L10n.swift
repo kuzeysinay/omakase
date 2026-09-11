@@ -220,6 +220,20 @@ struct L10n {
         }
     }
 
+    func readingCooldownTitle(seconds: Int) -> String {
+        switch lang {
+        case .english: "Reading cooldown: \(seconds)s"
+        case .turkish: "Okuma süresi: \(seconds) sn"
+        }
+    }
+
+    var readingCooldownDetail: String {
+        switch lang {
+        case .english: "Take your time with this post. Next dish unlocks shortly."
+        case .turkish: "Gönderiyi sindirmen için bekleniyor. Yeni post az sonra açılacak."
+        }
+    }
+
     var removeBookmarkA11y: String {
         switch lang {
         case .english: "Remove bookmark"

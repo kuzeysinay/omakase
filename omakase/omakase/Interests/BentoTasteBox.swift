@@ -141,13 +141,24 @@ struct BentoTasteBox: View {
         HStack(spacing: 8) {
             switch mode {
             case .rootCategories:
-                // Generation indicator on the left (cooldown is represented by the top edge bar)
+                // Generation indicator on the left (cooldown is represented by the top edge bar + badge)
                 if isGenerating {
                     HStack(spacing: 5) {
                         ProgressView()
                             .controlSize(.mini)
                         Text(appLanguage == .turkish ? "Post hazırlanıyor…" : "Cooking post…")
                             .font(.caption2.weight(.semibold))
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.secondary)
+                } else if isCooldownActive {
+                    HStack(spacing: 5) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 10, weight: .bold))
+                        Text(appLanguage == .turkish ? "Okuma: \(cooldownRemaining)s" : "Reading: \(cooldownRemaining)s")
+                            .font(.caption2.weight(.bold).monospacedDigit())
                     }
                     .padding(.horizontal, 9)
                     .padding(.vertical, 4)
@@ -188,7 +199,7 @@ struct BentoTasteBox: View {
                     .foregroundStyle(isSpinningCategories ? Color.primary : Color.secondary)
                 }
                 .buttonStyle(.plain)
-                .disabled(isSpinningCategories || isGenerating)
+                .disabled(isSpinningCategories || isGenerating || isCooldownActive)
 
             case .subInterests(let category):
                 // Back Button (2048 Undo/Back)
@@ -246,12 +257,25 @@ struct BentoTasteBox: View {
                 .buttonStyle(BentoRefreshButtonStyle())
                 .disabled(isSynthesizing || isGenerating || isCooldownActive)
 
-                // Optional post generation indicator
+                // Optional post generation or cooldown indicator
                 if isGenerating {
                     HStack(spacing: 4) {
                         ProgressView().controlSize(.mini)
                         Text(appLanguage == .turkish ? "Üretiliyor" : "Generating")
                             .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.secondary)
+                } else if isCooldownActive {
+                    HStack(spacing: 4) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 9, weight: .bold))
+                        Text("\(cooldownRemaining)s")
+                            .font(.caption2.weight(.bold).monospacedDigit())
                             .lineLimit(1)
                             .fixedSize()
                     }
@@ -341,6 +365,7 @@ struct BentoTasteBox: View {
                             RootBentoTile(
                                 category: category,
                                 language: appLanguage,
+                                isDisabled: isGenerating || isCooldownActive,
                                 width: tileW,
                                 height: tileH
                             ) {
@@ -391,11 +416,12 @@ struct BentoTasteBox: View {
                 if isFilmCategory {
                     LetterboxdBentoTile(
                         username: storedLetterboxdUsername,
-                        isDisabled: isGenerating,
+                        isDisabled: isGenerating || isCooldownActive,
                         l10n: l10n,
                         width: letterboxdTileW,
                         height: tileH,
                         onTap: {
+                            guard !isGenerating && !isCooldownActive else { return }
                             let clean = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
                             if clean.isEmpty {
                                 onPromptLetterboxdUsername?()
@@ -419,7 +445,7 @@ struct BentoTasteBox: View {
                     SubInterestBentoTile(
                         title: topic,
                         isRevealed: tileIndex < revealedTilesCount,
-                        isDisabled: isGenerating,
+                        isDisabled: isGenerating || isCooldownActive,
                         isRefreshing: isRefreshingSubInterests,
                         width: thisTileW,
                         height: tileH,
@@ -584,7 +610,7 @@ struct BentoTasteBox: View {
     // MARK: - Category Roll Animation (Tactile 3D Card Flip)
 
     private func performCategoryRoll() {
-        guard !isSpinningCategories else { return }
+        guard !isSpinningCategories && !isGenerating && !isCooldownActive else { return }
         isSpinningCategories = true
 
         withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) {
@@ -634,6 +660,7 @@ struct BentoTasteBox: View {
     // MARK: - Game Mechanics & AI Synthesis
 
     private func openCategory(_ category: InterestCategory) {
+        guard !isGenerating && !isCooldownActive else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
             mode = .subInterests(category: category)
@@ -708,7 +735,7 @@ struct BentoTasteBox: View {
                 }
             }
         } else {
-            var fallbacks = category.fallbackInterests(for: appLanguage).shuffled()
+            let fallbacks = category.fallbackInterests(for: appLanguage).shuffled()
             let initial10 = Array(fallbacks.prefix(10))
             currentSubInterests = initial10
             revealedTilesCount = 0
@@ -820,6 +847,7 @@ struct BentoTasteBox: View {
 private struct RootBentoTile: View {
     let category: InterestCategory
     let language: AppLanguage
+    let isDisabled: Bool
     let width: CGFloat
     let height: CGFloat
     let onTap: () -> Void
@@ -828,6 +856,7 @@ private struct RootBentoTile: View {
 
     var body: some View {
         Button {
+            guard !isDisabled else { return }
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             onTap()
         } label: {
@@ -835,7 +864,7 @@ private struct RootBentoTile: View {
                 HStack(alignment: .top) {
                     Image(systemName: category.iconName)
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(OmakaseTheme.ink)
+                        .foregroundStyle(isDisabled ? Color.secondary.opacity(0.5) : OmakaseTheme.ink)
                         .scaleEffect(isPressed ? 1.12 : 1.0)
                         .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
                     Spacer()
@@ -850,7 +879,7 @@ private struct RootBentoTile: View {
 
                 Text(category.localizedName(for: language))
                     .font(.caption.weight(isPressed ? .bold : .semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(isDisabled ? Color.secondary : Color.primary)
                     .lineLimit(1)
             }
             .padding(.horizontal, 10)
@@ -860,7 +889,7 @@ private struct RootBentoTile: View {
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .systemBackground))
                     .shadow(
-                        color: .black.opacity(isPressed ? 0.01 : 0.04),
+                        color: .black.opacity(isPressed ? 0.01 : (isDisabled ? 0.01 : 0.04)),
                         radius: isPressed ? 0.5 : 3,
                         y: isPressed ? 0.5 : 1.5
                     )
@@ -868,15 +897,18 @@ private struct RootBentoTile: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .strokeBorder(
-                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(0.12),
+                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(isDisabled ? 0.06 : 0.12),
                         lineWidth: isPressed ? 1.5 : 1
                     )
             )
             .offset(y: isPressed ? 1.5 : 0)
             .scaleEffect(isPressed ? 0.94 : 1.0)
+            .opacity(isDisabled ? 0.45 : 1.0)
             .animation(.spring(response: 0.2, dampingFraction: 0.68), value: isPressed)
+            .animation(.easeInOut(duration: 0.2), value: isDisabled)
         }
         .buttonStyle(BentoPressButtonStyle(isPressed: $isPressed))
+        .disabled(isDisabled)
     }
 }
 
@@ -895,6 +927,7 @@ private struct SubInterestBentoTile: View {
 
     var body: some View {
         Button {
+            guard !isDisabled && !isRefreshing else { return }
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             onTap()
         } label: {
@@ -1002,6 +1035,7 @@ private struct LetterboxdBentoTile: View {
 
     var body: some View {
         Button {
+            guard !isDisabled else { return }
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             onTap()
         } label: {

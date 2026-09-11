@@ -100,6 +100,7 @@ final class FeedViewModel {
     /// Append a new post **at the end** and start streaming it. Safe to call while another
     /// stream is in flight — the previous one is cancelled.
     func requestNextPost() {
+        guard !isGenerating && !isCooldownActive else { return }
         streamingTask?.cancel()
         errorMessage = nil
 
@@ -249,7 +250,7 @@ final class FeedViewModel {
     /// Generate a single post specifically and exclusively focused on the tapped topic,
     /// without mutating the user's persistent interests list in memory.
     func requestDedicatedPost(topic: String) {
-        guard !isGenerating else { return }
+        guard !isGenerating && !isCooldownActive else { return }
         streamingTask?.cancel()
         readingCooldownRemaining = 0
         errorMessage = nil
@@ -406,7 +407,7 @@ final class FeedViewModel {
 
     /// Request a cinema post specifically contextualized with the user's Letterboxd watched films.
     func requestLetterboxdDedicatedPost(username overrideUsername: String? = nil) {
-        guard !isGenerating else { return }
+        guard !isGenerating && !isCooldownActive else { return }
 
         if let overrideUsername, !overrideUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             self.letterboxdUsername = overrideUsername.trimmingCharacters(in: .whitespacesAndNewlines)

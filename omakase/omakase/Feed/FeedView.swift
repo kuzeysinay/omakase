@@ -80,6 +80,7 @@ struct FeedView: View {
                     cooldownRemaining: viewModel.readingCooldownRemaining,
                     cooldownTotal: viewModel.readingCooldownTotal,
                     onSelectDedicatedTopic: { topic in
+                        guard !viewModel.isGenerating && !viewModel.isCooldownActive else { return }
                         viewModel.requestDedicatedPost(topic: topic)
                     },
                     onPromptLetterboxdUsername: {
@@ -87,6 +88,7 @@ struct FeedView: View {
                         showLetterboxdUsernamePrompt = true
                     },
                     onSelectLetterboxdPost: {
+                        guard !viewModel.isGenerating && !viewModel.isCooldownActive else { return }
                         let clean = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
                         viewModel.requestLetterboxdDedicatedPost(username: clean)
                     }
@@ -376,8 +378,8 @@ struct FeedView: View {
                     generateTriggerCardID = nil
                     proxy.scrollTo(newID, anchor: .top)
                 }
-                .onChange(of: viewModel.isGenerating) { _, generating in
-                    if !generating, let pos = feedScrollPosition as? String, pos == "generate-card", let id = viewModel.posts.last?.id {
+                .onChange(of: viewModel.isCooldownActive) { _, cooldownActive in
+                    if !cooldownActive, let pos = feedScrollPosition as? String, pos == "generate-card", let id = viewModel.posts.last?.id {
                         triggerGenerateNextPostIfNeeded(for: id)
                     }
                 }
@@ -405,32 +407,60 @@ struct FeedView: View {
 
     private func generateNextCard(triggerCardID: UUID?, containerHeight: CGFloat) -> some View {
         return VStack(spacing: 20) {
-            Image(systemName: viewModel.isGenerating ? "wand.and.stars" : "sparkles")
-                .font(.system(size: 48, weight: .light))
-                .foregroundStyle(OmakaseTheme.ink)
-                .symbolEffect(.pulse, isActive: viewModel.isGenerating)
+            if viewModel.isGenerating {
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundStyle(OmakaseTheme.ink)
+                    .symbolEffect(.pulse, isActive: true)
 
-            Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
-                .font(.title3.bold())
-                .multilineTextAlignment(.center)
+                Text(l10n.generating)
+                    .font(.title3.bold())
+                    .multilineTextAlignment(.center)
+            } else if viewModel.isCooldownActive {
+                Image(systemName: "hourglass")
+                    .font(.system(size: 44, weight: .light))
+                    .foregroundStyle(OmakaseTheme.ink)
+                    .symbolEffect(.pulse, isActive: true)
 
-            if viewModel.isOffline && !viewModel.isGenerating {
-                Label(l10n.internetRequired, systemImage: "wifi.slash")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 6) {
+                    Text(l10n.readingCooldownTitle(seconds: viewModel.readingCooldownRemaining))
+                        .font(.title3.bold())
+                        .multilineTextAlignment(.center)
+                        .contentTransition(.numericText())
+
+                    Text(l10n.readingCooldownDetail)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                }
+            } else {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundStyle(OmakaseTheme.ink)
+
+                Text(l10n.serveNextPost)
+                    .font(.title3.bold())
+                    .multilineTextAlignment(.center)
+
+                if viewModel.isOffline {
+                    Label(l10n.internetRequired, systemImage: "wifi.slash")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.horizontal, 32)
         .contentShape(Rectangle())
         .onTapGesture {
-            if let triggerCardID {
+            if let triggerCardID, !viewModel.isCooldownActive {
                 triggerGenerateNextPostIfNeeded(for: triggerCardID)
             }
         }
     }
 
     private var generateButton: some View {
-        let isDisabled = viewModel.isGenerating || viewModel.isOffline
+        let isDisabled = viewModel.isGenerating || viewModel.isOffline || viewModel.isCooldownActive
         return Button {
             viewModel.requestNextPost()
         } label: {
@@ -444,6 +474,13 @@ struct FeedView: View {
                     if viewModel.isOffline && !viewModel.isGenerating {
                         Text(l10n.internetRequired)
                             .fontWeight(.semibold)
+                    } else if viewModel.isCooldownActive {
+                        HStack(spacing: 6) {
+                            Image(systemName: "hourglass")
+                                .font(.caption.weight(.bold))
+                            Text(l10n.readingCooldownTitle(seconds: viewModel.readingCooldownRemaining))
+                                .fontWeight(.semibold)
+                        }
                     } else {
                         Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
                             .fontWeight(.semibold)
@@ -461,7 +498,7 @@ struct FeedView: View {
 
     private func triggerGenerateNextPostIfNeeded(for cardID: UUID) {
         guard generateTriggerCardID != cardID else { return }
-        guard !viewModel.isGenerating, !viewModel.isOffline else { return }
+        guard !viewModel.isGenerating, !viewModel.isCooldownActive, !viewModel.isOffline else { return }
         generateTriggerCardID = cardID
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         viewModel.requestNextPost()
