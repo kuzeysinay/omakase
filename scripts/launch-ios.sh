@@ -18,7 +18,7 @@ fi
 
 echo "🚀 Target Device: $DEVICE_ID"
 echo "🔨 Building Omakase scheme..."
-xcodebuild -scheme omakase -destination "id=$DEVICE_ID" build -quiet
+xcodebuild -scheme omakase -configuration Debug -destination "generic/platform=iOS" -allowProvisioningUpdates build -quiet
 
 # 2. Find built .app in Xcode DerivedData
 APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/omakase-*/Build/Products/Debug-iphoneos/omakase.app -maxdepth 0 2>/dev/null | head -n 1)

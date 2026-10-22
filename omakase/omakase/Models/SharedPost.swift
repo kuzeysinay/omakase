@@ -13,6 +13,7 @@ struct SharedPost: Codable, Identifiable, Equatable, Sendable {
     @DocumentID var id: String?
     var authorId: String
     var authorName: String
+    var authorUsername: String?
     var authorPhotoURL: String?
     var title: String
     var text: String
@@ -28,6 +29,7 @@ struct SharedPost: Codable, Identifiable, Equatable, Sendable {
     init(
         authorId: String,
         authorName: String,
+        authorUsername: String? = nil,
         authorPhotoURL: String? = nil,
         title: String,
         text: String,
@@ -41,6 +43,7 @@ struct SharedPost: Codable, Identifiable, Equatable, Sendable {
     ) {
         self.authorId = authorId
         self.authorName = authorName
+        self.authorUsername = authorUsername
         self.authorPhotoURL = authorPhotoURL
         self.title = title
         self.text = text

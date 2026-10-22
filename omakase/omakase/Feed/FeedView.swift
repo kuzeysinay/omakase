@@ -17,9 +17,7 @@ struct FeedView: View {
     @State private var pendingDeletePostID: UUID?
     @State private var showDeletePostConfirmation = false
     @State private var toastMessage: String?
-    @State private var generateTriggerCardID: UUID?
     @State private var feedScrollPosition: AnyHashable?
-    @State private var isBentoExpanded: Bool = true
 
     // Letterboxd
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
@@ -35,11 +33,9 @@ struct FeedView: View {
         L10n(lang: appLanguage)
     }
 
-    private func toggleBentoExpanded() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-            isBentoExpanded.toggle()
-        }
+    private var cooldownProgress: CGFloat {
+        guard viewModel.readingCooldownTotal > 0 else { return 0 }
+        return max(0, min(1, CGFloat(viewModel.readingCooldownRemaining) / CGFloat(viewModel.readingCooldownTotal)))
     }
 
     init(authService: AuthService) {
@@ -53,89 +49,66 @@ struct FeedView: View {
         @Bindable var viewModel = viewModel
         @Bindable var bookmarkStore = bookmarkStore
         return NavigationStack {
-            ZStack(alignment: .bottom) {
-                Group {
-                    if viewModel.posts.isEmpty {
-                        emptyState
-                            .padding(.bottom, 80)
-                    } else {
-                        reelsFeed(bookmarkStore: bookmarkStore)
-                            .padding(.bottom, 80)
-                    }
-                }
+            reelsFeed(bookmarkStore: bookmarkStore)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                BentoTasteBox(
-                    allInterests: allInterests,
-                    activeInterests: $activeInterests,
-                    onAddInterest: { addInterest($0) },
-                    onRemoveInterest: { removeInterest($0) },
-                    isLetterboxdActive: $isLetterboxdActive,
-                    isExpanded: $isBentoExpanded,
-                    onToggleExpand: {
-                        toggleBentoExpanded()
-                    },
-                    isGenerating: viewModel.isGenerating,
-                    isCooldownActive: viewModel.isCooldownActive,
-                    cooldownRemaining: viewModel.readingCooldownRemaining,
-                    cooldownTotal: viewModel.readingCooldownTotal,
-                    onSelectDedicatedTopic: { topic in
-                        guard !viewModel.isGenerating && !viewModel.isCooldownActive else { return }
-                        viewModel.requestDedicatedPost(topic: topic)
-                    },
-                    onPromptLetterboxdUsername: {
-                        letterboxdDraft = storedLetterboxdUsername
-                        showLetterboxdUsernamePrompt = true
-                    },
-                    onSelectLetterboxdPost: {
-                        guard !viewModel.isGenerating && !viewModel.isCooldownActive else { return }
-                        let clean = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
-                        viewModel.requestLetterboxdDedicatedPost(username: clean)
-                    }
-                )
-                .environment(\.appLanguage, appLanguage)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(uiColor: .systemBackground))
-            .toolbar(.hidden, for: .navigationBar)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        HStack(spacing: 7) {
-                            Image("AppLogo")
-                                .resizable()
-                                .renderingMode(.template)
-                                .scaledToFit()
-                                .frame(width: 28, height: 28)
-                                .foregroundStyle(Color.primary)
-                            Text(l10n.appTitle)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(Color.primary)
-                        }
-                        .padding(.leading, 16)
-
-                        Spacer()
-
-                        // Trailing buttons: 44×44 frame matches iOS standard tap target
-                        Button {
-                            showBookmarks = true
-                        } label: {
-                            Image(systemName: "bookmark")
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(Color.primary.opacity(0.85))
-                                .frame(width: 44, height: 44)
-                        }
-                        .accessibilityLabel(l10n.savedPostsA11y(count: bookmarkStore.count))
-
-                        Spacer().frame(width: 8)
-                    }
-                    .frame(height: 44) // standard iOS nav bar height
-                    .background(Color(uiColor: .systemBackground))
-
-                    Divider().opacity(0.12)
-                }
                 .background(Color(uiColor: .systemBackground))
-            }
+                .toolbar(.hidden, for: .navigationBar)
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    VStack(spacing: 0) {
+                        HStack(spacing: 0) {
+                            HStack(spacing: 7) {
+                                Image("AppLogo")
+                                    .resizable()
+                                    .renderingMode(.template)
+                                    .scaledToFit()
+                                    .frame(width: 28, height: 28)
+                                    .foregroundStyle(Color.primary)
+                                Text(l10n.appTitle)
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(Color.primary)
+                            }
+                            .padding(.leading, 16)
+
+                            Spacer()
+
+                            // Trailing buttons: 44×44 frame matches iOS standard tap target
+                            Button {
+                                showBookmarks = true
+                            } label: {
+                                Image(systemName: "bookmark")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(Color.primary.opacity(0.85))
+                                    .frame(width: 44, height: 44)
+                            }
+                            .accessibilityLabel(l10n.savedPostsA11y(count: bookmarkStore.count))
+
+                            Spacer().frame(width: 8)
+                        }
+                        .frame(height: 44) // standard iOS nav bar height
+                        .background(Color(uiColor: .systemBackground))
+
+                        // Reading cooldown progress bar or hairline divider
+                        GeometryReader { barGeo in
+                            ZStack(alignment: .leading) {
+                                if viewModel.isCooldownActive {
+                                    Rectangle()
+                                        .fill(Color.primary.opacity(0.08))
+                                    Rectangle()
+                                        .fill(OmakaseTheme.ink)
+                                        .frame(width: max(0, barGeo.size.width * cooldownProgress))
+                                        .animation(.linear(duration: 0.95), value: viewModel.readingCooldownRemaining)
+                                } else {
+                                    Rectangle()
+                                        .fill(Color.primary.opacity(0.12))
+                                        .frame(height: 0.5)
+                                }
+                            }
+                        }
+                        .frame(height: viewModel.isCooldownActive ? 3.0 : 0.5)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isCooldownActive)
+                    }
+                    .background(Color(uiColor: .systemBackground))
+                }
             .alert(
                 l10n.errorSomethingWrong,
                 isPresented: .init(
@@ -160,10 +133,10 @@ struct FeedView: View {
                             } else if viewModel.posts.count > 1 {
                                 fallbackID = viewModel.posts[idx + 1].id
                             } else {
-                                fallbackID = nil
+                                fallbackID = "category-page"
                             }
                         } else {
-                            fallbackID = nil
+                            fallbackID = "category-page"
                         }
 
                         withAnimation {
@@ -224,11 +197,22 @@ struct FeedView: View {
             viewModel.setContentLanguage(appLanguage)
             viewModel.updateInterests(parsed)
             if viewModel.posts.isEmpty {
-                await viewModel.loadCachedPosts()
-                if viewModel.posts.isEmpty {
-                    viewModel.requestNextPost()
-                } else if let lastID = viewModel.posts.last?.id {
-                    feedScrollPosition = lastID
+                if viewModel.isOffline {
+                    await viewModel.loadCachedPosts()
+                    if let lastID = viewModel.posts.last?.id {
+                        feedScrollPosition = lastID
+                    } else {
+                        feedScrollPosition = "category-page"
+                    }
+                } else {
+                    feedScrollPosition = "category-page"
+                }
+            }
+        }
+        .onChange(of: viewModel.isOffline) { _, isOffline in
+            if isOffline && viewModel.posts.isEmpty {
+                Task {
+                    await viewModel.loadCachedPosts()
                 }
             }
         }
@@ -273,235 +257,136 @@ struct FeedView: View {
         storedInterests = list.joined(separator: ", ")
     }
 
-    private func handleLetterboxdToggle(_ isActive: Bool) {
-        if isActive {
-            let username = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
-            if username.isEmpty {
-                // No username yet — prompt the user.
-                showLetterboxdUsernamePrompt = true
-            } else {
-                // Username exists; ensure ViewModel knows & fetch if needed.
-                viewModel.letterboxdUsername = username
-                viewModel.isLetterboxdActive = true
-                if viewModel.letterboxdFilms.isEmpty {
-                    viewModel.fetchLetterboxdFilms()
-                }
-            }
-        } else {
-            viewModel.isLetterboxdActive = false
-        }
-    }
-
     // MARK: - Subviews
 
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "sparkles")
-                .font(.system(size: 52, weight: .light))
-                .foregroundStyle(OmakaseTheme.ink)
-            Text(l10n.emptyFeedHeadline)
-                .font(.title3.bold())
-            Text(l10n.emptyFeedDetail)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Spacer()
-            generateButton
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    /// Instagram Reels-style vertical paging feed. Each post occupies the full screen height.
+    /// Instagram Reels-style vertical paging feed.
+    /// Each post occupies the full screen height, followed by the full-screen Category page.
     private func reelsFeed(bookmarkStore: BookmarkStore) -> some View {
         ScrollViewReader { proxy in
             GeometryReader { geo in
-            ZStack(alignment: .top) {
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 0) {
-                        ForEach(viewModel.posts) { post in
-                            ReelsPostCard(
-                                post: post,
-                                bookmarkStore: bookmarkStore,
-                                authService: authService,
-                                viewModel: viewModel,
-                                toastMessage: $toastMessage,
-                                onDelete: {
-                                    pendingDeletePostID = post.id
-                                    showDeletePostConfirmation = true
+                ZStack(alignment: .top) {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        LazyVStack(spacing: 100) {
+                            ForEach(viewModel.posts) { post in
+                                ReelsPostCard(
+                                    post: post,
+                                    isLastPost: post.id == viewModel.posts.last?.id,
+                                    bookmarkStore: bookmarkStore,
+                                    authService: authService,
+                                    viewModel: viewModel,
+                                    toastMessage: $toastMessage,
+                                    onDelete: {
+                                        pendingDeletePostID = post.id
+                                        showDeletePostConfirmation = true
+                                    },
+                                    onScrollToCategories: {
+                                        withAnimation(.spring(response: 0.36, dampingFraction: 0.85)) {
+                                            feedScrollPosition = "category-page"
+                                            proxy.scrollTo("category-page", anchor: .top)
+                                        }
+                                    }
+                                )
+                                .environment(\.appLanguage, appLanguage)
+                                .id(post.id)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                            }
+
+                            // Full-screen Categories Page:
+                            // Covers the entire page when there are no posts, disappears while a post
+                            // is generating, and opens again when scrolling down after a post.
+                            if !viewModel.isGenerating {
+                                BentoTasteBox(
+                                    allInterests: allInterests,
+                                    activeInterests: $activeInterests,
+                                    onAddInterest: { addInterest($0) },
+                                    onRemoveInterest: { removeInterest($0) },
+                                    isLetterboxdActive: $isLetterboxdActive,
+                                    isGenerating: viewModel.isGenerating,
+                                    isCooldownActive: viewModel.isCooldownActive,
+                                    cooldownRemaining: viewModel.readingCooldownRemaining,
+                                    cooldownTotal: viewModel.readingCooldownTotal,
+                                    hasExistingPosts: !viewModel.posts.isEmpty,
+                                    onScrollToLastPost: {
+                                        if let lastID = viewModel.posts.last?.id {
+                                            withAnimation(.spring(response: 0.36, dampingFraction: 0.85)) {
+                                                feedScrollPosition = lastID
+                                                proxy.scrollTo(lastID, anchor: .top)
+                                            }
+                                        }
+                                    },
+                                    onSelectDedicatedTopic: { topic in
+                                        guard !viewModel.isGenerating && !viewModel.isCooldownActive else { return }
+                                        viewModel.requestDedicatedPost(topic: topic)
+                                    },
+                                    onPromptLetterboxdUsername: {
+                                        letterboxdDraft = storedLetterboxdUsername
+                                        showLetterboxdUsernamePrompt = true
+                                    },
+                                    onSelectLetterboxdPost: {
+                                        guard !viewModel.isGenerating && !viewModel.isCooldownActive else { return }
+                                        let clean = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+                                        viewModel.requestLetterboxdDedicatedPost(username: clean)
+                                    }
+                                )
+                                .environment(\.appLanguage, appLanguage)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                                .id("category-page")
+                                .transition(.opacity)
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .contentMargins(.vertical, 0, for: .scrollContent)
+                    .scrollPosition(id: $feedScrollPosition, anchor: .top)
+                    .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+                    .scrollDismissesKeyboard(.interactively)
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .onChange(of: viewModel.posts.last?.id) { _, newID in
+                        guard let newID else {
+                            feedScrollPosition = "category-page"
+                            return
+                        }
+                        feedScrollPosition = newID
+                        proxy.scrollTo(newID, anchor: .top)
+                    }
+                    .onChange(of: viewModel.isGenerating) { _, isGenerating in
+                        if !isGenerating {
+                            if let lastID = viewModel.posts.last?.id {
+                                feedScrollPosition = lastID
+                                DispatchQueue.main.async {
+                                    proxy.scrollTo(lastID, anchor: .top)
                                 }
-                            )
-                            .environment(\.appLanguage, appLanguage)
-                            .id(post.id)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                        }
-
-                        // Generate next post card at the end
-                        VStack {
-                            Spacer()
-                            generateNextCard(triggerCardID: viewModel.posts.last?.id, containerHeight: geo.size.height)
-                            Spacer()
-                        }
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .id("generate-card")
-                    }
-                    .scrollTargetLayout()
-                }
-                .scrollPosition(id: $feedScrollPosition, anchor: .top)
-                .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
-                .scrollDismissesKeyboard(.interactively)
-                .onAppear {
-                    if let lastID = viewModel.posts.last?.id {
-                        feedScrollPosition = lastID
-                        DispatchQueue.main.async {
-                            proxy.scrollTo(lastID, anchor: .top)
+                            } else {
+                                feedScrollPosition = "category-page"
+                                DispatchQueue.main.async {
+                                    proxy.scrollTo("category-page", anchor: .top)
+                                }
+                            }
                         }
                     }
-                }
-                .task(id: feedScrollPosition) {
-                    guard let str = feedScrollPosition as? String, str == "generate-card" else { return }
-                    do {
-                        // Debounce to ignore momentary scroll jumps during layout animations (e.g. TasteBar expanding)
-                        try await Task.sleep(for: .milliseconds(250))
-                        guard !Task.isCancelled else { return }
-                        
-                        if let lastID = viewModel.posts.last?.id {
-                            triggerGenerateNextPostIfNeeded(for: lastID)
+
+                    // Offline banner floats above the scroll, doesn't affect paging
+                    if viewModel.isOffline && viewModel.isShowingCachedContent {
+                        HStack(spacing: 8) {
+                            Image(systemName: "wifi.slash")
+                                .font(.subheadline.weight(.semibold))
+                            Text(l10n.offlineBanner)
+                                .font(.subheadline.weight(.medium))
                         }
-                    } catch { }
-                }
-                .onChange(of: viewModel.posts.last?.id) { _, newID in
-                    guard let newID else { return }
-                    generateTriggerCardID = nil
-                    proxy.scrollTo(newID, anchor: .top)
-                }
-                .onChange(of: viewModel.isCooldownActive) { _, cooldownActive in
-                    if !cooldownActive, let pos = feedScrollPosition as? String, pos == "generate-card", let id = viewModel.posts.last?.id {
-                        triggerGenerateNextPostIfNeeded(for: id)
-                    }
-                }
-
-                // Offline banner floats above the scroll, doesn't affect paging
-                if viewModel.isOffline && viewModel.isShowingCachedContent {
-                    HStack(spacing: 8) {
-                        Image(systemName: "wifi.slash")
-                            .font(.subheadline.weight(.semibold))
-                        Text(l10n.offlineBanner)
-                            .font(.subheadline.weight(.medium))
-                    }
-                    .foregroundStyle(OmakaseTheme.ink)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(OmakaseTheme.wash, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
-                }
-            }
-        }
-    }
-    }
-
-    private func generateNextCard(triggerCardID: UUID?, containerHeight: CGFloat) -> some View {
-        return VStack(spacing: 20) {
-            if viewModel.isGenerating {
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 48, weight: .light))
-                    .foregroundStyle(OmakaseTheme.ink)
-                    .symbolEffect(.pulse, isActive: true)
-
-                Text(l10n.generating)
-                    .font(.title3.bold())
-                    .multilineTextAlignment(.center)
-            } else if viewModel.isCooldownActive {
-                Image(systemName: "hourglass")
-                    .font(.system(size: 44, weight: .light))
-                    .foregroundStyle(OmakaseTheme.ink)
-                    .symbolEffect(.pulse, isActive: true)
-
-                VStack(spacing: 6) {
-                    Text(l10n.readingCooldownTitle(seconds: viewModel.readingCooldownRemaining))
-                        .font(.title3.bold())
-                        .multilineTextAlignment(.center)
-                        .contentTransition(.numericText())
-
-                    Text(l10n.readingCooldownDetail)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                        .foregroundStyle(OmakaseTheme.ink)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(OmakaseTheme.wash, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .padding(.horizontal, 16)
-                }
-            } else {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 48, weight: .light))
-                    .foregroundStyle(OmakaseTheme.ink)
-
-                Text(l10n.serveNextPost)
-                    .font(.title3.bold())
-                    .multilineTextAlignment(.center)
-
-                if viewModel.isOffline {
-                    Label(l10n.internetRequired, systemImage: "wifi.slash")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.horizontal, 32)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if let triggerCardID, !viewModel.isCooldownActive {
-                triggerGenerateNextPostIfNeeded(for: triggerCardID)
-            }
-        }
-    }
-
-    private var generateButton: some View {
-        let isDisabled = viewModel.isGenerating || viewModel.isOffline || viewModel.isCooldownActive
-        return Button {
-            viewModel.requestNextPost()
-        } label: {
-            VStack(spacing: 6) {
-                HStack(spacing: 10) {
-                    if viewModel.isGenerating {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(OmakaseTheme.chipActiveText)
-                    }
-                    if viewModel.isOffline && !viewModel.isGenerating {
-                        Text(l10n.internetRequired)
-                            .fontWeight(.semibold)
-                    } else if viewModel.isCooldownActive {
-                        HStack(spacing: 6) {
-                            Image(systemName: "hourglass")
-                                .font(.caption.weight(.bold))
-                            Text(l10n.readingCooldownTitle(seconds: viewModel.readingCooldownRemaining))
-                                .fontWeight(.semibold)
-                        }
-                    } else {
-                        Text(viewModel.isGenerating ? l10n.generating : l10n.serveNextPost)
-                            .fontWeight(.semibold)
+                        .padding(.top, 4)
                     }
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 0)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(OmakaseTheme.chipActiveFill)
-        .controlSize(.large)
-        .disabled(isDisabled)
-    }
-
-    private func triggerGenerateNextPostIfNeeded(for cardID: UUID) {
-        guard generateTriggerCardID != cardID else { return }
-        guard !viewModel.isGenerating, !viewModel.isCooldownActive, !viewModel.isOffline else { return }
-        generateTriggerCardID = cardID
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        viewModel.requestNextPost()
     }
 
     // MARK: - Helpers
@@ -518,11 +403,13 @@ struct FeedView: View {
 
 private struct ReelsPostCard: View {
     let post: Post
+    let isLastPost: Bool
     @Bindable var bookmarkStore: BookmarkStore
     let authService: AuthService
     var viewModel: FeedViewModel
     var toastMessage: Binding<String?>
     var onDelete: () -> Void
+    var onScrollToCategories: () -> Void
 
     @Environment(\.appLanguage) private var appLanguage
 
@@ -570,7 +457,7 @@ private struct ReelsPostCard: View {
                     .font(.system(size: 16.5, weight: .regular))
                     .lineSpacing(5)
                     .foregroundStyle(Color.primary.opacity(0.92))
-                    .fixedSize(horizontal: false, vertical: true)
+                    .minimumScaleFactor(0.85)
                     // Removed per-token .contentTransition/.animation — they
                     // fired on every SSE token causing continuous animation
                     // overhead and layout thrashing during streaming.
@@ -605,6 +492,28 @@ private struct ReelsPostCard: View {
             }
 
             Spacer(minLength: 16)
+
+            if post.isComplete && isLastPost {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onScrollToCategories()
+                } label: {
+                    HStack(spacing: 6) {
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .font(.caption.weight(.bold))
+                        Text(l10n.lang == .turkish ? "Yeni post için aşağı kaydır" : "Scroll down for a new post")
+                            .font(.caption.weight(.medium))
+                        Spacer()
+                    }
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 8)
+                .transition(.opacity)
+            }
         }
         .padding(.horizontal, 20)
         .animation(.easeOut(duration: 0.6), value: post.isComplete)

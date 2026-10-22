@@ -20,21 +20,86 @@ final class FirestoreService {
     // MARK: - Users
 
     /// Create the user profile document if it doesn't already exist.
-    func ensureUserProfile(for user: User) async throws {
+    func ensureUserProfile(
+        for user: User,
+        customDisplayName: String? = nil,
+        customUsername: String? = nil
+    ) async throws {
         let ref = db.collection("users").document(user.uid)
         let snapshot = try await ref.getDocument()
+
+        let resolvedName: String = {
+            if let custom = customDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines), !custom.isEmpty {
+                return custom
+            }
+            if let existing = user.displayName?.trimmingCharacters(in: .whitespacesAndNewlines), !existing.isEmpty {
+                return existing
+            }
+            if let email = user.email, let prefix = email.split(separator: "@").first, !prefix.isEmpty {
+                return String(prefix)
+            }
+            return "Omakase User"
+        }()
+
+        let resolvedUsername: String = {
+            if let custom = customUsername {
+                let clean = UserProfile.sanitizeUsername(custom)
+                if !clean.isEmpty { return clean }
+            }
+            if let email = user.email, let prefix = email.split(separator: "@").first {
+                let clean = UserProfile.sanitizeUsername(String(prefix))
+                if !clean.isEmpty { return clean }
+            }
+            let fromName = UserProfile.sanitizeUsername(resolvedName)
+            return fromName.isEmpty ? "omakase_user" : fromName
+        }()
 
         if !snapshot.exists {
             let profile = UserProfile(
                 id: user.uid,
-                displayName: user.displayName ?? "Omakase User",
+                displayName: resolvedName,
+                username: resolvedUsername,
                 email: user.email ?? "",
                 photoURL: user.photoURL?.absoluteString,
                 interests: [],
                 createdAt: .now
             )
             try ref.setData(from: profile)
+        } else {
+            var updates: [String: Any] = [:]
+            if let custom = customDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines), !custom.isEmpty {
+                updates["displayName"] = custom
+                updates["searchableName"] = custom.lowercased()
+            }
+            if let customU = customUsername {
+                let clean = UserProfile.sanitizeUsername(customU)
+                if !clean.isEmpty {
+                    updates["username"] = clean
+                    updates["searchableUsername"] = clean.lowercased()
+                }
+            }
+            if !updates.isEmpty {
+                try await ref.updateData(updates)
+            }
         }
+    }
+
+    /// Check if a `@username` is available across all users.
+    func isUsernameAvailable(_ rawUsername: String, excludingUid: String? = nil) async throws -> Bool {
+        let clean = UserProfile.sanitizeUsername(rawUsername)
+        guard clean.count >= 3 else { return false }
+
+        let snapshot = try await db.collection("users")
+            .whereField("searchableUsername", isEqualTo: clean.lowercased())
+            .limit(to: 2)
+            .getDocuments()
+
+        for doc in snapshot.documents {
+            if doc.documentID != excludingUid {
+                return false
+            }
+        }
+        return true
     }
 
     /// Update the user's interests array in Firestore.
@@ -50,20 +115,38 @@ final class FirestoreService {
         return try? snapshot.data(as: UserProfile.self)
     }
 
-    /// Search users by name (case-insensitive prefix match).
+    /// Search users by display name or @username (case-insensitive prefix match).
     func searchUsers(query: String, currentUid: String) async throws -> [UserProfile] {
-        let lowered = query.lowercased()
-        let end = lowered + "\u{f8ff}"
+        let stripped = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "@"))
+            .lowercased()
+        guard !stripped.isEmpty else { return [] }
+        let end = stripped + "\u{f8ff}"
 
-        let snapshot = try await db.collection("users")
-            .whereField("searchableName", isGreaterThanOrEqualTo: lowered)
+        async let nameQuery = db.collection("users")
+            .whereField("searchableName", isGreaterThanOrEqualTo: stripped)
             .whereField("searchableName", isLessThan: end)
             .limit(to: 20)
             .getDocuments()
 
-        return snapshot.documents
-            .compactMap { try? $0.data(as: UserProfile.self) }
-            .filter { $0.id != currentUid }
+        async let handleQuery = db.collection("users")
+            .whereField("searchableUsername", isGreaterThanOrEqualTo: stripped)
+            .whereField("searchableUsername", isLessThan: end)
+            .limit(to: 20)
+            .getDocuments()
+
+        let (nameSnap, handleSnap) = try await (nameQuery, handleQuery)
+        var seen = Set<String>()
+        var combined: [UserProfile] = []
+
+        for doc in handleSnap.documents + nameSnap.documents {
+            guard doc.documentID != currentUid, !seen.contains(doc.documentID) else { continue }
+            if let user = try? doc.data(as: UserProfile.self) {
+                seen.insert(doc.documentID)
+                combined.append(user)
+            }
+        }
+        return combined
     }
 
     // MARK: - Follow / Unfollow
@@ -140,9 +223,13 @@ final class FirestoreService {
 
     /// Share a post to the communal timeline.
     func sharePost(_ post: Post, author: User) async throws {
+        let userProfile = try? await fetchUserProfile(uid: author.uid)
+        let resolvedName = userProfile?.displayName ?? author.displayName ?? "Omakase User"
+        let resolvedUsername = userProfile?.username
         let shared = SharedPost(
             authorId: author.uid,
-            authorName: author.displayName ?? "Omakase User",
+            authorName: resolvedName,
+            authorUsername: resolvedUsername,
             authorPhotoURL: author.photoURL?.absoluteString,
             title: post.title,
             text: post.text,

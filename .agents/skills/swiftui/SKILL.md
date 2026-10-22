@@ -1,0 +1,51 @@
+---
+name: swiftui
+description: Route SwiftUI implementation tasks to the correct Knowledge Contracts — view composition, view identity in ForEach/List, modifier order, NavigationStack/NavigationPath, NavigationSplitView, stack/spacing layout, safe area handling, lazy grids/stacks, GeometryReader pitfalls, @State/@Binding, the @Observable macro, @Environment values, and migrating legacy ObservableObject and NavigationView code. Use when writing or reviewing SwiftUI view code, structuring navigation, laying out a screen in code, choosing a state-management approach, modernising an older SwiftUI codebase, or debugging view-identity/layout bugs. This is implementation-code guidance (iOS 17+), not visual design — for what a screen should look like, see human-interface-guidelines. Triggers on SwiftUI, NavigationStack, NavigationSplitView, NavigationView, navigationViewStyle, @State, @Binding, @Observable, @Bindable, @ObservationIgnored, ObservableObject, @Published, @StateObject, @ObservedObject, @EnvironmentObject, environmentObject, @Environment, GeometryReader, LazyVGrid, LazyVStack, ForEach identity, view composition, ViewBuilder, modifier order, safeAreaInset, ignoresSafeArea, migration, deprecated.
+id: skill.swiftui.foundations
+title: SwiftUI — Foundations
+version: 1.0.0
+status: Approved
+artifact_type: skill
+domain: SwiftUI
+routes: [knowledge.swiftui.view-composition, knowledge.swiftui.view-identity, knowledge.swiftui.modifier-order, knowledge.swiftui.navigation-stack, knowledge.swiftui.navigation-split-view, knowledge.swiftui.navigation-view-migration, knowledge.swiftui.stacks-and-spacing, knowledge.swiftui.safe-area, knowledge.swiftui.lazy-grids, knowledge.swiftui.geometry-reader-anti-pattern, knowledge.swiftui.state-and-binding, knowledge.swiftui.observable-macro, knowledge.swiftui.observable-object-migration, knowledge.swiftui.environment-values]
+related:
+  - skill.human-interface-guidelines.foundations
+  - skill.swiftui.interaction
+last_updated: 2026-08-08
+---
+
+# SwiftUI — Foundations Skill
+
+## Purpose
+
+Route SwiftUI implementation-code tasks to the minimum required
+SwiftUI Knowledge Contracts.
+
+## Routing
+
+Load only the contracts relevant to the task. All paths relative to
+knowledge/swiftui/.
+
+-   Views -> view-composition.md, view-identity.md, modifier-order.md
+-   Navigation -> navigation-stack.md, navigation-split-view.md
+-   Layout -> stacks-and-spacing.md, safe-area.md, lazy-grids.md, geometry-reader-anti-pattern.md
+-   State management -> state-and-binding.md, observable-macro.md, environment-values.md
+-   Modernizing existing code -> observable-object-migration.md (ObservableObject, @Published, @StateObject, @ObservedObject, @EnvironmentObject), navigation-view-migration.md (NavigationView, navigationViewStyle, isActive:/tag:selection: NavigationLink)
+
+Never load more than the contracts relevant to the specific question.
+For visual/UX design guidance (what a screen should look like, not how
+it's coded), route to `skill.human-interface-guidelines.foundations`
+instead.
+
+## Stop Conditions
+
+Stop and report if the requested topic has no matching Knowledge
+Contract in knowledge/swiftui/ — do not guess or fall back to general
+knowledge. Animation and gesture questions route to
+`skill.swiftui.interaction` instead of being reported as a gap.
+
+-   Previews — Excluded
+-   Custom `Layout` protocol conformances — Excluded
+-   Migrating a UIKit screen into SwiftUI, or hosting SwiftUI in UIKit —
+    owned by `uikit`, in its `uikit-interaction` skill
+-   Accessibility APIs — owned by `accessibility`

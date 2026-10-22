@@ -26,11 +26,11 @@ struct ContentView: View {
         ZStack {
             Group {
                 if !authService.isAuthenticated {
-                    // Step 1: Sign in with Google
+                    // Step 1: Sign in or Sign up (Email / Google)
                     AuthView(authService: authService)
                 } else if !hasOnboarded {
                     // Step 2: Onboarding (pick interests)
-                    OnboardingView()
+                    OnboardingView(authService: authService)
                 } else {
                     // Step 3: Main app with tab bar
                     MainTabView(authService: authService)

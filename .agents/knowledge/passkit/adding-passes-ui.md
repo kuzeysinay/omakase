@@ -1,0 +1,136 @@
+# Adding Passes UI
+
+Status: Approved Version: 1.0.1
+
+## Metadata
+
+``` yaml
+id: knowledge.passkit.adding-passes-ui
+artifact_type: knowledge
+title: Adding Passes UI
+version: 1.0.1
+status: Approved
+owner: Apple Agent Kit
+summary: Defines presenting the system add-to-Wallet UI for a pass the app already has as PKPass/Data -- SwiftUI's AddPassToWalletButton (iOS 16+), and UIKit's PKAddPassesViewController(pass:)/(passes:) with PKAddPassButton, the canAddPasses() availability check, and the delegate/dismissal pattern.
+domain: PassKit
+tags:
+  - passkit
+  - pkaddpassesviewcontroller
+  - pkaddpassbutton
+  - addpasstowalletbutton
+  - wallet-ui
+  - uikit
+references:
+  - https://developer.apple.com/documentation/passkit/pkaddpassesviewcontroller
+  - https://developer.apple.com/documentation/passkit/pkaddpassesviewcontroller/canaddpasses()
+  - https://developer.apple.com/documentation/passkit/pkaddpassesviewcontroller/init(pass:)
+  - https://developer.apple.com/documentation/passkit/pkaddpassesviewcontrollerdelegate
+  - https://developer.apple.com/documentation/passkit/pkaddpassbutton
+  - https://developer.apple.com/documentation/passkit/addpasstowalletbutton
+depends_on:
+  - knowledge.passkit.pass-library-and-authorization
+related:
+  - knowledge.uikit.swiftui-view-representable
+last_updated: 2026-08-23
+```
+
+## Intent
+
+This contract defines the client-side UI flow for adding a pass the app already holds as `PKPass`/`Data` to the user's Wallet: in SwiftUI (iOS 16+), `AddPassToWalletButton`; in UIKit, checking `PKAddPassesViewController.canAddPasses()` before presenting anything, constructing and presenting `PKAddPassesViewController`, styling the entry point with `PKAddPassButton`, and handling completion through `PKAddPassesViewControllerDelegate`. It assumes the app already knows how to query/add through `PKPassLibrary` directly (`pass-library-and-authorization`) and is choosing the UI-presentation path instead.
+
+## Scope
+
+### Included
+
+-   `AddPassToWalletButton`, the SwiftUI-native control that presents the flow and reports completion directly, no representable wrapping needed
+-   `PKAddPassesViewController.canAddPasses()` as the availability check specific to the UIKit flow
+-   Constructing `PKAddPassesViewController(pass:)` / `init(passes:)` from a `PKPass` (both are failable initializers)
+-   Presenting the view controller and dismissing it via `PKAddPassesViewControllerDelegate.addPassesViewControllerDidFinish(_:)`
+-   `PKAddPassButton` as the UIKit entry-point control and its button styles
+
+### Excluded
+
+-   Direct `PKPassLibrary` querying/adding without presenting UI — see `pass-library-and-authorization`
+-   `.pkpass`/`pass.json` structure and constructing the `PKPass` this flow presents — see `pass-content-and-required-fields`
+-   `PKAddSecureElementPassViewController` — a distinct, NFC/secure-element-specific view controller, not covered by this domain's v1
+
+## Rules
+
+### Rule 1
+
+Agents MUST check `PKAddPassesViewController.canAddPasses()` before constructing or presenting the view controller, and MUST NOT assume every device that supports `PKPassLibrary` also supports this specific UI flow. Per Apple's documentation, `canAddPasses()` "Returns a Boolean value that indicates whether the device supports adding passes" — this is a separate, narrower check from `PKPassLibrary.isPassLibraryAvailable()` (see `pass-library-and-authorization`), scoped specifically to the add-passes UI.
+
+### Rule 2
+
+Agents MUST construct `PKAddPassesViewController` with `init(pass:)` for a single pass or `init(passes:)` for multiple, and MUST handle the failable initializer's `nil` case rather than force-unwrapping. Per Apple's documentation, `init(pass:)` "Initializes and returns a newly created add-passes view controller with a single pass," returning "the initialized add-passes view controller object or `nil` if there was a problem initializing the object."
+
+### Rule 3
+
+Agents MUST implement `PKAddPassesViewControllerDelegate.addPassesViewControllerDidFinish(_:)` and dismiss the presented view controller from that callback, rather than dismissing on a fixed timer or leaving dismissal to the system. Apple's `PKAddPassesViewControllerDelegate` reference documents exactly one delegate method — `addPassesViewControllerDidFinish(_:)` — as "Methods that an add-passes view controller's delegate implements," confirming this single callback is the intended dismissal hook regardless of whether the user added the pass or cancelled.
+
+### Rule 4
+
+Agents adding an entry point for this flow SHOULD use `PKAddPassButton` (UIKit) rather than a custom-styled button, so Wallet's system-provided appearance and localization stay correct. Per Apple's documentation, `PKAddPassButton` "Provides a button that enables users to add passes to Wallet," and "you choose the button's style, and the system provides a control with the correct appearance."
+
+### Rule 5
+
+Agents building this flow in SwiftUI (iOS 16+) MUST use `AddPassToWalletButton`, not wrap `PKAddPassesViewController`/`PKAddPassButton` in a `UIViewControllerRepresentable`. Per Apple's documentation, `AddPassToWalletButton` "is the SwiftUI equivalent to `PKAddPassButton`" — its initializer takes the passes and a completion closure directly, so it also replaces the delegate-dismissal flow of Rule 3, not just the button's appearance. `knowledge.uikit.swiftui-view-representable` Rule 5's wrap-in-`UIViewControllerRepresentable` guidance applies only to a UIKit-hosted screen that needs this flow, never to SwiftUI.
+
+## Compliant Example
+
+```swift
+// SwiftUI (Rule 5) -- replaces the entire UIKit flow below, button through dismissal.
+AddPassToWalletButton([pass]) { added in addedToWallet = added }
+    .addPassToWalletButtonStyle(.blackOutline)
+```
+
+```swift
+// UIKit
+import UIKit
+import PassKit
+
+final class AddPassCoordinator: NSObject, PKAddPassesViewControllerDelegate {
+    func presentAddPass(for pass: PKPass, from presenter: UIViewController) {
+        guard PKAddPassesViewController.canAddPasses() else { return } // Rule 1
+        guard let addPassesVC = PKAddPassesViewController(pass: pass) else { return } // Rule 2
+        addPassesVC.delegate = self
+        presenter.present(addPassesVC, animated: true)
+    }
+
+    func addPassesViewControllerDidFinish(_ controller: PKAddPassesViewController) {
+        controller.dismiss(animated: true) // Rule 3
+    }
+}
+```
+
+## Non-Compliant Example
+
+```swift
+import UIKit
+import PassKit
+
+func presentAddPass(for pass: PKPass, from presenter: UIViewController) {
+    // Never checks canAddPasses() -- violates Rule 1.
+    let addPassesVC = PKAddPassesViewController(pass: pass)! // force-unwraps the failable init -- violates Rule 2
+    // No delegate set, so addPassesViewControllerDidFinish(_:) never fires and the
+    // sheet is dismissed on a fixed timer instead -- violates Rule 3.
+    presenter.present(addPassesVC, animated: true)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+        addPassesVC.dismiss(animated: true)
+    }
+}
+```
+Skips the flow-specific availability check (Rule 1), force-unwraps a failable initializer (Rule 2), and dismisses on a guessed timer instead of the delegate callback Apple documents for this purpose (Rule 3).
+
+## Dependencies
+
+-   `knowledge.passkit.pass-library-and-authorization` — this contract assumes the app already has a `PKPass` in hand and knows how `PKPassLibrary` itself is queried; it covers only the UI-presentation path for adding that pass.
+
+## References
+
+-   [Apple Developer — PKAddPassesViewController](https://developer.apple.com/documentation/passkit/pkaddpassesviewcontroller)
+-   [Apple Developer — canAddPasses()](https://developer.apple.com/documentation/passkit/pkaddpassesviewcontroller/canaddpasses())
+-   [Apple Developer — init(pass:)](https://developer.apple.com/documentation/passkit/pkaddpassesviewcontroller/init(pass:))
+-   [Apple Developer — PKAddPassesViewControllerDelegate](https://developer.apple.com/documentation/passkit/pkaddpassesviewcontrollerdelegate)
+-   [Apple Developer — PKAddPassButton](https://developer.apple.com/documentation/passkit/pkaddpassbutton)
+-   [Apple Developer — AddPassToWalletButton](https://developer.apple.com/documentation/passkit/addpasstowalletbutton)

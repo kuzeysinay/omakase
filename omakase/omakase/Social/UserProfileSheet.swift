@@ -60,8 +60,13 @@ struct UserProfileSheet: View {
                 }
             } else { defaultAvatar }
 
-            Text(user.displayName)
-                .font(.title2.bold())
+            VStack(spacing: 4) {
+                Text(user.displayName)
+                    .font(.title2.bold())
+                Text(user.formattedHandle)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
 
             HStack(spacing: 32) {
                 VStack(spacing: 2) {
@@ -209,9 +214,15 @@ struct MyProfileSheet: View {
                             Text(profile?.displayName ?? authService.displayName ?? "")
                                 .font(.title2.bold())
                                 .multilineTextAlignment(.center)
+                            if let profile {
+                                Text(profile.formattedHandle)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
                             Text(profile?.email ?? authService.email ?? "")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                                 .multilineTextAlignment(.center)
                         }
 

@@ -11,6 +11,8 @@ struct OnboardingView: View {
     @AppStorage("omakase.interests") private var storedInterests: String = ""
     @AppStorage("omakase.hasOnboarded") private var hasOnboarded: Bool = false
 
+    var authService: AuthService? = nil
+
     @State private var interests: [String] = []
 
     private var l10n: L10n { L10n(lang: appLanguage) }
@@ -79,8 +81,14 @@ struct OnboardingView: View {
     // MARK: - Actions
 
     private func save() {
-        storedInterests = interests.joined(separator: ", ")
+        let finalInterests = interests
+        storedInterests = finalInterests.joined(separator: ", ")
         hasOnboarded = true
+        if let uid = authService?.uid {
+            Task {
+                try? await FirestoreService.shared.updateInterests(finalInterests, uid: uid)
+            }
+        }
     }
 }
 

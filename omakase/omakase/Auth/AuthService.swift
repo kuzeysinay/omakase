@@ -26,6 +26,7 @@ final class AuthService {
     /// `true` while a sign-in attempt is in flight.
     private(set) var isSigningIn: Bool = false
     private(set) var errorMessage: String?
+    private(set) var infoMessage: String?
 
     var isAuthenticated: Bool { currentUser != nil }
     var uid: String? { currentUser?.uid }
@@ -53,12 +54,170 @@ final class AuthService {
         }
     }
 
+    func clearMessages() {
+        errorMessage = nil
+        infoMessage = nil
+    }
+
+    func setError(_ message: String?) {
+        errorMessage = message
+        infoMessage = nil
+    }
+
+    // MARK: - Email Sign-Up & Sign-In
+
+    func signUpWithEmail(
+        displayName: String,
+        username: String,
+        email: String,
+        password: String,
+        l10n: L10n
+    ) async {
+        guard !isSigningIn else { return }
+        clearMessages()
+
+        let trimmedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanUsername = UserProfile.sanitizeUsername(username)
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else {
+            errorMessage = l10n.authErrorNameRequired
+            return
+        }
+        guard cleanUsername.count >= 3 else {
+            errorMessage = l10n.authUsernameTooShort
+            return
+        }
+        guard trimmedEmail.contains("@"), trimmedEmail.contains(".") else {
+            errorMessage = l10n.authErrorInvalidEmail
+            return
+        }
+        guard password.count >= 6 else {
+            errorMessage = l10n.authErrorWeakPassword
+            return
+        }
+
+        isSigningIn = true
+
+        do {
+            let available = (try? await FirestoreService.shared.isUsernameAvailable(cleanUsername)) ?? true
+            guard available else {
+                errorMessage = l10n.authUsernameTaken
+                isSigningIn = false
+                return
+            }
+
+            let authResult = try await Auth.auth().createUser(withEmail: trimmedEmail, password: password)
+
+            let changeRequest = authResult.user.createProfileChangeRequest()
+            changeRequest.displayName = trimmedName
+            try? await changeRequest.commitChanges()
+            try? await authResult.user.reload()
+
+            let updatedUser = Auth.auth().currentUser ?? authResult.user
+
+            // Ensure new users always go through the full onboarding flow (interest selection)
+            UserDefaults.standard.set("", forKey: "omakase.interests")
+            UserDefaults.standard.set(false, forKey: "omakase.hasOnboarded")
+
+            try await FirestoreService.shared.ensureUserProfile(
+                for: updatedUser,
+                customDisplayName: trimmedName,
+                customUsername: cleanUsername
+            )
+
+            currentUser = updatedUser
+        } catch {
+            errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n)
+        }
+
+        isSigningIn = false
+    }
+
+    func signInWithEmail(
+        email: String,
+        password: String,
+        l10n: L10n
+    ) async {
+        guard !isSigningIn else { return }
+        clearMessages()
+
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedEmail.contains("@"), trimmedEmail.contains(".") else {
+            errorMessage = l10n.authErrorInvalidEmail
+            return
+        }
+        guard !password.isEmpty else {
+            errorMessage = l10n.authErrorInvalidCredential
+            return
+        }
+
+        isSigningIn = true
+
+        do {
+            let authResult = try await Auth.auth().signIn(withEmail: trimmedEmail, password: password)
+            try await FirestoreService.shared.ensureUserProfile(for: authResult.user)
+
+            if let profile = try? await FirestoreService.shared.fetchUserProfile(uid: authResult.user.uid),
+               !profile.interests.isEmpty {
+                UserDefaults.standard.set(profile.interests.joined(separator: ", "), forKey: "omakase.interests")
+                UserDefaults.standard.set(true, forKey: "omakase.hasOnboarded")
+            }
+
+            currentUser = authResult.user
+        } catch {
+            errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n)
+        }
+
+        isSigningIn = false
+    }
+
+    func sendPasswordReset(email: String, l10n: L10n) async {
+        guard !isSigningIn else { return }
+        clearMessages()
+
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedEmail.contains("@"), trimmedEmail.contains(".") else {
+            errorMessage = l10n.authErrorEnterEmailForReset
+            return
+        }
+
+        isSigningIn = true
+        do {
+            try await Auth.auth().sendPasswordReset(withEmail: trimmedEmail)
+            infoMessage = l10n.authResetPasswordSent
+        } catch {
+            errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n)
+        }
+        isSigningIn = false
+    }
+
+    private static func friendlyErrorMessage(for error: Error, l10n: L10n) -> String {
+        let nsError = error as NSError
+        if nsError.domain == AuthErrorDomain,
+           let code = AuthErrorCode(rawValue: nsError.code) {
+            switch code {
+            case .invalidEmail:
+                return l10n.authErrorInvalidEmail
+            case .emailAlreadyInUse:
+                return l10n.authErrorEmailInUse
+            case .weakPassword:
+                return l10n.authErrorWeakPassword
+            case .wrongPassword, .invalidCredential, .userNotFound:
+                return l10n.authErrorInvalidCredential
+            default:
+                break
+            }
+        }
+        return error.localizedDescription
+    }
+
     // MARK: - Google Sign-In
 
     func signInWithGoogle() async {
         guard !isSigningIn else { return }
         isSigningIn = true
-        errorMessage = nil
+        clearMessages()
 
         do {
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,

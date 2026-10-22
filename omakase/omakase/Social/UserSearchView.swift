@@ -106,9 +106,7 @@ struct UserSearchView: View {
             avatarView(urlString: user.photoURL)
             VStack(alignment: .leading, spacing: 2) {
                 Text(user.displayName).font(.body.bold())
-                if !user.email.isEmpty {
-                    Text(user.email).font(.caption).foregroundStyle(.secondary)
-                }
+                Text(user.formattedHandle).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             followButton(for: user)

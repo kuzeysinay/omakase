@@ -86,9 +86,18 @@ struct TimelinePostCard: View {
                 HStack(spacing: 10) {
                     authorAvatar
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(post.authorName)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(post.authorName)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            if let handle = post.authorUsername, !handle.isEmpty {
+                                Text(handle.hasPrefix("@") ? handle : "@\(handle)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
                         Text(post.sharedAt.localizedFormatted(for: appLanguage))
                             .font(.caption)
                             .foregroundStyle(.secondary)

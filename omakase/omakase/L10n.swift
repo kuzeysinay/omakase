@@ -503,8 +503,323 @@ struct L10n {
 
     var signInWithGoogle: String {
         switch lang {
-        case .english: "Sign in with Google"
-        case .turkish: "Google ile giriş yap"
+        case .english: "Continue with Google"
+        case .turkish: "Google ile devam et"
+        }
+    }
+
+    var authSignUpTab: String {
+        switch lang {
+        case .english: "Sign Up"
+        case .turkish: "Kayıt Ol"
+        }
+    }
+
+    var authSignInTab: String {
+        switch lang {
+        case .english: "Sign In"
+        case .turkish: "Giriş Yap"
+        }
+    }
+
+    var authNameLabel: String {
+        switch lang {
+        case .english: "Full Name"
+        case .turkish: "Ad Soyad"
+        }
+    }
+
+    var authNamePlaceholder: String {
+        switch lang {
+        case .english: "Your name"
+        case .turkish: "Adın Soyadın"
+        }
+    }
+
+    var authEmailLabel: String {
+        switch lang {
+        case .english: "Email"
+        case .turkish: "E-posta"
+        }
+    }
+
+    var authEmailPlaceholder: String {
+        switch lang {
+        case .english: "name@example.com"
+        case .turkish: "ornek@eposta.com"
+        }
+    }
+
+    var authPasswordLabel: String {
+        switch lang {
+        case .english: "Password"
+        case .turkish: "Şifre"
+        }
+    }
+
+    var authPasswordPlaceholder: String {
+        switch lang {
+        case .english: "At least 6 characters"
+        case .turkish: "En az 6 karakter"
+        }
+    }
+
+    var authConfirmPasswordLabel: String {
+        switch lang {
+        case .english: "Confirm Password"
+        case .turkish: "Şifre Tekrar"
+        }
+    }
+
+    var authConfirmPasswordPlaceholder: String {
+        switch lang {
+        case .english: "Re-enter your password"
+        case .turkish: "Şifreni tekrar gir"
+        }
+    }
+
+    var authSignUpWithEmailButton: String {
+        switch lang {
+        case .english: "Sign up with Email"
+        case .turkish: "E-posta ile Kayıt Ol"
+        }
+    }
+
+    var authSignInWithEmailButton: String {
+        switch lang {
+        case .english: "Sign in with Email"
+        case .turkish: "E-posta ile Giriş Yap"
+        }
+    }
+
+    var authOrDivider: String {
+        switch lang {
+        case .english: "or"
+        case .turkish: "veya"
+        }
+    }
+
+    var authOrWithEmail: String {
+        switch lang {
+        case .english: "or with email"
+        case .turkish: "veya e-posta ile"
+        }
+    }
+
+    var authForgotPassword: String {
+        switch lang {
+        case .english: "Forgot password?"
+        case .turkish: "Şifremi unuttum"
+        }
+    }
+
+    var authResetPasswordSent: String {
+        switch lang {
+        case .english: "Password reset link sent to your email."
+        case .turkish: "Şifre sıfırlama bağlantısı e-posta adresine gönderildi."
+        }
+    }
+
+    var authSwitchToSignInPrompt: String {
+        switch lang {
+        case .english: "Already have an account? Sign in"
+        case .turkish: "Zaten hesabın var mı? Giriş yap"
+        }
+    }
+
+    var authSwitchToSignUpPrompt: String {
+        switch lang {
+        case .english: "Don't have an account? Sign up with email"
+        case .turkish: "Hesabın yok mu? E-posta ile kayıt ol"
+        }
+    }
+
+    var authErrorNameRequired: String {
+        switch lang {
+        case .english: "Please enter your name."
+        case .turkish: "Lütfen adınızı girin."
+        }
+    }
+
+    var authErrorInvalidEmail: String {
+        switch lang {
+        case .english: "Please enter a valid email address."
+        case .turkish: "Lütfen geçerli bir e-posta adresi girin."
+        }
+    }
+
+    var authErrorWeakPassword: String {
+        switch lang {
+        case .english: "Password must be at least 6 characters."
+        case .turkish: "Şifre en az 6 karakter olmalıdır."
+        }
+    }
+
+    var authErrorPasswordMismatch: String {
+        switch lang {
+        case .english: "Passwords do not match."
+        case .turkish: "Şifreler eşleşmiyor."
+        }
+    }
+
+    var authErrorEmailInUse: String {
+        switch lang {
+        case .english: "This email address is already registered."
+        case .turkish: "Bu e-posta adresiyle zaten bir hesap var."
+        }
+    }
+
+    var authErrorInvalidCredential: String {
+        switch lang {
+        case .english: "Incorrect email or password."
+        case .turkish: "E-posta veya şifre hatalı."
+        }
+    }
+
+    var authErrorEnterEmailForReset: String {
+        switch lang {
+        case .english: "Enter your email address above first to reset your password."
+        case .turkish: "Şifre sıfırlamak için önce yukarıya e-posta adresini gir."
+        }
+    }
+
+    var authCreateAccountButton: String {
+        switch lang {
+        case .english: "Create account with Email"
+        case .turkish: "E-posta ile Hesap Oluştur"
+        }
+    }
+
+    var authContinueButton: String {
+        switch lang {
+        case .english: "Continue"
+        case .turkish: "Devam Et"
+        }
+    }
+
+    var authCompleteSignUpButton: String {
+        switch lang {
+        case .english: "Create Account"
+        case .turkish: "Hesabı Oluştur"
+        }
+    }
+
+    var authStep1Title: String {
+        switch lang {
+        case .english: "Create your account"
+        case .turkish: "Hesabını oluştur"
+        }
+    }
+
+    var authStep1Subtitle: String {
+        switch lang {
+        case .english: "Start with your email and a secure password."
+        case .turkish: "E-posta adresin ve güvenli bir şifre ile başla."
+        }
+    }
+
+    var authStep2Title: String {
+        switch lang {
+        case .english: "What should we call you?"
+        case .turkish: "Görünür ismin ne olsun?"
+        }
+    }
+
+    var authStep2Subtitle: String {
+        switch lang {
+        case .english: "This is your display name shown on your profile and shared bites."
+        case .turkish: "Profilinde ve paylaştığın lokmalarda herkesin göreceği ismin."
+        }
+    }
+
+    var authDisplayNamePlaceholder: String {
+        switch lang {
+        case .english: "Display Name (e.g. Kuzey Sınay)"
+        case .turkish: "Görünür İsim (örn. Kuzey Sınay)"
+        }
+    }
+
+    var authStep3Title: String {
+        switch lang {
+        case .english: "Pick your @username"
+        case .turkish: "Bir @kullanıcı adı seç"
+        }
+    }
+
+    var authStep3Subtitle: String {
+        switch lang {
+        case .english: "Your unique handle makes it easy for others to find and follow you."
+        case .turkish: "Toplulukta seni benzersiz kılacak ve kolayca bulunmanı sağlayacak kullanıcı adın."
+        }
+    }
+
+    var authUsernamePlaceholder: String {
+        switch lang {
+        case .english: "username"
+        case .turkish: "kullanici_adi"
+        }
+    }
+
+    var authSuggestedUsernames: String {
+        switch lang {
+        case .english: "Suggestions"
+        case .turkish: "Öneriler"
+        }
+    }
+
+    var authUsernameAvailable: String {
+        switch lang {
+        case .english: "Available"
+        case .turkish: "Kullanılabilir"
+        }
+    }
+
+    var authUsernameTaken: String {
+        switch lang {
+        case .english: "This username is already taken."
+        case .turkish: "Bu kullanıcı adı zaten alınmış."
+        }
+    }
+
+    var authUsernameTooShort: String {
+        switch lang {
+        case .english: "Username must be at least 3 characters."
+        case .turkish: "Kullanıcı adı en az 3 karakter olmalıdır."
+        }
+    }
+
+    var authWelcomeBackTitle: String {
+        switch lang {
+        case .english: "Welcome back"
+        case .turkish: "Tekrar hoş geldin"
+        }
+    }
+
+    var authWelcomeBackSubtitle: String {
+        switch lang {
+        case .english: "Sign in with your email and password."
+        case .turkish: "E-posta adresin ve şifrenle giriş yap."
+        }
+    }
+
+    var authPasswordHintValid: String {
+        switch lang {
+        case .english: "6+ characters"
+        case .turkish: "6+ karakter tamam"
+        }
+    }
+
+    var authPasswordHintRequirement: String {
+        switch lang {
+        case .english: "Minimum 6 characters"
+        case .turkish: "En az 6 karakter"
+        }
+    }
+
+    var authProfilePreviewLabel: String {
+        switch lang {
+        case .english: "PROFILE PREVIEW"
+        case .turkish: "PROFİL ÖNİZLEMESİ"
         }
     }
 
@@ -526,8 +841,8 @@ struct L10n {
 
     var tabTimeline: String {
         switch lang {
-        case .english: "Timeline"
-        case .turkish: "Zaman Akışı"
+        case .english: "Community"
+        case .turkish: "Topluluk"
         }
     }
 
@@ -538,19 +853,19 @@ struct L10n {
         }
     }
 
-    // MARK: - Timeline
+    // MARK: - Timeline / Community
 
     var loadingTimeline: String {
         switch lang {
-        case .english: "Loading timeline…"
-        case .turkish: "Zaman akışı yükleniyor…"
+        case .english: "Loading community…"
+        case .turkish: "Topluluk yükleniyor…"
         }
     }
 
     var timelineEmptyHeadline: String {
         switch lang {
-        case .english: "Your timeline is empty"
-        case .turkish: "Zaman akışın boş"
+        case .english: "No community posts yet"
+        case .turkish: "Henüz paylaşım yok"
         }
     }
 
@@ -558,6 +873,13 @@ struct L10n {
         switch lang {
         case .english: "Follow people to see the posts they share from their AI feeds."
         case .turkish: "Yapay zeka akışlarından paylaştıkları gönderileri görmek için insanları takip et."
+        }
+    }
+
+    var communitySearchPlaceholder: String {
+        switch lang {
+        case .english: "Search people or posts…"
+        case .turkish: "Kişi veya gönderi ara…"
         }
     }
 
@@ -667,15 +989,15 @@ struct L10n {
 
     var sharePost: String {
         switch lang {
-        case .english: "Share to timeline"
-        case .turkish: "Zaman akışına paylaş"
+        case .english: "Share to community"
+        case .turkish: "Toplulukta paylaş"
         }
     }
 
     var unsharePost: String {
         switch lang {
-        case .english: "Remove from timeline"
-        case .turkish: "Zaman akışından kaldır"
+        case .english: "Remove from community"
+        case .turkish: "Topluluktan kaldır"
         }
     }
 
@@ -739,8 +1061,8 @@ struct L10n {
 
     var toastPostShared: String {
         switch lang {
-        case .english: "Post shared to Social Feed"
-        case .turkish: "Gönderi akışta paylaşıldı"
+        case .english: "Post shared to Community"
+        case .turkish: "Gönderi toplulukta paylaşıldı"
         }
     }
 

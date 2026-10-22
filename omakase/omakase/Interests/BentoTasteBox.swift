@@ -2,9 +2,9 @@
 //  BentoTasteBox.swift
 //  omakase
 //
-//  Gamified Bento Box (2048-style) interest discovery engine for Feed.
-//  Dynamic, tactile tile grid that morphs into sub-interests on tap,
-//  with live AI synthesis feeling, while preserving ample room for posts.
+//  Full-screen Bento Box interest & topic discovery page for Feed.
+//  Covers the entire screen when no post is shown or when scrolling down
+//  to generate a new post, and disappears while a post is being generated.
 //
 
 import SwiftUI
@@ -17,12 +17,12 @@ struct BentoTasteBox: View {
     var onRemoveInterest: (String) -> Void
     @Binding var isLetterboxdActive: Bool
     var onResetInterests: (() -> Void)? = nil
-    @Binding var isExpanded: Bool
-    var onToggleExpand: (() -> Void)? = nil
     var isGenerating: Bool = false
     var isCooldownActive: Bool = false
     var cooldownRemaining: Int = 0
     var cooldownTotal: Int = 0
+    var hasExistingPosts: Bool = false
+    var onScrollToLastPost: (() -> Void)? = nil
     var onSelectDedicatedTopic: ((String) -> Void)? = nil
     var onPromptLetterboxdUsername: (() -> Void)? = nil
     var onSelectLetterboxdPost: (() -> Void)? = nil
@@ -37,388 +37,347 @@ struct BentoTasteBox: View {
     }
 
     @State private var mode: BoxMode = .rootCategories
-    @State private var displayedCategories: [InterestCategory] = Array(InterestCategory.presets.prefix(6))
-
-    // Category Roll animation state (tactile 3D card flip in place)
-    @State private var isSpinningCategories: Bool = false
-    @State private var flipAngle: Double = 0
-    @State private var flipScale: CGFloat = 1.0
-    @State private var spinIconRotation: Double = 0
 
     // AI synthesis state
     @State private var isSynthesizing: Bool = false
     @State private var isRefreshingSubInterests: Bool = false
     @State private var synthesisTaskId: UUID = UUID()
     @State private var currentSubInterests: [String] = []
+    @State private var cachedSubInterestsByCategory: [String: [String]] = [:]
     @State private var revealedTilesCount: Int = 0
     @State private var justAddedInterest: String? = nil
 
     // Manual text entry
-    @State private var showManualInput: Bool = false
     @State private var manualText: String = ""
     @FocusState private var isManualFieldFocused: Bool
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
-    private var cooldownProgress: CGFloat {
-        guard cooldownTotal > 0 else { return 0 }
-        return max(0, min(1, CGFloat(cooldownRemaining) / CGFloat(cooldownTotal)))
-    }
-
     var body: some View {
-        VStack(spacing: 0) {
-            // Full-width Edge-to-Edge Decreasing Reading Cooldown Bar / Hairline Divider
-            topProgressBar
+        VStack(alignment: .leading, spacing: 0) {
+            // Optional "Back to previous post" button when user scrolled down from a post
+            if hasExistingPosts {
+                backToFeedBanner
+                    .padding(.horizontal, 18)
+                    .padding(.top, 10)
+            }
 
-            // Mini Header Bar (Mode title, Back/Shuffle, Collapse toggle)
-            headerBar
+            // Header section (Title / Back button + Refresh / Cooldown indicator)
+            headerSection
+                .padding(.horizontal, 18)
+                .padding(.top, hasExistingPosts ? 10 : 16)
+                .padding(.bottom, 12)
 
-            if isExpanded {
-                // The Bento Box Grid Canvas (2048-style)
-                bentoGridCanvas
-                    .frame(height: 122)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 4)
-                    .padding(.bottom, 6)
-                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .bottom)))
+            // Main Full-Page Bento Grid Canvas (Scrollable Categories or Sub-Topics)
+            bentoGridCanvas
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.vertical, 4)
 
-                // Active interests ribbon (if user has any active interests)
-                if !allInterests.isEmpty {
+            // Scroll hint caption
+            scrollHintBar
+                .padding(.horizontal, 18)
+                .padding(.top, 6)
+                .padding(.bottom, 10)
+
+            // Bottom controls: Active interests ribbon + Custom topic input bar
+            VStack(spacing: 10) {
+                if !allInterests.isEmpty || isLetterboxdActive {
                     activeInterestsRibbon
-                        .padding(.top, 2)
-                        .padding(.bottom, 6)
                 }
 
-                // Optional manual text entry field
-                if showManualInput {
-                    manualInputBar
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 8)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-            } else {
-                // Collapsed Compact Ribbon
-                collapsedRibbon
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
+                manualInputBar
+                    .padding(.horizontal, 18)
             }
+            .padding(.bottom, 16)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(uiColor: .systemBackground))
-        .clipped()
-        .animation(.spring(response: 0.32, dampingFraction: 0.8), value: mode)
-        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: showManualInput)
-    }
-
-    // MARK: - Top Edge Progress Bar (Reading Cooldown & Hairline Divider)
-
-    private var topProgressBar: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                if isCooldownActive {
-                    // Dimmed track
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.08))
-                    // Active decreasing progress bar
-                    Rectangle()
-                        .fill(OmakaseTheme.ink)
-                        .frame(width: max(0, geo.size.width * cooldownProgress))
-                        .animation(.linear(duration: 0.95), value: cooldownRemaining)
-                } else {
-                    // Minimalist, razor-clean hairline separator
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.1))
-                        .frame(height: 0.5)
-                }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isManualFieldFocused {
+                isManualFieldFocused = false
             }
         }
-        .frame(height: isCooldownActive ? 3.5 : 0.5)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isCooldownActive)
+        .onChange(of: appLanguage) { _, _ in
+            cachedSubInterestsByCategory.removeAll()
+        }
+        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: mode)
     }
 
-    // MARK: - Header Bar
+    // MARK: - Back to Feed Banner
 
-    private var headerBar: some View {
-        HStack(spacing: 8) {
+    private var backToFeedBanner: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            isManualFieldFocused = false
+            onScrollToLastPost?()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.up.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(OmakaseTheme.ink)
+                Text(appLanguage == .turkish ? "Son gönderiye dönmek için yukarı kaydır veya dokun" : "Swipe up or tap to return to last post")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(minHeight: 42)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(uiColor: .secondarySystemBackground))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Header Section
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
             switch mode {
             case .rootCategories:
-                // Generation indicator on the left (cooldown is represented by the top edge bar + badge)
-                if isGenerating {
-                    HStack(spacing: 5) {
-                        ProgressView()
-                            .controlSize(.mini)
-                        Text(appLanguage == .turkish ? "Post hazırlanıyor…" : "Cooking post…")
-                            .font(.caption2.weight(.semibold))
-                    }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.12), in: Capsule())
-                    .foregroundStyle(.secondary)
-                } else if isCooldownActive {
-                    HStack(spacing: 5) {
-                        Image(systemName: "hourglass")
-                            .font(.system(size: 10, weight: .bold))
-                        Text(appLanguage == .turkish ? "Okuma: \(cooldownRemaining)s" : "Reading: \(cooldownRemaining)s")
-                            .font(.caption2.weight(.bold).monospacedDigit())
-                    }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.12), in: Capsule())
-                    .foregroundStyle(.secondary)
-                }
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(appLanguage == .turkish ? "Kategoriler" : "Categories")
+                            .font(.system(size: 26, weight: .bold))
+                            .foregroundStyle(.primary)
 
-                Spacer()
-
-                // Category Roll Button ("Döndür")
-                Button {
-                    performCategoryRoll()
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 11, weight: .semibold))
-                            .rotationEffect(.degrees(spinIconRotation))
-                        Text(isSpinningCategories
-                             ? (appLanguage == .turkish ? "Dönüyor…" : "Rolling…")
-                             : l10n.bentoShuffle)
-                            .font(.caption2.weight(.semibold))
-                            .lineLimit(1)
-                            .fixedSize()
+                        Text(
+                            appLanguage == .turkish
+                                ? "Bir kategori seç ve alt konuya dokunarak yeni post üret"
+                                : "Select a category and tap a subtopic to craft a new post"
+                        )
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4.5)
-                    .background(
-                        Capsule()
-                            .fill(isSpinningCategories ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .systemBackground))
-                    )
-                    .overlay(
-                        Capsule()
-                            .strokeBorder(
-                                isSpinningCategories ? OmakaseTheme.ink.opacity(0.35) : Color.primary.opacity(0.14),
-                                lineWidth: 1
-                            )
-                    )
-                    .foregroundStyle(isSpinningCategories ? Color.primary : Color.secondary)
+
+                    Spacer(minLength: 4)
+
+                    statusBadge
                 }
-                .buttonStyle(.plain)
-                .disabled(isSpinningCategories || isGenerating || isCooldownActive)
 
             case .subInterests(let category):
-                // Back Button (2048 Undo/Back)
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
-                        mode = .rootCategories
-                        currentSubInterests = []
-                        isRefreshingSubInterests = false
+                HStack(spacing: 10) {
+                    // Large, easy-to-tap Back Button (min 48pt height)
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
+                            mode = .rootCategories
+                            currentSubInterests = []
+                            isRefreshingSubInterests = false
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 15, weight: .bold))
+                            Image(systemName: category.iconName)
+                                .font(.system(size: 16, weight: .semibold))
+                            Text(category.localizedName(for: appLanguage))
+                                .font(.system(size: 16, weight: .bold))
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .frame(minHeight: 48)
+                        .background(
+                            Capsule()
+                                .fill(Color(uiColor: .secondarySystemBackground))
+                        )
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color.primary.opacity(0.14), lineWidth: 1)
+                        )
+                        .foregroundStyle(.primary)
                     }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "chevron.left")
-                            .font(.caption.weight(.bold))
-                        Image(systemName: category.iconName)
-                            .font(.caption.weight(.semibold))
-                        Text(category.localizedName(for: appLanguage))
-                            .font(.caption.weight(.semibold))
-                    }
-                    .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
+                    .buttonStyle(BentoRefreshButtonStyle())
 
-                Spacer()
+                    Spacer(minLength: 4)
 
-                // Refresh Button (regenerates 10 topics)
-                Button {
-                    loadCategory(category, refresh: true)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 11, weight: .bold))
-                            .rotationEffect(.degrees(isSynthesizing ? 360 : 0))
-                            .animation(isSynthesizing ? .linear(duration: 0.85).repeatForever(autoreverses: false) : .spring(response: 0.3), value: isSynthesizing)
-                        Text(isSynthesizing ? (appLanguage == .turkish ? "Yenileniyor…" : "Refreshing…") : (appLanguage == .turkish ? "Yenile" : "Refresh"))
-                            .font(.caption2.weight(.semibold))
-                            .lineLimit(1)
-                            .fixedSize()
+                    if isCooldownActive || isGenerating {
+                        statusBadge
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule()
-                            .fill(isSynthesizing ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .systemBackground))
-                    )
-                    .overlay(
-                        Capsule()
-                            .strokeBorder(
-                                isSynthesizing ? OmakaseTheme.ink.opacity(0.3) : Color.primary.opacity(0.12),
-                                lineWidth: 1
+
+                    // Large, easy-to-tap Refresh Button (min 48pt height)
+                    Button {
+                        loadCategory(category, refresh: true)
+                    } label: {
+                        HStack(spacing: 7) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14, weight: .bold))
+                                .rotationEffect(.degrees(isSynthesizing ? 360 : 0))
+                                .animation(
+                                    isSynthesizing
+                                        ? .linear(duration: 0.85).repeatForever(autoreverses: false)
+                                        : .spring(response: 0.3),
+                                    value: isSynthesizing
+                                )
+                            Text(
+                                isSynthesizing
+                                    ? (appLanguage == .turkish ? "Yenileniyor…" : "Refreshing…")
+                                    : (appLanguage == .turkish ? "Yenile" : "Refresh")
                             )
-                    )
-                    .foregroundStyle(isSynthesizing ? Color.primary : Color.secondary)
-                }
-                .buttonStyle(BentoRefreshButtonStyle())
-                .disabled(isSynthesizing || isGenerating || isCooldownActive)
-
-                // Optional post generation or cooldown indicator
-                if isGenerating {
-                    HStack(spacing: 4) {
-                        ProgressView().controlSize(.mini)
-                        Text(appLanguage == .turkish ? "Üretiliyor" : "Generating")
-                            .font(.caption2.weight(.semibold))
+                            .font(.system(size: 15, weight: .semibold))
                             .lineLimit(1)
                             .fixedSize()
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.secondary.opacity(0.12), in: Capsule())
-                    .foregroundStyle(.secondary)
-                } else if isCooldownActive {
-                    HStack(spacing: 4) {
-                        Image(systemName: "hourglass")
-                            .font(.system(size: 9, weight: .bold))
-                        Text("\(cooldownRemaining)s")
-                            .font(.caption2.weight(.bold).monospacedDigit())
-                            .lineLimit(1)
-                            .fixedSize()
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.secondary.opacity(0.12), in: Capsule())
-                    .foregroundStyle(.secondary)
-                }
-            }
-
-            // Keyboard Toggle Button
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                    showManualInput.toggle()
-                    if showManualInput {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                            isManualFieldFocused = true
                         }
-                    } else {
-                        isManualFieldFocused = false
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
+                        .frame(minHeight: 48)
+                        .background(
+                            Capsule()
+                                .fill(isSynthesizing ? OmakaseTheme.ink.opacity(0.1) : Color(uiColor: .secondarySystemBackground))
+                        )
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(
+                                    isSynthesizing ? OmakaseTheme.ink.opacity(0.35) : Color.primary.opacity(0.14),
+                                    lineWidth: 1
+                                )
+                        )
+                        .foregroundStyle(.primary)
                     }
+                    .buttonStyle(BentoRefreshButtonStyle())
+                    .disabled(isSynthesizing || isGenerating)
                 }
-            } label: {
-                Image(systemName: showManualInput ? "keyboard.chevron.compact.down" : "magnifyingglass")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 26, height: 26)
-                    .background(Color(uiColor: .systemBackground), in: Circle())
-                    .overlay(Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
 
-            // Collapse / Expand Toggle
-            Button {
-                if isExpanded {
-                    showManualInput = false
-                    isManualFieldFocused = false
-                }
-                if let onToggleExpand {
-                    onToggleExpand()
-                } else {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
-                        isExpanded.toggle()
-                        if !isExpanded {
-                            showManualInput = false
-                            isManualFieldFocused = false
-                        }
-                    }
-                }
-            } label: {
-                Image(systemName: isExpanded ? "chevron.down" : "chevron.up")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 26, height: 26)
-                    .background(Color(uiColor: .systemBackground), in: Circle())
-                    .overlay(Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+                Text(
+                    isCooldownActive
+                        ? (appLanguage == .turkish
+                            ? "Okuma süresi (\(cooldownRemaining) sn) tamamlandığında bir alt konuya dokunarak post üretebilirsin."
+                            : "Once reading cooldown (\(cooldownRemaining)s) ends, tap any subtopic to generate a post.")
+                        : (appLanguage == .turkish
+                            ? "Post üretmek için aşağıdaki alt konulardan birine dokun"
+                            : "Tap any subtopic below to generate a dedicated post")
+                )
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             }
-            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 8)
-        .padding(.bottom, isExpanded ? 4 : 8)
     }
 
-    // MARK: - Bento Grid Canvas (2048-Style)
+    @ViewBuilder
+    private var statusBadge: some View {
+        if isGenerating {
+            HStack(spacing: 6) {
+                ProgressView()
+                    .controlSize(.small)
+                Text(appLanguage == .turkish ? "Hazırlanıyor…" : "Cooking…")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(Color.secondary.opacity(0.12), in: Capsule())
+            .foregroundStyle(.secondary)
+        } else if isCooldownActive {
+            HStack(spacing: 6) {
+                Image(systemName: "hourglass")
+                    .font(.system(size: 13, weight: .bold))
+                Text(appLanguage == .turkish ? "\(cooldownRemaining) sn" : "\(cooldownRemaining)s")
+                    .font(.subheadline.weight(.bold).monospacedDigit())
+                    .contentTransition(.numericText())
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(Color.secondary.opacity(0.12), in: Capsule())
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Bento Grid Canvas (Full-Page Scrollable Categories & Sub-Topics)
 
     private var bentoGridCanvas: some View {
         GeometryReader { geo in
-            let tileW = (geo.size.width - 16) / 3
-            let tileH = (geo.size.height - 8) / 2
+            let spacing: CGFloat = 12
+            // Size columns so 2 full columns fit comfortably and the 3rd column peeks from the right edge
+            let tileW = max(162, (geo.size.width - 52) / 2.12)
 
             ZStack {
                 switch mode {
                 case .rootCategories:
-                    // 2x3 Root Bento Grid with Synchronized Simultaneous Slide
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: 8),
-                            GridItem(.flexible(), spacing: 8),
-                            GridItem(.flexible(), spacing: 8),
-                        ],
-                        spacing: 8
-                    ) {
-                        ForEach(displayedCategories) { category in
-                            RootBentoTile(
-                                category: category,
-                                language: appLanguage,
-                                isDisabled: isGenerating || isCooldownActive,
-                                width: tileW,
-                                height: tileH
-                            ) {
-                                openCategory(category)
+                    let rowCount = 3
+                    let tileH = max(96, (geo.size.height - CGFloat(rowCount - 1) * spacing) / CGFloat(rowCount))
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHGrid(
+                            rows: Array(
+                                repeating: GridItem(.fixed(tileH), spacing: spacing),
+                                count: rowCount
+                            ),
+                            spacing: spacing
+                        ) {
+                            ForEach(InterestCategory.presets) { category in
+                                RootBentoTile(
+                                    category: category,
+                                    language: appLanguage,
+                                    isDisabled: isGenerating,
+                                    width: tileW,
+                                    height: tileH
+                                ) {
+                                    openCategory(category)
+                                }
                             }
                         }
+                        .padding(.horizontal, 18)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .rotation3DEffect(
-                        .degrees(flipAngle),
-                        axis: (x: 0.0, y: 1.0, z: 0.0),
-                        perspective: 0.25
-                    )
-                    .scaleEffect(flipScale)
                     .transition(.asymmetric(
-                        insertion: .scale(scale: 0.94).combined(with: .opacity),
-                        removal: .scale(scale: 1.04).combined(with: .opacity)
+                        insertion: .scale(scale: 0.96).combined(with: .opacity),
+                        removal: .scale(scale: 1.03).combined(with: .opacity)
                     ))
 
                 case .subInterests(let category):
-                    // Sub-interests 2048-style grid (Horizontal scrollable 2 rows x 5 items = 10 items)
-                    subInterestsBentoGrid(tileW: max(tileW, 120), tileH: tileH, category: category)
-                        .transition(.asymmetric(
-                            insertion: .scale(scale: 1.05).combined(with: .opacity),
-                            removal: .scale(scale: 0.94).combined(with: .opacity)
-                        ))
+                    let rowCount = 3
+                    let subSpacing: CGFloat = 10
+                    let tileH = max(92, (geo.size.height - CGFloat(rowCount - 1) * subSpacing) / CGFloat(rowCount))
+                    let subTileW = (geo.size.width - 36 - subSpacing) / 2.06
+
+                    subInterestsBentoGrid(
+                        tileW: subTileW,
+                        tileH: tileH,
+                        spacing: subSpacing,
+                        category: category
+                    )
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 1.04).combined(with: .opacity),
+                        removal: .scale(scale: 0.95).combined(with: .opacity)
+                    ))
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
-    // MARK: - Sub-Interests Bento Grid (10 Items)
+    // MARK: - Sub-Interests Bento Grid (Compact 3x2 Visible = 6 at once, 12 Total)
 
-    private func subInterestsBentoGrid(tileW: CGFloat, tileH: CGFloat, category: InterestCategory) -> some View {
+    private func subInterestsBentoGrid(
+        tileW: CGFloat,
+        tileH: CGFloat,
+        spacing: CGFloat,
+        category: InterestCategory
+    ) -> some View {
         let isFilmCategory = (category.id == "film")
-        let topicsCount = isFilmCategory ? 9 : 10
+        let topicsCount = isFilmCategory ? 11 : 12
         let displayTopics = Array(currentSubInterests.prefix(topicsCount).enumerated())
-        let letterboxdTileW = max(tileW, 168)
 
         return ScrollView(.horizontal, showsIndicators: false) {
             LazyHGrid(
                 rows: [
-                    GridItem(.fixed(tileH), spacing: 8),
-                    GridItem(.fixed(tileH), spacing: 8),
+                    GridItem(.fixed(tileH), spacing: spacing),
+                    GridItem(.fixed(tileH), spacing: spacing),
+                    GridItem(.fixed(tileH), spacing: spacing),
                 ],
-                spacing: 8
+                spacing: spacing
             ) {
                 if isFilmCategory {
                     LetterboxdBentoTile(
                         username: storedLetterboxdUsername,
                         isDisabled: isGenerating || isCooldownActive,
                         l10n: l10n,
-                        width: letterboxdTileW,
+                        width: tileW,
                         height: tileH,
                         onTap: {
                             guard !isGenerating && !isCooldownActive else { return }
@@ -426,6 +385,7 @@ struct BentoTasteBox: View {
                             if clean.isEmpty {
                                 onPromptLetterboxdUsername?()
                             } else {
+                                mode = .rootCategories
                                 onSelectLetterboxdPost?()
                             }
                         },
@@ -441,13 +401,12 @@ struct BentoTasteBox: View {
 
                 ForEach(displayTopics, id: \.element) { index, topic in
                     let tileIndex = isFilmCategory ? (index + 1) : index
-                    let thisTileW = (isFilmCategory && index == 0) ? letterboxdTileW : tileW
                     SubInterestBentoTile(
                         title: topic,
                         isRevealed: tileIndex < revealedTilesCount,
                         isDisabled: isGenerating || isCooldownActive,
                         isRefreshing: isRefreshingSubInterests,
-                        width: thisTileW,
+                        width: tileW,
                         height: tileH,
                         onTap: {
                             selectDedicatedTopic(topic)
@@ -455,27 +414,49 @@ struct BentoTasteBox: View {
                     )
                 }
             }
-            .padding(.trailing, 8)
+            .padding(.horizontal, 18)
         }
     }
 
-    // MARK: - Active Interests Ribbon
+    // MARK: - Scroll Hint Bar
+
+    private var scrollHintBar: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "hand.draw")
+                .font(.caption.weight(.semibold))
+            Text(
+                mode == .rootCategories
+                    ? (appLanguage == .turkish
+                        ? "Tüm kategorileri görmek için yana kaydır (\(InterestCategory.presets.count) kategori)"
+                        : "Swipe sideways to browse all \(InterestCategory.presets.count) categories")
+                    : (appLanguage == .turkish
+                        ? "Daha fazla alt konu için yana kaydır"
+                        : "Swipe sideways for more subtopics")
+            )
+            .font(.caption.weight(.medium))
+            Spacer()
+        }
+        .foregroundStyle(.secondary)
+    }
+
+    // MARK: - Active Interests Ribbon (Large Tappable Pills)
 
     private var activeInterestsRibbon: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 // Letterboxd pill if active
                 if isLetterboxdActive {
-                    HStack(spacing: 4) {
-                        Image(systemName: "film")
-                            .font(.caption2)
+                    HStack(spacing: 6) {
+                        Image(systemName: "film.fill")
+                            .font(.caption.weight(.semibold))
                         Text("Letterboxd")
-                            .font(.caption2.weight(.medium))
+                            .font(.subheadline.weight(.semibold))
                     }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .background(Color.green.opacity(0.18), in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.green.opacity(0.4), lineWidth: 1))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .frame(minHeight: 40)
+                    .background(Color.green.opacity(0.16), in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.green.opacity(0.45), lineWidth: 1))
                     .foregroundStyle(Color.green)
                 }
 
@@ -483,7 +464,7 @@ struct BentoTasteBox: View {
                 ForEach(allInterests, id: \.self) { interest in
                     let isActive = activeInterests.contains(interest)
 
-                    HStack(spacing: 5) {
+                    HStack(spacing: 4) {
                         Button {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
@@ -495,35 +476,45 @@ struct BentoTasteBox: View {
                             }
                         } label: {
                             Text(interest)
-                                .font(.caption.weight(.medium))
+                                .font(.subheadline.weight(.medium))
                                 .lineLimit(1)
+                                .padding(.leading, 14)
+                                .padding(.trailing, 6)
+                                .padding(.vertical, 9)
                         }
+                        .buttonStyle(.plain)
 
-                        // Remove 'x' button
+                        // Large tap target for Remove 'x' button
                         Button {
                             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
                                 onRemoveInterest(interest)
                             }
                         } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(isActive ? OmakaseTheme.chipActiveText.opacity(0.7) : Color.secondary)
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(
+                                    isActive
+                                        ? OmakaseTheme.chipActiveText.opacity(0.75)
+                                        : Color.secondary.opacity(0.8)
+                                )
+                                .frame(width: 34, height: 34)
+                                .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 4)
                     }
-                    .padding(.leading, 10)
-                    .padding(.trailing, 8)
-                    .padding(.vertical, 5)
+                    .frame(minHeight: 40)
                     .background(
                         Capsule().fill(
                             isActive
                                 ? OmakaseTheme.chipActiveFill
-                                : Color(uiColor: .systemBackground)
+                                : Color(uiColor: .secondarySystemBackground)
                         )
                     )
                     .overlay(
                         Capsule().strokeBorder(
-                            isActive ? Color.clear : Color.primary.opacity(0.15),
+                            isActive ? Color.clear : Color.primary.opacity(0.14),
                             lineWidth: 1
                         )
                     )
@@ -532,135 +523,85 @@ struct BentoTasteBox: View {
                     )
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 18)
         }
     }
 
-    // MARK: - Collapsed Ribbon
-
-    private var collapsedRibbon: some View {
-        HStack(spacing: 8) {
-            Button {
-                if let onToggleExpand {
-                    onToggleExpand()
-                } else {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
-                        isExpanded = true
-                    }
-                }
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "sparkles")
-                        .font(.caption2.weight(.bold))
-                    Text(l10n.bentoExpand)
-                        .font(.caption.weight(.semibold))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(OmakaseTheme.chipActiveFill, in: Capsule())
-                .foregroundStyle(OmakaseTheme.chipActiveText)
-            }
-            .buttonStyle(.plain)
-
-            // Scroll of active tastes
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(allInterests, id: \.self) { interest in
-                        Text(interest)
-                            .font(.caption2)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(Color(uiColor: .systemBackground), in: Capsule())
-                            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Manual Input Bar
+    // MARK: - Manual Input Bar (Large & Easy to Tap)
 
     private var manualInputBar: some View {
-        HStack(spacing: 8) {
+        let trimmed = manualText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.caption)
+                .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(.secondary)
+                .padding(.leading, 4)
 
-            TextField(l10n.addTastePlaceholder, text: $manualText)
-                .font(.subheadline)
-                .textInputAutocapitalization(.words)
-                .autocorrectionDisabled()
-                .focused($isManualFieldFocused)
-                .onSubmit(commitManualInput)
+            TextField(
+                appLanguage == .turkish ? "Kendi konunu yaz veya ilgi ekle…" : "Type a custom topic or add taste…",
+                text: $manualText
+            )
+            .font(.body)
+            .textInputAutocapitalization(.words)
+            .autocorrectionDisabled()
+            .focused($isManualFieldFocused)
+            .submitLabel(.go)
+            .onSubmit {
+                if !trimmed.isEmpty {
+                    if !isGenerating && !isCooldownActive {
+                        submitCustomTopicForPost()
+                    } else {
+                        commitManualInput()
+                    }
+                }
+            }
 
-            if !manualText.isEmpty {
+            if !trimmed.isEmpty {
+                // Add to tastes button (44x44 tap target)
                 Button(action: commitManualInput) {
                     Image(systemName: "plus.circle.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(OmakaseTheme.ink)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 40, height: 40)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+
+                // Generate dedicated post on this custom topic
+                Button(action: submitCustomTopicForPost) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "sparkles")
+                            .font(.caption.weight(.bold))
+                        Text(appLanguage == .turkish ? "Üret" : "Create")
+                            .font(.subheadline.weight(.bold))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(OmakaseTheme.chipActiveFill, in: Capsule())
+                    .foregroundStyle(OmakaseTheme.chipActiveText)
+                }
+                .buttonStyle(.plain)
+                .disabled(isGenerating || isCooldownActive)
+                .opacity((isGenerating || isCooldownActive) ? 0.45 : 1.0)
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
-    }
-
-    // MARK: - Category Roll Animation (Tactile 3D Card Flip)
-
-    private func performCategoryRoll() {
-        guard !isSpinningCategories && !isGenerating && !isCooldownActive else { return }
-        isSpinningCategories = true
-
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) {
-            spinIconRotation += 360
-        }
-
-        let allPresets = InterestCategory.presets
-        let currentIds = Set(displayedCategories.map(\.id))
-        var candidates = allPresets.filter { !currentIds.contains($0.id) }.shuffled()
-        if candidates.count < 6 {
-            let remainder = allPresets.filter { currentIds.contains($0.id) }.shuffled()
-            candidates.append(contentsOf: remainder)
-        }
-        let newSix = Array(candidates.prefix(6))
-
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
-        Task { @MainActor in
-            // Phase 1: Flip edge-on (0° -> 90°) with a slight scale down
-            withAnimation(.easeIn(duration: 0.14)) {
-                flipAngle = 90
-                flipScale = 0.92
-            }
-
-            try? await Task.sleep(for: .milliseconds(140))
-
-            // Phase 2: Instant swap while edge-on (invisible to user)
-            displayedCategories = newSix
-
-            var noAnim = Transaction()
-            noAnim.disablesAnimations = true
-            withTransaction(noAnim) {
-                flipAngle = -90
-            }
-
-            // Phase 3: Spring flip face-up (-90° -> 0°) with bounce
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
-                flipAngle = 0
-                flipScale = 1.0
-            }
-
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            isSpinningCategories = false
-        }
+        .padding(.vertical, 6)
+        .frame(minHeight: 50)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+        )
     }
 
     // MARK: - Game Mechanics & AI Synthesis
 
     private func openCategory(_ category: InterestCategory) {
-        guard !isGenerating && !isCooldownActive else { return }
+        guard !isGenerating else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
             mode = .subInterests(category: category)
@@ -695,7 +636,7 @@ struct BentoTasteBox: View {
 
                     let appropriate = aiResults.filter { ContentModerationService.isAppropriate($0) }
                     if appropriate.count >= 6 {
-                        freshTopics = Array(appropriate.prefix(10))
+                        freshTopics = Array(appropriate.prefix(12))
                     }
                 } catch {
                     // Fall back to local pool
@@ -703,16 +644,16 @@ struct BentoTasteBox: View {
 
                 guard synthesisTaskId == taskId else { return }
 
-                // If AI did not return enough suggestions, pull 10 unshown topics from local fallback pool
-                if freshTopics.count < 6 {
-                    var pool = category.fallbackInterests(for: appLanguage).filter { !currentSubInterests.contains($0) }
+                // Ensure we have 12 topics for the 3x4 grid, topping up from fallback pool if needed
+                if freshTopics.count < 12 {
+                    var pool = category.fallbackInterests(for: appLanguage).filter {
+                        !currentSubInterests.contains($0) && !freshTopics.contains($0)
+                    }
                     pool.shuffle()
-                    if pool.count >= 10 {
-                        freshTopics = Array(pool.prefix(10))
-                    } else {
-                        var fallbackAll = category.fallbackInterests(for: appLanguage)
-                        fallbackAll.shuffle()
-                        freshTopics = Array(fallbackAll.prefix(10))
+                    freshTopics.append(contentsOf: pool.prefix(12 - freshTopics.count))
+                    if freshTopics.count < 12 {
+                        let fallbackAll = category.fallbackInterests(for: appLanguage).filter { !freshTopics.contains($0) }.shuffled()
+                        freshTopics.append(contentsOf: fallbackAll.prefix(12 - freshTopics.count))
                     }
                 }
 
@@ -724,6 +665,7 @@ struct BentoTasteBox: View {
                 guard synthesisTaskId == taskId else { return }
 
                 await MainActor.run {
+                    cachedSubInterestsByCategory[category.id] = freshTopics
                     withAnimation(.easeInOut(duration: 0.2)) {
                         currentSubInterests = freshTopics
                         revealedTilesCount = 0
@@ -735,52 +677,27 @@ struct BentoTasteBox: View {
                 }
             }
         } else {
-            let fallbacks = category.fallbackInterests(for: appLanguage).shuffled()
-            let initial10 = Array(fallbacks.prefix(10))
-            currentSubInterests = initial10
-            revealedTilesCount = 0
-            isSynthesizing = true
-            isRefreshingSubInterests = false
-
-            animateStaggeredTiles(total: initial10.count)
-
-            Task {
-                do {
-                    let aiResults = try await CategoryExpansionService.expand(
-                        category: category.localizedName(for: appLanguage),
-                        existingInterests: allInterests,
-                        language: appLanguage
-                    )
-                    guard synthesisTaskId == taskId else { return }
-
-                    let appropriate = aiResults.filter { ContentModerationService.isAppropriate($0) }
-                    if appropriate.count >= 6 {
-                        let top10 = Array(appropriate.prefix(10))
-                        await MainActor.run {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                currentSubInterests = top10
-                                revealedTilesCount = top10.count
-                                isSynthesizing = false
-                            }
-                        }
-                        return
-                    }
-                    await MainActor.run {
-                        isSynthesizing = false
-                    }
-                } catch {
-                    guard synthesisTaskId == taskId else { return }
-                    await MainActor.run {
-                        isSynthesizing = false
-                    }
-                }
+            // Do not auto-refresh on category open; keep existing subtopics as-is
+            let existingTopics: [String]
+            if let cached = cachedSubInterestsByCategory[category.id], !cached.isEmpty {
+                existingTopics = cached
+            } else {
+                let initial12 = Array(category.fallbackInterests(for: appLanguage).prefix(12))
+                cachedSubInterestsByCategory[category.id] = initial12
+                existingTopics = initial12
             }
+            currentSubInterests = existingTopics
+            revealedTilesCount = existingTopics.count
+            isSynthesizing = false
+            isRefreshingSubInterests = false
         }
     }
 
     private func selectDedicatedTopic(_ topic: String) {
         guard !isGenerating && !isCooldownActive else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        isManualFieldFocused = false
+        mode = .rootCategories
         onSelectDedicatedTopic?(topic)
     }
 
@@ -813,7 +730,6 @@ struct BentoTasteBox: View {
                 }
             }
         } else {
-            // Toggle active state
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
                 if activeInterests.contains(topic) {
@@ -836,13 +752,26 @@ struct BentoTasteBox: View {
         collectInterest(trimmed)
         manualText = ""
         isManualFieldFocused = false
-        withAnimation {
-            showManualInput = false
+    }
+
+    private func submitCustomTopicForPost() {
+        let trimmed = manualText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard ContentModerationService.isAppropriate(trimmed) else {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            manualText = ""
+            return
+        }
+        collectInterest(trimmed)
+        manualText = ""
+        isManualFieldFocused = false
+        if !isGenerating && !isCooldownActive {
+            selectDedicatedTopic(trimmed)
         }
     }
 }
 
-// MARK: - Root Bento Tile (Level 0)
+// MARK: - Root Bento Tile (Level 0 - Large Full-Page Card)
 
 private struct RootBentoTile: View {
     let category: InterestCategory
@@ -854,55 +783,80 @@ private struct RootBentoTile: View {
 
     @State private var isPressed: Bool = false
 
+    private var samplePreview: String {
+        Array(category.fallbackInterests(for: language).prefix(2)).joined(separator: " · ")
+    }
+
     var body: some View {
         Button {
             guard !isDisabled else { return }
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             onTap()
         } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .top) {
-                    Image(systemName: category.iconName)
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(isDisabled ? Color.secondary.opacity(0.5) : OmakaseTheme.ink)
-                        .scaleEffect(isPressed ? 1.12 : 1.0)
-                        .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .center) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(OmakaseTheme.wash)
+                            .frame(width: 42, height: 42)
+
+                        Image(systemName: category.iconName)
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(isDisabled ? Color.secondary.opacity(0.5) : OmakaseTheme.ink)
+                    }
+                    .scaleEffect(isPressed ? 1.08 : 1.0)
+                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(isPressed ? Color.primary : Color.secondary.opacity(0.6))
-                        .offset(x: isPressed ? 2.5 : 0)
-                        .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary.opacity(0.05))
+                            .frame(width: 28, height: 28)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(isPressed ? Color.primary : Color.secondary)
+                    }
+                    .offset(x: isPressed ? 2.5 : 0)
+                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
                 }
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 2)
 
-                Text(category.localizedName(for: language))
-                    .font(.caption.weight(isPressed ? .bold : .semibold))
-                    .foregroundStyle(isDisabled ? Color.secondary : Color.primary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(category.localizedName(for: language))
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(isDisabled ? Color.secondary : Color.primary)
+                        .lineLimit(1)
+
+                    Text(samplePreview)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .frame(width: width, height: height, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .systemBackground))
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
                     .shadow(
                         color: .black.opacity(isPressed ? 0.01 : (isDisabled ? 0.01 : 0.04)),
-                        radius: isPressed ? 0.5 : 3,
-                        y: isPressed ? 0.5 : 1.5
+                        radius: isPressed ? 1 : 4,
+                        y: isPressed ? 0.5 : 2
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .strokeBorder(
-                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(isDisabled ? 0.06 : 0.12),
-                        lineWidth: isPressed ? 1.5 : 1
+                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(isDisabled ? 0.06 : 0.13),
+                        lineWidth: isPressed ? 1.6 : 1
                     )
             )
             .offset(y: isPressed ? 1.5 : 0)
-            .scaleEffect(isPressed ? 0.94 : 1.0)
+            .scaleEffect(isPressed ? 0.96 : 1.0)
             .opacity(isDisabled ? 0.45 : 1.0)
             .animation(.spring(response: 0.2, dampingFraction: 0.68), value: isPressed)
             .animation(.easeInOut(duration: 0.2), value: isDisabled)
@@ -912,7 +866,7 @@ private struct RootBentoTile: View {
     }
 }
 
-// MARK: - Sub-Interest Bento Tile (Single-Shot Dedicated Post Generator)
+// MARK: - Sub-Interest Bento Tile (Full-Canvas 3x2 Single-Shot Dedicated Post Generator)
 
 private struct SubInterestBentoTile: View {
     let title: String
@@ -931,48 +885,64 @@ private struct SubInterestBentoTile: View {
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             onTap()
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(isDisabled ? Color.secondary.opacity(0.6) : OmakaseTheme.ink)
-                    .scaleEffect(isPressed ? 1.15 : 1.0)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .center) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(OmakaseTheme.wash)
+                            .frame(width: 34, height: 34)
+
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(isDisabled ? Color.secondary.opacity(0.6) : OmakaseTheme.ink)
+                    }
+                    .scaleEffect(isPressed ? 1.12 : 1.0)
                     .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
 
+                    Spacer()
+
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary.opacity(0.05))
+                            .frame(width: 28, height: 28)
+
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(isDisabled ? Color.secondary.opacity(0.3) : Color.secondary)
+                    }
+                    .offset(x: isPressed ? 1.5 : 0, y: isPressed ? -1.5 : 0)
+                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+                }
+
+                Spacer(minLength: 2)
+
                 Text(title)
-                    .font(.caption.weight(isPressed ? .semibold : .medium))
+                    .font(.system(size: 15.5, weight: .semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .foregroundStyle(isDisabled ? Color.secondary : Color.primary)
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(isDisabled ? Color.secondary.opacity(0.3) : Color.secondary.opacity(0.6))
-                    .offset(x: isPressed ? 1.5 : 0, y: isPressed ? -1.5 : 0)
-                    .scaleEffect(isPressed ? 1.15 : 1.0)
-                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
             }
-            .padding(.horizontal, 10)
-            .frame(width: max(width, 130), height: height)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(width: width, height: height, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .systemBackground))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
                     .shadow(
                         color: .black.opacity(isPressed ? 0.01 : 0.03),
-                        radius: isPressed ? 0.5 : 2.5,
+                        radius: isPressed ? 1 : 3,
                         y: isPressed ? 0.5 : 1.5
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(
-                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(isDisabled ? 0.06 : 0.12),
+                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(isDisabled ? 0.06 : 0.13),
                         lineWidth: isPressed ? 1.5 : 1
                     )
             )
             .offset(y: isPressed ? 1.5 : 0)
-            .scaleEffect(isRefreshing ? 0.96 : (isRevealed ? (isPressed ? 0.94 : 1.0) : 0.75))
+            .scaleEffect(isRefreshing ? 0.96 : (isRevealed ? (isPressed ? 0.96 : 1.0) : 0.78))
             .opacity(isRefreshing ? 0.45 : (isRevealed ? (isDisabled ? 0.45 : 1.0) : 0.0))
             .animation(.spring(response: 0.32, dampingFraction: 0.75), value: isRevealed)
             .animation(.spring(response: 0.2, dampingFraction: 0.68), value: isPressed)
@@ -1004,8 +974,8 @@ private struct BentoPressButtonStyle: ButtonStyle {
 private struct BentoRefreshButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.93 : 1.0)
-            .opacity(configuration.isPressed ? 0.75 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .opacity(configuration.isPressed ? 0.78 : 1.0)
             .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
             .onChange(of: configuration.isPressed) { _, pressed in
                 if pressed {
@@ -1039,25 +1009,23 @@ private struct LetterboxdBentoTile: View {
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             onTap()
         } label: {
-            HStack(spacing: 8) {
-                // Sleek, legally compliant cinema icon badge (replaces imitation 3-dot logo)
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color(hex: 0x00E054).opacity(0.18))
-                        .frame(width: 28, height: 28)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .center, spacing: 6) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(hex: 0x00E054).opacity(0.18))
+                            .frame(width: 34, height: 34)
 
-                    Image(systemName: isConnected ? "popcorn.fill" : "film.stack.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0x00E054))
-                }
+                        Image(systemName: isConnected ? "popcorn.fill" : "film.stack.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color(hex: 0x00E054))
+                    }
 
-                VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
                         Text("LETTERBOXD")
-                            .font(.system(size: 9, weight: .heavy, design: .rounded))
+                            .font(.system(size: 9.5, weight: .heavy, design: .rounded))
                             .foregroundStyle(Color(hex: 0x00E054))
                             .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
 
                         if isConnected {
                             Circle()
@@ -1066,34 +1034,43 @@ private struct LetterboxdBentoTile: View {
                         }
                     }
 
-                    Text(isConnected ? l10n.letterboxdRecentFilms : l10n.letterboxdConnectDiary)
-                        .font(.system(size: 11.5, weight: .bold))
-                        .foregroundStyle(Color.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                    Spacer(minLength: 2)
+
+                    Image(systemName: isConnected ? "sparkles" : "plus.circle.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0x00E054).opacity(0.9))
                 }
 
                 Spacer(minLength: 2)
 
-                Image(systemName: isConnected ? "sparkles" : "plus.circle.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0x00E054).opacity(0.85))
-                    .scaleEffect(isPressed ? 1.15 : 1.0)
-                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isConnected ? l10n.letterboxdRecentFilms : l10n.letterboxdConnectDiary)
+                        .font(.system(size: 14.5, weight: .bold))
+                        .foregroundStyle(Color.white)
+                        .lineLimit(2)
+
+                    if isConnected {
+                        Text("@\(username)")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(Color.white.opacity(0.7))
+                            .lineLimit(1)
+                    }
+                }
             }
-            .padding(.horizontal, 10)
-            .frame(width: width, height: height)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(width: width, height: height, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color(hex: 0x14181C))
                     .shadow(
-                        color: Color(hex: 0x00E054).opacity(isPressed ? 0.25 : 0.1),
+                        color: Color(hex: 0x00E054).opacity(isPressed ? 0.25 : 0.12),
                         radius: isPressed ? 1 : 4,
                         y: isPressed ? 0.5 : 1.5
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
                             colors: [
@@ -1103,11 +1080,11 @@ private struct LetterboxdBentoTile: View {
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: isPressed ? 1.6 : 1.2
+                        lineWidth: isPressed ? 1.5 : 1.1
                     )
             )
             .offset(y: isPressed ? 1.5 : 0)
-            .scaleEffect(isPressed ? 0.95 : 1.0)
+            .scaleEffect(isPressed ? 0.96 : 1.0)
             .opacity(isDisabled ? 0.5 : 1.0)
             .animation(.spring(response: 0.2, dampingFraction: 0.68), value: isPressed)
         }

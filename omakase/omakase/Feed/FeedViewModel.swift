@@ -204,7 +204,7 @@ final class FeedViewModel {
                         {
                             let l10n = L10n(lang: self.contentLanguage)
                             self.errorMessage = l10n.streamEndedNoText
-                            self.markPostComplete(streamPostID)
+                            self.handleStreamAbandoned(postID: streamPostID)
                         }
                     }
                 }
@@ -231,7 +231,7 @@ final class FeedViewModel {
                         apiBase: apiBaseForErrors,
                         l10n: L10n(lang: self.contentLanguage)
                     )
-                    self.markPostComplete(streamPostID)
+                    self.handleStreamAbandoned(postID: streamPostID)
                 }
             }
             await MainActor.run { [weak self] in
@@ -303,6 +303,24 @@ final class FeedViewModel {
                         await Task.yield()
                     }
                 }
+                let streamEndedByCancellation = Task.isCancelled
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    if streamEndedByCancellation {
+                        self.handleStreamAbandoned(postID: streamPostID)
+                    } else if let p = self.posts.first(where: { $0.id == streamPostID }),
+                              !p.isComplete,
+                              p.text.isEmpty,
+                              self.errorMessage == nil {
+                        let l10n = L10n(lang: self.contentLanguage)
+                        self.errorMessage = l10n.streamEndedNoText
+                        self.handleStreamAbandoned(postID: streamPostID)
+                    }
+                }
+            } catch is CancellationError {
+                await MainActor.run { [weak self] in
+                    self?.handleStreamAbandoned(postID: streamPostID)
+                }
             } catch {
                 await MainActor.run { [weak self] in
                     guard let self else { return }
@@ -311,7 +329,7 @@ final class FeedViewModel {
                         apiBase: apiBaseForErrors,
                         l10n: L10n(lang: self.contentLanguage)
                     )
-                    self.markPostComplete(streamPostID)
+                    self.handleStreamAbandoned(postID: streamPostID)
                 }
             }
 
