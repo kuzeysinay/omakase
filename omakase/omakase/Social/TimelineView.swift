@@ -117,6 +117,11 @@ struct TimelineView: View {
                 )
                 .environment(\.appLanguage, appLanguage)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .omakaseDidUpdateBlockedUsers)) { _ in
+                let blocked = FirestoreService.shared.blockedUIDs
+                userResults.removeAll { blocked.contains($0.id) }
+                followingSet.subtract(blocked)
+            }
         }
     }
 

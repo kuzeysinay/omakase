@@ -5,7 +5,7 @@
 
 import SwiftUI
 
-/// Shows another user's profile with follow/unfollow action.
+/// Shows another user's profile with follow/unfollow, report, and block actions.
 struct UserProfileSheet: View {
 
     let userId: String
@@ -16,11 +16,14 @@ struct UserProfileSheet: View {
 
     @State private var profile: UserProfile?
     @State private var isFollowing = false
+    @State private var isBlocked = false
     @State private var isPending = false
     @State private var followerCount = 0
     @State private var followingCount = 0
     @State private var userPosts: [SharedPost] = []
     @State private var isLoadingPosts = true
+    @State private var showBlockConfirm = false
+    @State private var showReportConfirmation = false
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -41,6 +44,60 @@ struct UserProfileSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(l10n.done) { dismiss() }
                 }
+
+                if userId != authService.uid {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Button {
+                                Task {
+                                    guard let uid = authService.uid else { return }
+                                    try? await FirestoreService.shared.reportUser(
+                                        reportedUid: userId,
+                                        reporterUid: uid
+                                    )
+                                    showReportConfirmation = true
+                                }
+                            } label: {
+                                Label(l10n.reportUser, systemImage: "flag")
+                            }
+
+                            if isBlocked {
+                                Button {
+                                    Task { await toggleBlock() }
+                                } label: {
+                                    Label(l10n.unblockUser, systemImage: "hand.raised.slash")
+                                }
+                            } else {
+                                Button(role: .destructive) {
+                                    showBlockConfirm = true
+                                } label: {
+                                    Label(l10n.blockUser, systemImage: "hand.raised")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(.primary)
+                        }
+                        .accessibilityLabel(l10n.feedMoreActionsA11y)
+                    }
+                }
+            }
+            .alert(l10n.confirmBlockUserTitle, isPresented: $showBlockConfirm) {
+                Button(l10n.cancel, role: .cancel) { }
+                Button(l10n.blockUser, role: .destructive) {
+                    Task {
+                        await toggleBlock()
+                        dismiss()
+                    }
+                }
+            } message: {
+                Text(l10n.confirmBlockUserMessage)
+            }
+            .alert(l10n.reportUser, isPresented: $showReportConfirmation) {
+                Button(l10n.ok, role: .cancel) { }
+            } message: {
+                Text(l10n.reportSubmittedToast)
             }
         }
         .task { await loadProfile() }
@@ -80,24 +137,38 @@ struct UserProfileSheet: View {
             }
 
             if userId != authService.uid {
-                Button {
-                    Task { await toggleFollow() }
-                } label: {
-                    if isPending {
-                        ProgressView().controlSize(.small)
+                HStack(spacing: 12) {
+                    if !isBlocked {
+                        Button {
+                            Task { await toggleFollow() }
+                        } label: {
+                            if isPending {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Text(isFollowing ? l10n.following : l10n.follow)
+                                    .fontWeight(.semibold)
+                                    .frame(maxWidth: 180)
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(isFollowing ? .secondary : .primary)
+                        .controlSize(.large)
+                        .disabled(isPending)
                     } else {
-                        Text(isFollowing ? l10n.following : l10n.follow)
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: 200)
+                        Button {
+                            Task { await toggleBlock() }
+                        } label: {
+                            Label(l10n.unblockUser, systemImage: "hand.raised.slash")
+                                .fontWeight(.semibold)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                        .controlSize(.large)
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(isFollowing ? .secondary : .primary)
-                .controlSize(.large)
-                .disabled(isPending)
             }
 
-            if !user.interests.isEmpty {
+            if !user.interests.isEmpty && !isBlocked {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(l10n.yourTastes)
                         .font(.subheadline.bold())
@@ -119,7 +190,7 @@ struct UserProfileSheet: View {
 
             if isLoadingPosts {
                 ProgressView().padding()
-            } else if userPosts.isEmpty {
+            } else if userPosts.isEmpty || isBlocked {
                 Text(l10n.noPostsYet)
                     .foregroundStyle(.secondary)
                     .padding()
@@ -127,7 +198,7 @@ struct UserProfileSheet: View {
                 LazyVStack(spacing: 16) {
                     ForEach(userPosts) { post in
                         TimelinePostCard(
-                            post: post, 
+                            post: post,
                             authService: authService,
                             onAuthorTap: { },
                             onDelete: nil
@@ -149,10 +220,11 @@ struct UserProfileSheet: View {
     private func loadProfile() async {
         guard let uid = authService.uid else { return }
         profile = try? await FirestoreService.shared.fetchUserProfile(uid: userId)
+        isBlocked = FirestoreService.shared.isUserBlocked(targetUid: userId)
         isFollowing = (try? await FirestoreService.shared.isFollowing(targetUid: userId, currentUid: uid)) ?? false
         followerCount = (try? await FirestoreService.shared.fetchFollowerCount(uid: userId)) ?? 0
         followingCount = (try? await FirestoreService.shared.fetchFollowingCount(uid: userId)) ?? 0
-        
+
         userPosts = (try? await FirestoreService.shared.fetchUserTimeline(uid: userId)) ?? []
         isLoadingPosts = false
     }
@@ -170,6 +242,28 @@ struct UserProfileSheet: View {
                     currentUid: uid, currentDisplayName: authService.displayName ?? ""
                 )
                 isFollowing = true; followerCount += 1
+            }
+        } catch { }
+        isPending = false
+    }
+
+    private func toggleBlock() async {
+        guard let uid = authService.uid else { return }
+        isPending = true
+        do {
+            if isBlocked {
+                try await FirestoreService.shared.unblockUser(targetUid: userId, currentUid: uid)
+                isBlocked = false
+                userPosts = (try? await FirestoreService.shared.fetchUserTimeline(uid: userId)) ?? []
+            } else {
+                try await FirestoreService.shared.blockUser(
+                    targetUid: userId,
+                    targetDisplayName: profile?.displayName ?? "",
+                    currentUid: uid
+                )
+                isBlocked = true
+                isFollowing = false
+                userPosts = []
             }
         } catch { }
         isPending = false
@@ -196,6 +290,8 @@ struct MyProfileSheet: View {
     @AppStorage("omakase.appearance") private var appearanceCode: String = AppAppearance.system.rawValue
     @State private var isShowingLetterboxdPrompt = false
     @State private var tempLetterboxdUsername = ""
+    @State private var isShowingDeleteAccountAlert = false
+    @State private var isDeletingAccount = false
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -298,6 +394,66 @@ struct MyProfileSheet: View {
                     }
                 }
 
+                // MARK: - Support & Legal (Guidelines 1.2, 1.5 & 5.1.1(i))
+                Section(l10n.profileSupportAndLegal) {
+                    if let supportURL = URL(string: "mailto:destek@getomakase.app") {
+                        Link(destination: supportURL) {
+                            HStack {
+                                Label {
+                                    Text(l10n.contactSupport)
+                                        .foregroundStyle(.primary)
+                                } icon: {
+                                    Image(systemName: "envelope")
+                                        .foregroundStyle(.primary)
+                                }
+                                Spacer()
+                                Text("destek@getomakase.app")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+
+                    if let privacyURL = URL(string: "https://getomakase.app/privacy.html") {
+                        Link(destination: privacyURL) {
+                            HStack {
+                                Label {
+                                    Text(l10n.privacyPolicy)
+                                        .foregroundStyle(.primary)
+                                } icon: {
+                                    Image(systemName: "hand.raised")
+                                        .foregroundStyle(.primary)
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+
+                    if let termsURL = URL(string: "https://getomakase.app/terms.html") {
+                        Link(destination: termsURL) {
+                            HStack {
+                                Label {
+                                    Text(l10n.termsOfUse)
+                                        .foregroundStyle(.primary)
+                                } icon: {
+                                    Image(systemName: "doc.text")
+                                        .foregroundStyle(.primary)
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+                }
+
                 // MARK: - Posts
                 Section(l10n.profilePosts) {
                     if isLoadingPosts {
@@ -331,15 +487,33 @@ struct MyProfileSheet: View {
                     }
                 }
 
-                // MARK: - Account / Sign Out
+                // MARK: - Account / Sign Out & Delete Account (Guideline 5.1.1(v))
                 Section(l10n.profileAccount) {
-                    Button(role: .destructive) {
+                    Button {
                         authService.signOut()
                         dismiss()
                     } label: {
                         Label(l10n.signOut, systemImage: "rectangle.portrait.and.arrow.right")
+                            .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
+                    .disabled(isDeletingAccount)
+
+                    Button(role: .destructive) {
+                        isShowingDeleteAccountAlert = true
+                    } label: {
+                        if isDeletingAccount {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                Text(l10n.deleteAccount)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        } else {
+                            Label(l10n.deleteAccount, systemImage: "trash")
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    }
+                    .disabled(isDeletingAccount)
                 }
             }
             .listStyle(.insetGrouped)
@@ -364,6 +538,21 @@ struct MyProfileSheet: View {
             }
         } message: {
             Text(l10n.letterboxdUsernamePromptMessage)
+        }
+        .alert(l10n.confirmDeleteAccountTitle, isPresented: $isShowingDeleteAccountAlert) {
+            Button(l10n.cancel, role: .cancel) { }
+            Button(l10n.deleteAccountConfirmButton, role: .destructive) {
+                Task {
+                    isDeletingAccount = true
+                    let deleted = await authService.deleteAccount(l10n: l10n)
+                    isDeletingAccount = false
+                    if deleted {
+                        dismiss()
+                    }
+                }
+            }
+        } message: {
+            Text(l10n.confirmDeleteAccountMessage)
         }
         .task {
             guard let uid = authService.uid else { return }

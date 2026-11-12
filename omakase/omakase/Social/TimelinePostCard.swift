@@ -23,6 +23,8 @@ struct TimelinePostCard: View {
     @State private var localReactionCounts: [String: Int] = [:]
     @State private var showComments = false
     @State private var showDeepDive = false
+    @State private var showBlockConfirm = false
+    @State private var showReportConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -76,6 +78,26 @@ struct TimelinePostCard: View {
             deepDiveSheet
                 .environment(\.appLanguage, appLanguage)
         }
+        .alert(l10n.confirmBlockUserTitle, isPresented: $showBlockConfirm) {
+            Button(l10n.cancel, role: .cancel) { }
+            Button(l10n.blockUser, role: .destructive) {
+                Task {
+                    guard let uid = authService.uid else { return }
+                    try? await FirestoreService.shared.blockUser(
+                        targetUid: post.authorId,
+                        targetDisplayName: post.authorName,
+                        currentUid: uid
+                    )
+                }
+            }
+        } message: {
+            Text(l10n.confirmBlockUserMessage)
+        }
+        .alert(l10n.reportPost, isPresented: $showReportConfirmation) {
+            Button(l10n.ok, role: .cancel) { }
+        } message: {
+            Text(l10n.reportSubmittedToast)
+        }
     }
 
     // MARK: - Author header
@@ -125,10 +147,36 @@ struct TimelinePostCard: View {
                         .frame(width: 32, height: 32)
                 }
                 .tint(.primary)
+                .accessibilityLabel(l10n.feedMoreActionsA11y)
             } else {
-                Image(systemName: "arrow.up.right.circle")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                Menu {
+                    Button {
+                        Task {
+                            guard let uid = authService.uid, let postId = post.id else { return }
+                            try? await FirestoreService.shared.reportPost(
+                                postId: postId,
+                                reportedAuthorUid: post.authorId,
+                                reporterUid: uid
+                            )
+                            showReportConfirmation = true
+                        }
+                    } label: {
+                        Label(l10n.reportPost, systemImage: "flag")
+                    }
+
+                    Button(role: .destructive) {
+                        showBlockConfirm = true
+                    } label: {
+                        Label(l10n.blockUser, systemImage: "hand.raised")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, height: 32)
+                }
+                .tint(.primary)
+                .accessibilityLabel(l10n.feedMoreActionsA11y)
             }
         }
     }

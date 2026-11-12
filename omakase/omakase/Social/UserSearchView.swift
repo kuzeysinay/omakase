@@ -17,6 +17,7 @@ struct UserSearchView: View {
     @State private var isSearching = false
     @State private var followingSet: Set<String> = []
     @State private var pendingActions: Set<String> = []
+    @State private var selectedProfileUid: String?
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -78,6 +79,22 @@ struct UserSearchView: View {
                 await search()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .omakaseDidUpdateBlockedUsers)) { _ in
+            guard let uid = authService.uid else { return }
+            Task {
+                if let blocked = try? await FirestoreService.shared.fetchBlockedUIDs(currentUid: uid) {
+                    results.removeAll { blocked.contains($0.id) }
+                    followingSet.subtract(blocked)
+                }
+            }
+        }
+        .sheet(item: Binding(
+            get: { selectedProfileUid.map { ProfileDestination(uid: $0) } },
+            set: { selectedProfileUid = $0?.uid }
+        )) { dest in
+            UserProfileSheet(targetUid: dest.uid, authService: authService)
+                .presentationDetents([.large])
+        }
     }
 
     // MARK: - Subviews
@@ -94,6 +111,7 @@ struct UserSearchView: View {
                 Button { query = ""; results = [] } label: {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                 }
+                .accessibilityLabel(l10n.clearSearch)
             }
         }
         .padding(.horizontal, 12)
@@ -103,11 +121,18 @@ struct UserSearchView: View {
 
     private func userRow(_ user: UserProfile) -> some View {
         HStack(spacing: 12) {
-            avatarView(urlString: user.photoURL)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(user.displayName).font(.body.bold())
-                Text(user.formattedHandle).font(.caption).foregroundStyle(.secondary)
+            Button {
+                selectedProfileUid = user.id
+            } label: {
+                HStack(spacing: 12) {
+                    avatarView(urlString: user.photoURL)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(user.displayName).font(.body.bold()).foregroundStyle(.primary)
+                        Text(user.formattedHandle).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
+            .buttonStyle(.plain)
             Spacer()
             followButton(for: user)
         }

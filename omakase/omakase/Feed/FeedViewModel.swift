@@ -111,20 +111,6 @@ final class FeedViewModel {
         isGenerating = true
         activeStreamPostID = postID
 
-        // #region agent log
-        AgentDebugLog.log(
-            location: "FeedViewModel.swift:requestNextPost",
-            message: "starting stream",
-            hypothesisId: "H5",
-            data: [
-                "baseURL": baseURL.absoluteString,
-                "streamPath": "feed/stream",
-                "interestsCount": String(interests.count),
-                "seenCount": String(max(posts.count - 1, 0)),
-            ]
-        )
-        // #endregion
-
         let url = baseURL.appendingPathComponent("feed/stream")
         var requestBody: [String: Any] = [
             "interests": interests,
@@ -170,32 +156,8 @@ final class FeedViewModel {
                     guard let self else { return }
                     if streamEndedByCancellation {
                         self.handleStreamAbandoned(postID: streamPostID)
-                        // #region agent log
-                        AgentDebugLog.log(
-                            location: "FeedViewModel.swift:streamCancelAfterBreak",
-                            message: "stream loop ended via cancellation (break); abandoned post",
-                            hypothesisId: "H4",
-                            data: [
-                                "runId": "post-fix",
-                            ]
-                        )
-                        // #endregion
                     } else {
-                        // #region agent log
                         let p = self.posts.first { $0.id == streamPostID }
-                        let incomplete = p.map { !$0.isComplete } ?? true
-                        let len = p?.text.count ?? -1
-                        AgentDebugLog.log(
-                            location: "FeedViewModel.swift:streamLoopEnd",
-                            message: "for-await stream finished",
-                            hypothesisId: "H4",
-                            data: [
-                                "postIncomplete": String(incomplete),
-                                "textLength": String(len),
-                                "runId": "post-fix",
-                            ]
-                        )
-                        // #endregion
                         if
                             let p,
                             !p.isComplete,
@@ -213,17 +175,6 @@ final class FeedViewModel {
                     self?.handleStreamAbandoned(postID: streamPostID)
                 }
             } catch {
-                // #region agent log
-                AgentDebugLog.log(
-                    location: "FeedViewModel.swift:streamError",
-                    message: "stream threw",
-                    hypothesisId: "H4",
-                    data: [
-                        "error": String(describing: error),
-                        "runId": "post-fix",
-                    ]
-                )
-                // #endregion
                 await MainActor.run { [weak self] in
                     guard let self else { return }
                     self.errorMessage = Self.friendlyStreamError(
@@ -568,35 +519,6 @@ final class FeedViewModel {
         // Each event's `data` is a JSON object. Parse defensively so a single
         // malformed frame doesn't take down the stream.
         let payload = Self.decodeJSON(event.data)
-        // #region agent log
-        let dataPrefix = String(event.data.prefix(200))
-        if event.event == "start" || event.event == "done" || event.event == "error" {
-            AgentDebugLog.log(
-                location: "FeedViewModel.swift:handle",
-                message: "sse event",
-                hypothesisId: "H1",
-                data: [
-                    "eventName": event.event,
-                    "dataLen": String(event.data.count),
-                    "payloadKeys": payload.keys.sorted().joined(separator: ","),
-                    "dataPrefix": dataPrefix,
-                ]
-            )
-        } else if event.event == "token" {
-            let hasText = payload["text"] as? String != nil
-            if !hasText {
-                AgentDebugLog.log(
-                    location: "FeedViewModel.swift:handle",
-                    message: "token without string text",
-                    hypothesisId: "H2",
-                    data: [
-                        "payloadKeys": payload.keys.sorted().joined(separator: ","),
-                        "dataPrefix": dataPrefix,
-                    ]
-                )
-            }
-        }
-        // #endregion
 
         switch event.event {
         case "format":
@@ -613,19 +535,6 @@ final class FeedViewModel {
             }
         case "token":
             if let text = payload["text"] as? String {
-                // #region agent log
-                if text.count > 0 {
-                    let cur = posts.first { $0.id == postID }?.text.count ?? 0
-                    if cur == 0 {
-                        AgentDebugLog.log(
-                            location: "FeedViewModel.swift:handle",
-                            message: "first token chunk for post",
-                            hypothesisId: "H1",
-                            data: ["chunkLen": String(text.count)]
-                        )
-                    }
-                }
-                // #endregion
                 appendText(text, to: postID)
             }
         case "done":
@@ -713,45 +622,3 @@ final class FeedViewModel {
         return obj
     }
 }
-
-// #region agent log
-nonisolated enum AgentDebugLog {
-    private static let ingestURL = URL(string: "http://127.0.0.1:7607/ingest/20ae730c-fbc4-40a0-8eec-3e252145ce8f")!
-    private static let sessionId = "2ae36b"
-
-    nonisolated static func log(
-        location: String,
-        message: String,
-        hypothesisId: String,
-        data: [String: String] = [:]
-    ) {
-        let ts = Int64(Date().timeIntervalSince1970 * 1000)
-        let payload: [String: Any] = [
-            "sessionId": sessionId,
-            "location": location,
-            "message": message,
-            "hypothesisId": hypothesisId,
-            "timestamp": ts,
-            "data": data,
-        ]
-        guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
-        if let line = String(data: body, encoding: .utf8) {
-            print("[agent-debug] \(line)")
-        }
-        var request = URLRequest(url: ingestURL, timeoutInterval: 5)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(sessionId, forHTTPHeaderField: "X-Debug-Session-Id")
-        request.httpBody = body
-        URLSession.shared.dataTask(with: request) { _, response, error in
-            if let error {
-                print("[agent-debug] Ingest POST failed: \(error.localizedDescription) — .cursor debug log file on Mac will not be updated (ingest on 127.0.0.1:7607 not reachable or not running).")
-                return
-            }
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                print("[agent-debug] Ingest returned HTTP \(http.statusCode) — .cursor log may be empty.")
-            }
-        }.resume()
-    }
-}
-// #endregion

@@ -115,6 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
       "cta.desc": "Omakase iOS için yayında. Günlük merak ritüelinize başlamak için hemen indirin veya TestFlight erken erişim listesine katılın.",
       "cta.joinBtn": "TestFlight'a Katıl",
 
+      "footer.privacy": "Gizlilik Politikası",
+      "footer.terms": "Kullanım Koşulları",
       "footer.contact": "İletişim",
       "footer.copy": "© 2026 Omakase. Mürekkep ve kağıt sadeliğiyle iOS için tasarlandı."
     },
@@ -221,6 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
       "cta.desc": "Omakase is live on iOS. Download now or join the TestFlight early access list to begin your daily ritual of curiosity.",
       "cta.joinBtn": "Join TestFlight",
 
+      "footer.privacy": "Privacy Policy",
+      "footer.terms": "Terms of Use",
       "footer.contact": "Contact",
       "footer.copy": "© 2026 Omakase. Crafted for iOS with ink-and-paper simplicity."
     }

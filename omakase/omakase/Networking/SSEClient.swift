@@ -79,17 +79,6 @@ enum SSEClient {
                     guard contentType.contains("text/event-stream") else {
                         throw SSEError.notEventStream(contentType: contentType)
                     }
-                    // #region agent log
-                    AgentDebugLog.log(
-                        location: "SSEClient.swift:events",
-                        message: "sse response ok",
-                        hypothesisId: "H4",
-                        data: [
-                            "httpStatus": String(http.statusCode),
-                            "contentType": contentType,
-                        ]
-                    )
-                    // #endregion
 
                     // Assemble a byte buffer and split on `\n\n` / `\r\n\r\n` so the event
                     // boundary never depends on line iteration quirks or UTF-8 line assembly.

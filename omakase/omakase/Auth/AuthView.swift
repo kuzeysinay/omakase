@@ -90,7 +90,7 @@ struct AuthView: View {
                 candidates.append(numbered)
             }
         }
-        return Array(candidates.prefix(3))
+        return Array(ContentModerationService.filterAppropriate(candidates).prefix(3))
     }
 
     var body: some View {
@@ -171,6 +171,7 @@ struct AuthView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(appLanguage == .turkish ? "Geri" : "Back")
                 } else {
                     Spacer().frame(width: 40, height: 40)
                 }
@@ -241,8 +242,11 @@ struct AuthView: View {
             messageBanner
 
             // Primary Actions
-            VStack(spacing: 14) {
-                // 1. Continue with Google
+            VStack(spacing: 12) {
+                // 1. Continue with Apple (Guideline 4.8 equivalent primary login option)
+                appleButton
+
+                // 2. Continue with Google
                 googleButton
 
                 // Divider
@@ -259,7 +263,7 @@ struct AuthView: View {
                 }
                 .padding(.vertical, 4)
 
-                // 2. Create account with Email (Starts multi-step wizard)
+                // 3. Create account with Email (Starts multi-step wizard)
                 Button {
                     authService.clearMessages()
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
@@ -299,6 +303,24 @@ struct AuthView: View {
                     .padding(.vertical, 8)
             }
             .buttonStyle(.plain)
+
+            // Support & Legal links accessible before sign-in (Guideline 1.5 & 5.1.1(i))
+            HStack(spacing: 12) {
+                if let termsURL = URL(string: "https://getomakase.app/terms.html") {
+                    Link(l10n.termsOfUse, destination: termsURL)
+                }
+                Text("•").foregroundStyle(.tertiary)
+                if let privacyURL = URL(string: "https://getomakase.app/privacy.html") {
+                    Link(l10n.privacyPolicy, destination: privacyURL)
+                }
+                Text("•").foregroundStyle(.tertiary)
+                if let supportURL = URL(string: "mailto:destek@getomakase.app") {
+                    Link(l10n.contactSupport, destination: supportURL)
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .padding(.top, 4)
         }
     }
 
@@ -370,6 +392,7 @@ struct AuthView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(appLanguage == .turkish ? "Şifre görünürlüğü" : "Password visibility")
                     }
                     .padding(.horizontal, 16)
                     .frame(height: 52)
@@ -447,6 +470,7 @@ struct AuthView: View {
                                 .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(appLanguage == .turkish ? "Metni temizle" : "Clear text")
                     }
                 }
                 .padding(.horizontal, 16)
@@ -750,12 +774,37 @@ struct AuthView: View {
                 }
                 .padding(.vertical, 2)
 
+                appleButton
+
                 googleButton
             }
         }
     }
 
     // MARK: - Shared Components
+
+    private var appleButton: some View {
+        Button {
+            focusedField = nil
+            authService.signInWithApple()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "apple.logo")
+                    .font(.system(size: 19, weight: .semibold))
+                Text(l10n.signInWithApple)
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundStyle(Color(uiColor: .systemBackground))
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.primary)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(authService.isSigningIn)
+    }
 
     private var googleButton: some View {
         Button {
@@ -880,6 +929,10 @@ struct AuthView: View {
             authService.setError(l10n.authErrorNameRequired)
             return
         }
+        guard ContentModerationService.isAppropriate(trimmedDisplayName, maxLength: 40) else {
+            authService.setError(l10n.moderationErrorInappropriateText)
+            return
+        }
         if !hasManuallyEditedUsername || sanitizedUsername.isEmpty {
             if let firstSuggestion = usernameSuggestions.first {
                 username = firstSuggestion
@@ -898,6 +951,10 @@ struct AuthView: View {
         authService.clearMessages()
         guard sanitizedUsername.count >= 3 else {
             authService.setError(l10n.authUsernameTooShort)
+            return
+        }
+        guard ContentModerationService.isAppropriate(sanitizedUsername, maxLength: 20) else {
+            authService.setError(l10n.moderationErrorInappropriateText)
             return
         }
         Task {

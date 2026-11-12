@@ -19,9 +19,26 @@ final class TimelineViewModel {
     private(set) var followingUIDs: [String] = []
 
     private let authService: AuthService
+    @ObservationIgnored
+    private var blockObserver: NSObjectProtocol?
 
     init(authService: AuthService) {
         self.authService = authService
+        blockObserver = NotificationCenter.default.addObserver(
+            forName: .omakaseDidUpdateBlockedUsers,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.filterOutBlockedAuthors()
+            }
+        }
+    }
+
+    deinit {
+        if let blockObserver {
+            NotificationCenter.default.removeObserver(blockObserver)
+        }
     }
 
     // MARK: - Actions
@@ -53,6 +70,12 @@ final class TimelineViewModel {
 
     func removePost(id: String) {
         posts.removeAll { $0.id == id }
+    }
+
+    func filterOutBlockedAuthors() {
+        let blocked = FirestoreService.shared.blockedUIDs
+        posts.removeAll { blocked.contains($0.authorId) }
+        followingUIDs.removeAll { blocked.contains($0) }
     }
 
     /// Refresh the timeline (pull-to-refresh).

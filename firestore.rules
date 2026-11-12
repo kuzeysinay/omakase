@@ -1,9 +1,261 @@
 rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users/{userId}
+//   - id: string (matches userId, immutable)
+//   - displayName: string (required, <= 100 chars)
+//   - username: string (optional, <= 40 chars)
+//   - email: string (optional, <= 254 chars)
+//   - photoURL: string (optional, <= 2048 chars)
+//   - interests: list<string> (optional, <= 100 items)
+//   - createdAt: timestamp (required)
+//   - searchableName: string (optional, <= 100 chars)
+//   - searchableUsername: string (optional, <= 40 chars)
+//
+// Subcollection: users/{userId}/following/{targetUid}
+//   - followedAt: timestamp
+//   - targetDisplayName: string (optional, <= 100 chars)
+//
+// Subcollection: users/{userId}/followers/{followerUid}
+//   - followedAt: timestamp
+//   - followerDisplayName: string (optional, <= 100 chars)
+//
+// Subcollection: users/{userId}/blocked_users/{blockedUid}
+//   - blockedUid: string (optional, <= 128 chars)
+//   - blockedAt: timestamp (optional)
+//   - displayName: string (optional, <= 100 chars)
+//
+// Collection: shared_posts/{postId}
+//   - authorId: string (required, matches creator UID, immutable)
+//   - authorName: string (required, <= 100 chars)
+//   - authorUsername: string (optional, <= 40 chars)
+//   - authorPhotoURL: string (optional, <= 2048 chars)
+//   - title: string (required, <= 500 chars)
+//   - text: string (required, <= 20000 chars)
+//   - tags: list<string> (optional, <= 30 items)
+//   - originalCreatedAt: timestamp (required)
+//   - sharedAt: timestamp (required)
+//   - deepDiveText: string (optional, <= 50000 chars)
+//   - reactionCounts: map<string, int> (optional)
+//   - totalReactions: int (optional)
+//   - commentCount: int (optional)
+//   - reportedBy: list<string> (optional, <= 1000 items)
+//
+// Subcollection: shared_posts/{postId}/reactions/{reactionUid}
+//   - emoji: string (required, <= 32 chars)
+//   - reactedAt: timestamp (required)
+//
+// Subcollection: shared_posts/{postId}/comments/{commentId}
+//   - authorId: string (required, matches creator UID, immutable)
+//   - authorName: string (required, <= 100 chars)
+//   - authorPhotoURL: string (optional, <= 2048 chars)
+//   - text: string (required, 1..280 chars)
+//   - createdAt: timestamp (required)
+//   - reportedBy: list<string> (optional, <= 1000 items)
+//
+// Collection: moderation_reports/{reportId}
+//   - reporterUid: string (required, matches request.auth.uid)
+//   - targetType: string (optional, <= 64 chars)
+//   - targetId: string (optional, <= 256 chars)
+//   - postId: string (optional, <= 256 chars)
+//   - commentId: string (optional, <= 256 chars)
+//   - reportedAuthorUid: string (optional, <= 128 chars)
+//   - reason: string (optional, <= 1000 chars)
+//   - createdAt: timestamp (optional)
+//
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Tüm koleksiyonlara sadece giriş yapmış kullanıcıların okuma/yazma yapmasına izin ver
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isPostAuthor(postId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/shared_posts/$(postId)).data.authorId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUserProfile(data, userId) {
+      return (!('id' in data) || data.id == userId) &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+        (!('username' in data) || data.username == null || (data.username is string && data.username.size() <= 40)) &&
+        (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 254)) &&
+        (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 2048)) &&
+        (!('interests' in data) || (data.interests is list && data.interests.size() <= 100)) &&
+        (!('searchableName' in data) || (data.searchableName is string && data.searchableName.size() <= 100)) &&
+        (!('searchableUsername' in data) || data.searchableUsername == null || (data.searchableUsername is string && data.searchableUsername.size() <= 40));
+    }
+
+    function isValidFollowDoc(data) {
+      return (!('targetDisplayName' in data) || data.targetDisplayName == null || (data.targetDisplayName is string && data.targetDisplayName.size() <= 100)) &&
+        (!('followerDisplayName' in data) || data.followerDisplayName == null || (data.followerDisplayName is string && data.followerDisplayName.size() <= 100));
+    }
+
+    function isValidBlockedUserDoc(data) {
+      return (!('blockedUid' in data) || data.blockedUid == null || (data.blockedUid is string && data.blockedUid.size() <= 128)) &&
+        (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100));
+    }
+
+    function isValidSharedPost(data) {
+      return data.authorId is string && data.authorId.size() > 0 && data.authorId.size() <= 128 &&
+        data.title is string && data.title.size() <= 500 &&
+        data.text is string && data.text.size() <= 20000 &&
+        (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 100)) &&
+        (!('authorUsername' in data) || data.authorUsername == null || (data.authorUsername is string && data.authorUsername.size() <= 40)) &&
+        (!('authorPhotoURL' in data) || data.authorPhotoURL == null || (data.authorPhotoURL is string && data.authorPhotoURL.size() <= 2048)) &&
+        (!('tags' in data) || (data.tags is list && data.tags.size() <= 30)) &&
+        (!('deepDiveText' in data) || data.deepDiveText == null || (data.deepDiveText is string && data.deepDiveText.size() <= 50000)) &&
+        (!('reportedBy' in data) || data.reportedBy == null || (data.reportedBy is list && data.reportedBy.size() <= 1000));
+    }
+
+    function isValidReaction(data) {
+      return data.emoji is string && data.emoji.size() > 0 && data.emoji.size() <= 32;
+    }
+
+    function isValidComment(data) {
+      return data.authorId is string && data.authorId.size() > 0 && data.authorId.size() <= 128 &&
+        data.text is string && data.text.size() > 0 && data.text.size() <= 280 &&
+        (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 100)) &&
+        (!('authorPhotoURL' in data) || data.authorPhotoURL == null || (data.authorPhotoURL is string && data.authorPhotoURL.size() <= 2048)) &&
+        (!('reportedBy' in data) || data.reportedBy == null || (data.reportedBy is list && data.reportedBy.size() <= 1000));
+    }
+
+    function isValidModerationReport(data) {
+      return data.reporterUid is string &&
+        data.reporterUid == request.auth.uid &&
+        data.reporterUid.size() <= 128 &&
+        (!('reason' in data) || data.reason == null || (data.reason is string && data.reason.size() <= 1000)) &&
+        (!('targetType' in data) || data.targetType == null || (data.targetType is string && data.targetType.size() <= 64)) &&
+        (!('targetId' in data) || data.targetId == null || (data.targetId is string && data.targetId.size() <= 256));
+    }
+
+    // ===============================================================
+    // 1. Users & Social Graph Subcollections
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data, userId);
+      allow update: if isOwner(userId) &&
+        isValidUserProfile(request.resource.data, userId) &&
+        (!('id' in request.resource.data) || !('id' in resource.data) || request.resource.data.id == resource.data.id);
+      allow delete: if isOwner(userId);
+
+      match /following/{targetUid} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() &&
+          (request.auth.uid == userId || request.auth.uid == targetUid) &&
+          isValidFollowDoc(request.resource.data);
+        allow delete: if isAuthenticated() &&
+          (request.auth.uid == userId || request.auth.uid == targetUid);
+      }
+
+      match /followers/{followerUid} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() &&
+          (request.auth.uid == followerUid || request.auth.uid == userId) &&
+          isValidFollowDoc(request.resource.data);
+        allow delete: if isAuthenticated() &&
+          (request.auth.uid == followerUid || request.auth.uid == userId);
+      }
+
+      match /blocked_users/{blockedUid} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidBlockedUserDoc(request.resource.data);
+      }
+    }
+
+    // ===============================================================
+    // 2. Shared Posts, Reactions & Comments
+    // ===============================================================
+
+    match /shared_posts/{postId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.authorId == request.auth.uid &&
+        isValidSharedPost(request.resource.data);
+
+      allow delete: if isAuthenticated() &&
+        resource.data.authorId == request.auth.uid;
+
+      allow update: if isAuthenticated() &&
+        isValidSharedPost(request.resource.data) &&
+        (
+          (resource.data.authorId == request.auth.uid &&
+           request.resource.data.authorId == resource.data.authorId) ||
+          (request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['reactionCounts', 'totalReactions', 'commentCount', 'reportedBy']) &&
+           request.resource.data.authorId == resource.data.authorId &&
+           request.resource.data.text == resource.data.text &&
+           request.resource.data.title == resource.data.title)
+        );
+
+      match /reactions/{reactionUid} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() &&
+          (request.auth.uid == reactionUid || isPostAuthor(postId)) &&
+          isValidReaction(request.resource.data);
+        allow delete: if isAuthenticated() &&
+          (request.auth.uid == reactionUid || isPostAuthor(postId));
+      }
+
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+
+        allow create: if isAuthenticated() &&
+          request.resource.data.authorId == request.auth.uid &&
+          isValidComment(request.resource.data);
+
+        allow delete: if isAuthenticated() &&
+          (resource.data.authorId == request.auth.uid || isPostAuthor(postId));
+
+        allow update: if isAuthenticated() &&
+          isValidComment(request.resource.data) &&
+          (
+            (resource.data.authorId == request.auth.uid &&
+             request.resource.data.authorId == resource.data.authorId) ||
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportedBy']) &&
+             request.resource.data.authorId == resource.data.authorId &&
+             request.resource.data.text == resource.data.text)
+          );
+      }
+    }
+
+    // ===============================================================
+    // 3. Moderation Reports
+    // ===============================================================
+
+    match /moderation_reports/{reportId} {
+      allow create: if isAuthenticated() &&
+        request.resource.data.reporterUid == request.auth.uid &&
+        isValidModerationReport(request.resource.data);
+      allow read, update, delete: if false;
+    }
+
+    // ===============================================================
+    // Default Deny
+    // ===============================================================
+
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

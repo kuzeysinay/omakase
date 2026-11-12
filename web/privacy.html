@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Gizlilik Politikası / Privacy Policy — Omakase</title>
+  <meta name="description" content="Omakase iOS uygulaması ve web sitesi gizlilik politikası, toplanan veriler ve hesap silme hakları.">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="apple-touch-icon" href="assets/app-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .legal-wrap {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 120px 24px 80px;
+    }
+    .legal-card {
+      background: var(--bg-surface, #ffffff);
+      border: 1px solid var(--border-subtle, rgba(0,0,0,0.08));
+      border-radius: 20px;
+      padding: 40px 36px;
+      margin-bottom: 32px;
+    }
+    .legal-card h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .legal-meta {
+      font-size: 0.875rem;
+      opacity: 0.65;
+      margin-bottom: 28px;
+    }
+    .legal-card h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-top: 28px;
+      margin-bottom: 10px;
+    }
+    .legal-card p, .legal-card li {
+      font-size: 0.98rem;
+      line-height: 1.7;
+      opacity: 0.88;
+      margin-bottom: 12px;
+    }
+    .legal-card ul {
+      padding-left: 20px;
+      margin-bottom: 16px;
+    }
+    .lang-divider {
+      border: none;
+      border-top: 1px solid var(--border-subtle, rgba(0,0,0,0.1));
+      margin: 40px 0;
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="index.html" class="brand" aria-label="Omakase Ana Sayfa">
+        <img src="assets/logo.svg" alt="Omakase Logo" class="brand-logo" width="26" height="26">
+        <span class="brand-name">omakase</span>
+      </a>
+      <div class="nav-actions">
+        <a href="terms.html" class="ctrl-pill">Kullanım Koşulları / Terms</a>
+        <a href="index.html" class="btn-primary">Ana Sayfa</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="legal-wrap">
+    <!-- TURKISH -->
+    <article class="legal-card" lang="tr">
+      <h1>Gizlilik Politikası</h1>
+      <p class="legal-meta">Son Güncelleme: 12 Kasım 2026 • Yürürlük Tarihi: 12 Kasım 2026</p>
+
+      <p>
+        Omakase ("biz", "uygulama"), kullanıcılarının mahremiyetine ve zihinsel dinginliğine saygı duyar. Bu Gizlilik Politikası, Omakase iOS uygulamasını ve <strong>getomakase.app</strong> web sitesini kullandığınızda hangi verilerin işlendiğini, nasıl korunduğunu ve haklarınızı açıklar.
+      </p>
+
+      <h2>1. Toplanan Veriler ve Kullanım Amaçları</h2>
+      <ul>
+        <li><strong>Hesap ve Kimlik Bilgileri (Ad, E-posta, Kullanıcı Kimliği / UID, @kullanıcı_adı):</strong> Apple ile Giriş Yap (Sign in with Apple), Google ile Giriş Yap veya E-posta/Şifre ile kayıt olduğunuzda Firebase Authentication ve Cloud Firestore üzerinde yalnızca kimlik doğrulama ve topluluk profilinizi oluşturma amacıyla saklanır.</li>
+        <li><strong>Tercihler ve İlgi Alanları:</strong> Seçtiğiniz kültür kategorileri, alt konular ve dil tercihleri size özel içerik akışı üretmek için cihazınızda (<code>UserDefaults</code>) ve hesabınızla ilişkili olarak saklanır.</li>
+        <li><strong>Topluluk İçerikleri (Paylaşılan Yazılar, Yorumlar, İfadeler):</strong> Topluluk sekmesinde paylaştığınız gönderiler ve yorumlar diğer kayıtlı kullanıcılar tarafından görüntülenebilir.</li>
+        <li><strong>İsteğe Bağlı Letterboxd Kullanıcı Adı:</strong> Yalnızca kendi isteğinizle girdiğinizde herkese açık RSS akışınız okunarak film zevkinize uygun konular önerilir; şifreniz asla istenmez.</li>
+      </ul>
+
+      <h2>2. Üçüncü Taraf Hizmetler ve Veri Paylaşımı</h2>
+      <p>
+        Omakase <strong>hiçbir koşulda verilerinizi reklam ağlarına satmaz, kiralamaz ve uygulamalar arası takip (IDFA / Tracking) yapmaz.</strong> Uygulama işlevselliği için yalnızca şu altyapı sağlayıcıları kullanılır:
+      </p>
+      <ul>
+        <li><strong>Google Firebase (Authentication &amp; Cloud Firestore):</strong> Güvenli oturum açma ve topluluk veritabanı barındırma.</li>
+        <li><strong>Google Cloud Run &amp; Gemini API:</strong> Seçtiğiniz ilgi alanlarına göre gerçek zamanlı mikro-hikayeler üretmek için kullanılır. Kişisel kimlik bilgileriniz (e-posta vb.) yapay zekâ istemlerine dahil edilmez.</li>
+        <li><strong>Apple Identity Services (Sign in with Apple):</strong> Apple kimliğinizle güvenli ve gizlilik odaklı giriş yapmanızı sağlar.</li>
+      </ul>
+
+      <h2>3. Hesap ve Veri Silme Hakkı (Account Deletion)</h2>
+      <p>
+        Hesabınızı ve ilişkili tüm verilerinizi dilediğiniz an doğrudan uygulama içinden kalıcı olarak silebilirsiniz:
+      </p>
+      <ul>
+        <li>Uygulamada <strong>Topluluk → Profilim (sağ üstteki profil simgesi) → Hesabı Sil</strong> adımlarını izleyin.</li>
+        <li>Onay verdiğiniz anda Firebase Authentication kaydınız, Firestore kullanıcı profiliniz, takip/takipçi bağlantılarınız, engelleme listeniz ve paylaştığınız tüm topluluk gönderileri kalıcı olarak silinir.</li>
+      </ul>
+
+      <h2>4. Veri Güvenliği</h2>
+      <p>
+        Tüm veri iletişimi HTTPS/TLS şifrelemesi üzerinden gerçekleşir. Hassas oturum bilgileri iOS Keychain üzerinde donanım destekli şifreleme ile korunur.
+      </p>
+
+      <h2>5. İletişim</h2>
+      <p>
+        Gizlilik politikamız veya kişisel verilerinizle ilgili her türlü soru ve talebiniz için bize <a href="mailto:destek@getomakase.app"><strong>destek@getomakase.app</strong></a> adresinden ulaşabilirsiniz.
+      </p>
+    </article>
+
+    <hr class="lang-divider">
+
+    <!-- ENGLISH -->
+    <article class="legal-card" lang="en">
+      <h1>Privacy Policy</h1>
+      <p class="legal-meta">Last Updated: November 12, 2026 • Effective Date: November 12, 2026</p>
+
+      <p>
+        Omakase ("we", "our", or "the App") respects your privacy. This Privacy Policy explains what information we collect when you use the Omakase iOS application and <strong>getomakase.app</strong>, how we use and protect it, and how you can exercise your rights.
+      </p>
+
+      <h2>1. Information We Collect &amp; Purpose</h2>
+      <ul>
+        <li><strong>Account &amp; Identity Data (Name, Email Address, User ID, @username):</strong> Collected via Sign in with Apple, Sign in with Google, or Email/Password authentication using Firebase Authentication and Cloud Firestore strictly for account management and community features.</li>
+        <li><strong>Reading Preferences &amp; Interests:</strong> Your selected cultural categories, subtopics, and language settings are stored locally (<code>UserDefaults</code>) and in your profile to personalize your knowledge feed.</li>
+        <li><strong>User-Generated Content (Shared Posts, Comments, Reactions):</strong> Content you voluntarily share to the Community tab is visible to other authenticated users.</li>
+        <li><strong>Optional Letterboxd Username:</strong> If provided, we read your public Letterboxd RSS feed to tailor film topics. We never ask for your Letterboxd password.</li>
+      </ul>
+
+      <h2>2. Zero Tracking &amp; Third-Party Service Providers</h2>
+      <p>
+        Omakase <strong>does not track you across third-party apps or websites, displays zero advertisements, and never sells your personal data.</strong> We rely strictly on the following processors for core app functionality:
+      </p>
+      <ul>
+        <li><strong>Google Firebase (Authentication &amp; Cloud Firestore):</strong> For secure authentication and cloud data storage.</li>
+        <li><strong>Google Cloud Run &amp; Gemini API:</strong> For generating real-time cultural micro-stories based on your selected topics. Personal identifiers (such as your email) are never sent to the AI model.</li>
+        <li><strong>Sign in with Apple:</strong> For privacy-preserving authentication on iOS.</li>
+      </ul>
+
+      <h2>3. Account Deletion &amp; Data Removal</h2>
+      <p>
+        You may permanently delete your account and all associated data at any time directly inside the iOS app:
+      </p>
+      <ul>
+        <li>Navigate to <strong>Community → My Profile (top-right profile icon) → Delete Account</strong> and confirm.</li>
+        <li>Upon confirmation, your Firebase Authentication credentials, Firestore user profile, followers/following records, block list, and shared community posts are permanently deleted.</li>
+      </ul>
+
+      <h2>4. Contact Us</h2>
+      <p>
+        If you have any questions about this Privacy Policy or your data, please contact us at <a href="mailto:destek@getomakase.app"><strong>destek@getomakase.app</strong></a>.
+      </p>
+    </article>
+  </main>
+</body>
+</html>

@@ -7,6 +7,10 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 
+extension Notification.Name {
+    static let omakaseDidUpdateBlockedUsers = Notification.Name("omakase.didUpdateBlockedUsers")
+}
+
 /// Singleton that handles all Firestore read/write operations for the social layer.
 @MainActor
 final class FirestoreService {
@@ -14,6 +18,9 @@ final class FirestoreService {
     static let shared = FirestoreService()
 
     private let db = Firestore.firestore()
+
+    /// Cached set of blocked user UIDs for the active signed-in user.
+    private(set) var blockedUIDs: Set<String> = []
 
     private init() {}
 
@@ -82,6 +89,8 @@ final class FirestoreService {
                 try await ref.updateData(updates)
             }
         }
+
+        _ = try? await fetchBlockedUIDs(currentUid: user.uid)
     }
 
     /// Check if a `@username` is available across all users.
@@ -115,13 +124,17 @@ final class FirestoreService {
         return try? snapshot.data(as: UserProfile.self)
     }
 
-    /// Search users by display name or @username (case-insensitive prefix match).
+    /// Search users by display name or @username (case-insensitive prefix match), excluding blocked users.
     func searchUsers(query: String, currentUid: String) async throws -> [UserProfile] {
         let stripped = query.trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "@"))
             .lowercased()
         guard !stripped.isEmpty else { return [] }
         let end = stripped + "\u{f8ff}"
+
+        if blockedUIDs.isEmpty {
+            _ = try? await fetchBlockedUIDs(currentUid: currentUid)
+        }
 
         async let nameQuery = db.collection("users")
             .whereField("searchableName", isGreaterThanOrEqualTo: stripped)
@@ -140,13 +153,82 @@ final class FirestoreService {
         var combined: [UserProfile] = []
 
         for doc in handleSnap.documents + nameSnap.documents {
-            guard doc.documentID != currentUid, !seen.contains(doc.documentID) else { continue }
+            guard doc.documentID != currentUid,
+                  !blockedUIDs.contains(doc.documentID),
+                  !seen.contains(doc.documentID) else { continue }
             if let user = try? doc.data(as: UserProfile.self) {
                 seen.insert(doc.documentID)
                 combined.append(user)
             }
         }
         return combined
+    }
+
+    // MARK: - Block / Unblock Users (Guideline 1.2)
+
+    func fetchBlockedUIDs(currentUid: String) async throws -> Set<String> {
+        let snapshot = try await db.collection("users").document(currentUid)
+            .collection("blocked_users")
+            .getDocuments()
+        let uids = Set(snapshot.documents.map { $0.documentID })
+        self.blockedUIDs = uids
+        return uids
+    }
+
+    func isUserBlocked(targetUid: String) -> Bool {
+        blockedUIDs.contains(targetUid)
+    }
+
+    /// Block an abusive user: records the block in `users/{currentUid}/blocked_users/{targetUid}`,
+    /// severs follow relationships in both directions so the blocked user can no longer reach the blocker,
+    /// and updates the in-memory filter set immediately.
+    func blockUser(targetUid: String, targetDisplayName: String, currentUid: String) async throws {
+        guard targetUid != currentUid else { return }
+
+        blockedUIDs.insert(targetUid)
+        NotificationCenter.default.post(name: .omakaseDidUpdateBlockedUsers, object: targetUid)
+
+        let batch = db.batch()
+
+        let blockRef = db.collection("users").document(currentUid)
+            .collection("blocked_users").document(targetUid)
+        batch.setData([
+            "blockedUid": targetUid,
+            "displayName": String(targetDisplayName.prefix(100)),
+            "blockedAt": FieldValue.serverTimestamp()
+        ], forDocument: blockRef)
+
+        // Sever following/follower links in both directions
+        let myFollowingRef = db.collection("users").document(currentUid)
+            .collection("following").document(targetUid)
+        batch.deleteDocument(myFollowingRef)
+
+        let theirFollowersRef = db.collection("users").document(targetUid)
+            .collection("followers").document(currentUid)
+        batch.deleteDocument(theirFollowersRef)
+
+        let theirFollowingRef = db.collection("users").document(targetUid)
+            .collection("following").document(currentUid)
+        batch.deleteDocument(theirFollowingRef)
+
+        let myFollowersRef = db.collection("users").document(currentUid)
+            .collection("followers").document(targetUid)
+        batch.deleteDocument(myFollowersRef)
+
+        try await batch.commit()
+    }
+
+    func unblockUser(targetUid: String, currentUid: String) async throws {
+        blockedUIDs.remove(targetUid)
+        NotificationCenter.default.post(name: .omakaseDidUpdateBlockedUsers, object: targetUid)
+
+        try await db.collection("users").document(currentUid)
+            .collection("blocked_users").document(targetUid)
+            .delete()
+    }
+
+    func clearBlockedCache() {
+        blockedUIDs.removeAll()
     }
 
     // MARK: - Follow / Unfollow
@@ -159,7 +241,7 @@ final class FirestoreService {
             .collection("following").document(targetUid)
         batch.setData([
             "followedAt": FieldValue.serverTimestamp(),
-            "targetDisplayName": targetDisplayName
+            "targetDisplayName": String(targetDisplayName.prefix(100))
         ], forDocument: followingRef)
 
         // Add to target user's followers subcollection
@@ -167,7 +249,7 @@ final class FirestoreService {
             .collection("followers").document(currentUid)
         batch.setData([
             "followedAt": FieldValue.serverTimestamp(),
-            "followerDisplayName": currentDisplayName
+            "followerDisplayName": String(currentDisplayName.prefix(100))
         ], forDocument: followerRef)
 
         try await batch.commit()
@@ -195,12 +277,15 @@ final class FirestoreService {
         return doc.exists
     }
 
-    /// Fetch UIDs of all users the current user follows.
+    /// Fetch UIDs of all users the current user follows (excluding blocked users).
     func fetchFollowingUIDs(currentUid: String) async throws -> [String] {
+        _ = try? await fetchBlockedUIDs(currentUid: currentUid)
         let snapshot = try await db.collection("users").document(currentUid)
             .collection("following")
             .getDocuments()
-        return snapshot.documents.map { $0.documentID }
+        return snapshot.documents
+            .map { $0.documentID }
+            .filter { !blockedUIDs.contains($0) }
     }
 
     /// Fetch count of followers for a user.
@@ -270,45 +355,48 @@ final class FirestoreService {
         try await batch.commit()
     }
 
-    /// Fetch shared posts from users the current user follows, ordered by recency.
+    /// Fetch shared posts from users the current user follows, ordered by recency, excluding blocked users.
     func fetchTimeline(followingUIDs: [String]) async throws -> [SharedPost] {
-        guard !followingUIDs.isEmpty else { return [] }
+        let cleanUIDs = followingUIDs.filter { !blockedUIDs.contains($0) }
+        guard !cleanUIDs.isEmpty else { return [] }
 
-        // Firestore `whereField(in:)` supports at most 30 values per query.
-        // Split into batches if needed.
         var allPosts: [SharedPost] = []
 
-        for chunk in followingUIDs.chunked(into: 30) {
+        for chunk in cleanUIDs.chunked(into: 30) {
             let snapshot = try await db.collection("shared_posts")
                 .whereField("authorId", in: chunk)
                 .limit(to: 50)
                 .getDocuments()
 
-            let posts = snapshot.documents.compactMap { try? $0.data(as: SharedPost.self) }
+            let posts = snapshot.documents
+                .compactMap { try? $0.data(as: SharedPost.self) }
+                .filter { !blockedUIDs.contains($0.authorId) }
             allPosts.append(contentsOf: posts)
         }
 
-        // Sort combined results by sharedAt descending.
         return allPosts.sorted { $0.sharedAt > $1.sharedAt }
     }
 
-    /// Fetch the "Discover" timeline — all shared posts, regardless of following.
+    /// Fetch the "Discover" timeline — all shared posts, excluding blocked users.
     func fetchDiscoverTimeline(limit: Int = 50) async throws -> [SharedPost] {
         let snapshot = try await db.collection("shared_posts")
             .order(by: "sharedAt", descending: true)
             .limit(to: limit)
             .getDocuments()
 
-        return snapshot.documents.compactMap { try? $0.data(as: SharedPost.self) }
+        return snapshot.documents
+            .compactMap { try? $0.data(as: SharedPost.self) }
+            .filter { !blockedUIDs.contains($0.authorId) }
     }
 
     /// Fetch shared posts from a specific user.
     func fetchUserTimeline(uid: String, limit: Int = 50) async throws -> [SharedPost] {
+        guard !blockedUIDs.contains(uid) else { return [] }
         let snapshot = try await db.collection("shared_posts")
             .whereField("authorId", isEqualTo: uid)
             .limit(to: limit)
             .getDocuments()
-            
+
         var posts = snapshot.documents.compactMap { try? $0.data(as: SharedPost.self) }
         posts.sort { $0.sharedAt > $1.sharedAt }
         return posts
@@ -368,13 +456,16 @@ final class FirestoreService {
 
         let commentRef = db.collection("shared_posts").document(postId)
             .collection("comments").document()
-        batch.setData([
+        var commentData: [String: Any] = [
             "authorId": authorId,
-            "authorName": authorName,
-            "authorPhotoURL": authorPhotoURL as Any,
+            "authorName": String(authorName.prefix(100)),
             "text": String(text.prefix(280)),
             "createdAt": FieldValue.serverTimestamp(),
-        ], forDocument: commentRef)
+        ]
+        if let authorPhotoURL {
+            commentData["authorPhotoURL"] = authorPhotoURL
+        }
+        batch.setData(commentData, forDocument: commentRef)
 
         let postRef = db.collection("shared_posts").document(postId)
         batch.updateData([
@@ -390,7 +481,9 @@ final class FirestoreService {
             .order(by: "createdAt", descending: false)
             .limit(to: limit)
             .getDocuments()
-        return snap.documents.compactMap { try? $0.data(as: Comment.self) }
+        return snap.documents
+            .compactMap { try? $0.data(as: Comment.self) }
+            .filter { !blockedUIDs.contains($0.authorId) }
     }
 
     func deleteComment(postId: String, commentId: String) async throws {
@@ -408,12 +501,134 @@ final class FirestoreService {
         try await batch.commit()
     }
 
-    func reportComment(postId: String, commentId: String, reporterUid: String) async throws {
-        try await db.collection("shared_posts").document(postId)
+    // MARK: - Moderation Reports (Guideline 1.2)
+
+    func reportComment(postId: String, commentId: String, reportedAuthorUid: String? = nil, reporterUid: String) async throws {
+        let batch = db.batch()
+
+        let commentRef = db.collection("shared_posts").document(postId)
             .collection("comments").document(commentId)
-            .updateData([
-                "reportedBy": FieldValue.arrayUnion([reporterUid])
-            ])
+        batch.updateData([
+            "reportedBy": FieldValue.arrayUnion([reporterUid])
+        ], forDocument: commentRef)
+
+        let reportRef = db.collection("moderation_reports").document()
+        var reportData: [String: Any] = [
+            "reporterUid": reporterUid,
+            "targetType": "comment",
+            "targetId": commentId,
+            "postId": postId,
+            "commentId": commentId,
+            "reason": "Objectionable comment reported by user",
+            "createdAt": FieldValue.serverTimestamp()
+        ]
+        if let reportedAuthorUid {
+            reportData["reportedAuthorUid"] = reportedAuthorUid
+        }
+        batch.setData(reportData, forDocument: reportRef)
+
+        try await batch.commit()
+    }
+
+    func reportPost(postId: String, reportedAuthorUid: String, reporterUid: String, reason: String = "Objectionable post reported by user") async throws {
+        let batch = db.batch()
+
+        let postRef = db.collection("shared_posts").document(postId)
+        batch.updateData([
+            "reportedBy": FieldValue.arrayUnion([reporterUid])
+        ], forDocument: postRef)
+
+        let reportRef = db.collection("moderation_reports").document()
+        batch.setData([
+            "reporterUid": reporterUid,
+            "targetType": "post",
+            "targetId": postId,
+            "postId": postId,
+            "reportedAuthorUid": reportedAuthorUid,
+            "reason": String(reason.prefix(1000)),
+            "createdAt": FieldValue.serverTimestamp()
+        ], forDocument: reportRef)
+
+        try await batch.commit()
+    }
+
+    func reportUser(reportedUid: String, reporterUid: String, reason: String = "Abusive user profile reported by user") async throws {
+        let reportRef = db.collection("moderation_reports").document()
+        try await reportRef.setData([
+            "reporterUid": reporterUid,
+            "targetType": "user",
+            "targetId": reportedUid,
+            "reportedAuthorUid": reportedUid,
+            "reason": String(reason.prefix(1000)),
+            "createdAt": FieldValue.serverTimestamp()
+        ])
+    }
+
+    // MARK: - Account & Data Deletion (Guideline 5.1.1(v))
+
+    /// Permanently removes the user's Firestore data: shared posts, social graph edges, blocked users list, and profile document.
+    func deleteAllUserData(uid: String) async throws {
+        // 1. Delete all shared posts authored by this user
+        let sharedPostsSnap = try? await db.collection("shared_posts")
+            .whereField("authorId", isEqualTo: uid)
+            .getDocuments()
+        if let docs = sharedPostsSnap?.documents, !docs.isEmpty {
+            for chunk in docs.chunked(into: 400) {
+                let batch = db.batch()
+                for doc in chunk {
+                    batch.deleteDocument(doc.reference)
+                }
+                try? await batch.commit()
+            }
+        }
+
+        // 2. Clean up following subcollection and reciprocal followers entries
+        let followingSnap = try? await db.collection("users").document(uid)
+            .collection("following")
+            .getDocuments()
+        if let docs = followingSnap?.documents, !docs.isEmpty {
+            let batch = db.batch()
+            for doc in docs {
+                let targetUid = doc.documentID
+                batch.deleteDocument(doc.reference)
+                let reciprocalRef = db.collection("users").document(targetUid)
+                    .collection("followers").document(uid)
+                batch.deleteDocument(reciprocalRef)
+            }
+            try? await batch.commit()
+        }
+
+        // 3. Clean up followers subcollection and reciprocal following entries
+        let followersSnap = try? await db.collection("users").document(uid)
+            .collection("followers")
+            .getDocuments()
+        if let docs = followersSnap?.documents, !docs.isEmpty {
+            let batch = db.batch()
+            for doc in docs {
+                let followerUid = doc.documentID
+                batch.deleteDocument(doc.reference)
+                let reciprocalRef = db.collection("users").document(followerUid)
+                    .collection("following").document(uid)
+                batch.deleteDocument(reciprocalRef)
+            }
+            try? await batch.commit()
+        }
+
+        // 4. Clean up blocked_users subcollection
+        let blockedSnap = try? await db.collection("users").document(uid)
+            .collection("blocked_users")
+            .getDocuments()
+        if let docs = blockedSnap?.documents, !docs.isEmpty {
+            let batch = db.batch()
+            for doc in docs {
+                batch.deleteDocument(doc.reference)
+            }
+            try? await batch.commit()
+        }
+
+        // 5. Delete the user profile document itself
+        try await db.collection("users").document(uid).delete()
+        clearBlockedCache()
     }
 }
 

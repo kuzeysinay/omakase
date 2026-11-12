@@ -272,31 +272,18 @@ struct L10n {
     var streamEndedNoText: String {
         switch lang {
         case .english:
-            "The feed stream ended with no post text. Check that the backend is running, "
-                + "GEMINI_API_KEY and GEMINI_MODEL are set, and the device can reach the API (on a real "
-                + "iPhone, use your Mac’s LAN address instead of 127.0.0.1 in OMAKASE_API_URL)."
+            "Could not generate the post right now. Please check your internet connection and try again."
         case .turkish:
-            "Akış metin olmadan bitti. Sunucunun çalıştığını, GEMINI_API_KEY ve GEMINI_MODEL "
-                + "ayarlarını ve cihazın API’ye erişebildiğini doğrula (gerçek iPhone’da 127.0.0.1 "
-                + "telefonu gösterir — OMAKASE_API_URL içinde Mac’inin yerel IP’sini kullan, örn. "
-                + "http://192.168.1.x:8000)."
+            "Gönderi şu anda üretilemedi. Lütfen internet bağlantını kontrol edip tekrar dene."
         }
     }
 
     func couldNotConnect(apiBase: String) -> String {
         switch lang {
         case .english:
-            "Could not connect to the API at \(apiBase). "
-                + "Start the backend from the repo’s `backend` folder: "
-                + "`uvicorn main:app --reload --host 0.0.0.0 --port 8000`. "
-                + "On a physical iPhone, 127.0.0.1 points at the phone — set OMAKASE_API_URL in Info.plist "
-                + "to your Mac’s LAN IP (e.g. http://192.168.1.x:8000)."
+            "Could not connect to Omakase servers. Please check your internet connection and try again."
         case .turkish:
-            "API’ye bağlanılamadı: \(apiBase). "
-                + "Repodaki `backend` klasöründen sunucuyu başlat: "
-                + "`uvicorn main:app --reload --host 0.0.0.0 --port 8000`. "
-                + "Fiziksel iPhone’da 127.0.0.1 telefonun kendisidir — Info.plist’te OMAKASE_API_URL’i "
-                + "Mac’inin yerel IP’si yap (örn. http://192.168.1.x:8000)."
+            "Omakase sunucularına bağlanılamadı. Lütfen internet bağlantını kontrol edip tekrar dene."
         }
     }
 
@@ -505,6 +492,13 @@ struct L10n {
         switch lang {
         case .english: "Continue with Google"
         case .turkish: "Google ile devam et"
+        }
+    }
+
+    var signInWithApple: String {
+        switch lang {
+        case .english: "Continue with Apple"
+        case .turkish: "Apple ile devam et"
         }
     }
 
@@ -1261,6 +1255,161 @@ struct L10n {
         switch lang {
         case .english: "Connect Diary"
         case .turkish: "Günlüğü Bağla"
+        }
+    }
+
+    // MARK: - Account Deletion, UGC Moderation & Legal
+
+    var deleteAccount: String {
+        switch lang {
+        case .english: "Delete account"
+        case .turkish: "Hesabı sil"
+        }
+    }
+
+    var confirmDeleteAccountTitle: String {
+        switch lang {
+        case .english: "Delete Account Permanently?"
+        case .turkish: "Hesap Kalıcı Olarak Silinsin mi?"
+        }
+    }
+
+    var confirmDeleteAccountMessage: String {
+        switch lang {
+        case .english:
+            "Your profile, shared posts, comments, and account data will be permanently deleted. This action cannot be undone."
+        case .turkish:
+            "Profilin, toplulukta paylaştığın gönderiler, yorumların ve hesap verilerin kalıcı olarak silinecektir. Bu işlem geri alınamaz."
+        }
+    }
+
+    var deleteAccountConfirmButton: String {
+        switch lang {
+        case .english: "Delete Permanently"
+        case .turkish: "Kalıcı Olarak Sil"
+        }
+    }
+
+    var accountDeleteRequiresReauth: String {
+        switch lang {
+        case .english:
+            "For your security, please sign out and sign in again to complete account deletion."
+        case .turkish:
+            "Güvenliğin için hesabını silmeden önce lütfen çıkış yapıp tekrar giriş yap."
+        }
+    }
+
+    var moderationErrorInappropriateText: String {
+        switch lang {
+        case .english: "This text contains inappropriate language and cannot be used."
+        case .turkish: "Bu metin uygunsuz ifadeler içerdiği için kullanılamaz."
+        }
+    }
+
+    var reportPost: String {
+        switch lang {
+        case .english: "Report Post"
+        case .turkish: "Gönderiyi Bildir"
+        }
+    }
+
+    var reportUser: String {
+        switch lang {
+        case .english: "Report User"
+        case .turkish: "Kullanıcıyı Bildir"
+        }
+    }
+
+    var reportComment: String {
+        switch lang {
+        case .english: "Report Comment"
+        case .turkish: "Yorumu Bildir"
+        }
+    }
+
+    var reportSubmittedToast: String {
+        switch lang {
+        case .english: "Report received. Our team will review it within 24 hours."
+        case .turkish: "Bildiriminiz alındı. Ekibimiz 24 saat içinde inceleyecektir."
+        }
+    }
+
+    var blockUser: String {
+        switch lang {
+        case .english: "Block User"
+        case .turkish: "Kullanıcıyı Engelle"
+        }
+    }
+
+    var unblockUser: String {
+        switch lang {
+        case .english: "Unblock User"
+        case .turkish: "Engeli Kaldır"
+        }
+    }
+
+    var confirmBlockUserTitle: String {
+        switch lang {
+        case .english: "Block User?"
+        case .turkish: "Kullanıcı Engellensin mi?"
+        }
+    }
+
+    var confirmBlockUserMessage: String {
+        switch lang {
+        case .english:
+            "They will no longer be able to reach you, and their posts and comments will be removed from your feed immediately."
+        case .turkish:
+            "Bu kullanıcı artık seninle etkileşime geçemeyecek ve gönderileri ile yorumları akışından anında kaldırılacak."
+        }
+    }
+
+    var userBlockedToast: String {
+        switch lang {
+        case .english: "User blocked"
+        case .turkish: "Kullanıcı engellendi"
+        }
+    }
+
+    var profileSupportAndLegal: String {
+        switch lang {
+        case .english: "Support & Legal"
+        case .turkish: "Destek ve Yasal"
+        }
+    }
+
+    var contactSupport: String {
+        switch lang {
+        case .english: "Contact Support"
+        case .turkish: "Destek ve İletişim"
+        }
+    }
+
+    var privacyPolicy: String {
+        switch lang {
+        case .english: "Privacy Policy"
+        case .turkish: "Gizlilik Politikası"
+        }
+    }
+
+    var termsOfUse: String {
+        switch lang {
+        case .english: "Terms of Use (EULA)"
+        case .turkish: "Kullanım Koşulları (EULA)"
+        }
+    }
+
+    var blockedUsersTitle: String {
+        switch lang {
+        case .english: "Blocked Users"
+        case .turkish: "Engellenen Kullanıcılar"
+        }
+    }
+
+    var noBlockedUsers: String {
+        switch lang {
+        case .english: "No blocked users"
+        case .turkish: "Engellenen kullanıcı yok"
         }
     }
 }
