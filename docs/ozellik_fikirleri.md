@@ -1,7 +1,7 @@
 # 🍣 Omakase — Özellik Haritası & Yeni Fikirler
 
-> **Son Güncelleme:** 11 Eylül 2026  
-> **Kapsam:** Hayata geçirilen özelliklerin güncel durumu, önceliklendirilmiş v2 ve v3 ürün yol haritası.
+> **Son Güncelleme:** 12 Kasım 2026  
+> **Kapsam:** iOS istemcisi (`omakase/`), FastAPI backend (`backend/`) ve Web platformu (`web/`) üzerinde hayata geçirilen güncel özelliklerin durumu ve önceliklendirilmiş v2 / v3 ürün yol haritası.
 
 ---
 
@@ -10,87 +10,98 @@
 | Rozet | Anlam | Açıklama |
 |-------|-------|----------|
 | ✅ | **Tamamlandı** | Canlı kod tabanında aktif ve test edilmiş özellikler |
-| 🔴 | **Kritik (v2.0)** | Kullanıcı retention'ı ve derinlik için ilk sırada yapılacaklar |
-| 🟡 | **Yüksek (v2.1)** | Kullanıcı deneyimini belirgin şekilde zenginleştiren adımlar |
-| 🟢 | **Orta (v2.5)** | Ürünü parlatan ve sosyal viraliteyi artıran eklentiler |
-| 🔵 | **Vizyon (v3.0)** | Uzun vadeli çoklu ortam ve büyük altyapı adımları |
+| 🔴 | **Kritik (v1.0 App Store)** | App Store yayını öncesi tamamlanacak uyumluluk adımları |
+| 🟠 | **Yüksek (v2.0)** | Kullanıcı bağlılığı (retention) ve kültürel derinlik için ilk sırada yapılacaklar |
+| 🟡 | **Orta (v2.1)** | Kullanıcı deneyimini zenginleştiren çoklu ortam ve bildirim adımları |
+| 🟢 | **Büyüme (v2.5)** | Ürünü parlatan ve sosyal viraliteyi artıran eklentiler |
 
 ---
 
 ## 1. Tamamlanan Temel Özellikler ✅
 
-Aşağıdaki özellikler başarıyla geliştirilmiş, test edilmiş ve ana mimariye dahil edilmiştir:
+Aşağıdaki sistemler başarıyla geliştirilmiş, test edilmiş ve ana mimariye dahil edilmiştir:
 
-### ✅ 1. Bento Keşif Motoru (BentoTasteBox)
-* **2048 Tarzı Dokunsal Izgara:** 6 ana kategori (Film, Bilim, Felsefe, Sanat, Teknoloji, Edebiyat vb.).
-* **Dinamik Kategori Çevirme (Roll):** 3D kart çevirme animasyonu ile 6 yeni kategoriyi anında masaya getirme.
-* **AI Destekli Kategori Genişletme:** Bir kategoriye dokunulduğunda Gemini 3.1 Flash-Lite ile anında o alana özel 10 mikro-konu üretimi.
-* **Tek Dokunuşla Post:** Alt konulardan birine dokunulduğunda akışta doğrudan o konuya kilitlenmiş gönderi üretimi.
+### ✅ 1. Bento Keşif Motoru (`BentoTasteBox`)
+* **12 Ana Kültür Kategorisi:** Yatay kaydırmalı (horizontal scroll) kompakt kapsül barı (*Sinema, Bilim, Felsefe, Sanat, Teknoloji, Tarih, Müzik, Edebiyat, Psikoloji, Mimari, Gastronomi, Uzay*).
+* **Kompakt 6'lı Alt Konu Izgarası:** Seçilen kategoride 2 sütunlu, sıkılaştırılmış 6 alt konu karosu (`prefix(6)`).
+* **Akıllı Kategori Önbelleği & Manuel Yenileme:** Kategoriler arası geçiş yaparken mevcut alt konuları koruyan ve yalnızca kullanıcı yenile (`arrow.clockwise`) butonuna bastığında Gemini 3.1 Flash-Lite ile yeni alt konular üreten sürtünmesiz deneyim.
+* **Özel Konu Girişi (Custom Topic Input):** Kullanıcının kendi merak ettiği spesifik bir başlığı doğrudan yazıp şefe sipariş verebilmesi.
+* **Tam Ekran ve Sayfa Sonu Uyumu:** Gönderi yokken tam ekran açılan, gönderi üretildiğinde ise dikey sayfalama akışının en altında (`id: -1`) tam ekran yüksekliğinde (`containerRelativeFrame(.vertical)`) taşma yapmadan konumlanan temiz mimari.
 
-### ✅ 2. Letterboxd Entegrasyonu & Kültürel Post Motoru
-* **50 Film RSS Beslemesi:** Kullanıcının Letterboxd günlüğünden son 50 filmi tek seferde çekme.
-* **Rastgele Çeşitlilik Kilidi:** Gemini'nin hep aynı filme takılmasını önleyen Python seviyesinde rastgele film seçimi (`random.choice`).
-* **Doğrulanmış Kamera Arkası (Fun-Fact) Önceliği:** Halüsinasyonu sıfırlayan, gerçek prodüksiyon anekdotlarını öne çıkaran prompt mimarisi.
-* **Özgün Marka Arayüzü:** Resmi logoyu taklit etmeyen telifsiz neon yeşili sinema rozeti tasarımı.
+### ✅ 2. Sürtünmesiz Kayıt, `@kullanıcı_adı` ve Kimlik Doğrulama (`AuthView` & `AuthService`)
+* **Twitter/X Tarzı 3 Adımlı Kayıt Akışı:**
+  1. **Görünür İsim (`displayName`):** Canlı profil önizleme kartı ile anlık görsel geri bildirim.
+  2. **Benzersiz `@kullanıcı_adı` (`@username`):** Firestore üzerinden gerçek zamanlı müsaitlik kontrolü (350ms debounce), otomatik kullanıcı adı öneri kapsülleri ve karakter doğrulaması (`a-z, 0-9, _`).
+  3. **E-posta & Şifre:** Şifre güç göstergesi ile güvenli hesap tamamlama.
+* **Google Sign-In & E-posta Girişi:** Tek dokunuşla Google hesabı veya mevcut e-posta/şifre ile oturum açma.
 
-### ✅ 3. Okuma Süresi & Doomscrolling Karşıtı Kilit Sistemi
-* **Dinamik Süre Hesabı:** Post metninin kelime sayısına göre 15 - 25 saniye arasında akıllı bekleme süresi.
-* **Normal Scroll Koruması:** Kullanıcı aşağı kaydırsa dahi okuma süresi dolana kadar yeni post üretimini bloke eden koruma.
-* **Canlı Kum Saati Sayacı:** Son kartta ve Bento başlığında kalan saniyeyi gösteren animasyonlu geri sayım.
-* **Bento Buton Kilitleri:** Okuma süresi bitene kadar tüm kategori ve konu butonlarının devre dışı bırakılması.
+### ✅ 3. Topluluk Akışı, Arama ve Sosyal Etkileşim (`TimelineView`)
+* **Topluluk Sekmesi (`Community`):** Kullanıcıların beğendikleri şef yazılarını tek dokunuşla kendi `@kullanıcı_adı` profilleri üzerinden paylaştıkları sosyal akış.
+* **Entegre Arama Çubuğu & Kişi Arama (`UserSearchView`):** Gönderi başlığı, içerik, kategori, yazar ismi veya `@username` üzerinden anlık filtreleme ve okur keşfi.
+* **İfadeler (Reactions) & Yorumlar (`CommentsView`):** Gönderilere 5 farklı ifade (`🔥, 🧠, ❤️, 👏, 🤯`) bırakma, gerçek zamanlı yorumlaşma ve kullanıcı takip sistemi (`followUser` / `unfollowUser`).
+* **Çevrimdışı Yer İmleri (`BookmarkStore`):** Beğenilen mikro-hikayeleri cihazda yerel olarak kaydetme ve okuma.
 
-### ✅ 4. Reels Tarzı Tam Ekran Dikey Akış
-* Instagram Reels / TikTok formatında tek ekranda tek post gösteren pürüzsüz sayfalama (`.scrollTargetBehavior(.viewAligned)`).
-* Harf harf gerçek zamanlı daktilo efekti sağlayan SSE (Server-Sent Events) istemcisi.
+### ✅ 4. Letterboxd Entegrasyonu & Doğrulanmış Sinema Anekdotları
+* **50 Film RSS Beslemesi:** Kullanıcının Letterboxd günlüğünden son 50 filmi tek seferde çekme (`LetterboxdService`).
+* **Rastgele Çeşitlilik Kilidi:** Python seviyesinde rastgele film seçimi (`random.choice`) ile her seferinde farklı bir film üzerinden üretim.
+* **Halüsinasyon Önleyici Prompt Çerçevesi:** Kurgusal uydurmaları engelleyen, doğrulanmış prodüksiyon ve kamera arkası kayıtlarına odaklanan sıkı sistem yönergeleri.
 
-### ✅ 5. Deep Dive Modu
-* Post altındaki butona basıldığında mevcut konunun tavşan deliğine inen, daha derin bir follow-up gönderi üretimi.
+### ✅ 5. Okuma Süresi & Doomscrolling Karşıtı Kilit Sistemi (Reading Cooldown)
+* **Dinamik Süre Hesabı:** Post metninin kelime sayısına göre 15–25 saniye arasında akıllı sindirme süresi.
+* **Canlı Kum Saati & Scroll Koruması:** Süre dolana kadar yeni post üretimini ve kategori butonlarını kilitleyen, animasyonlu kum saati (`hourglass`) ile geri sayım yapan odaklanma mekanizması.
 
-### ✅ 6. Zengin Post Formatları
-* `DEBATE`, `TIMELINE`, `VERSUS`, `LETTERBOXD DIARY`, `MYTHBUSTER`, `ANECDOTE`, `IF YOU LIKE X TRY Y`.
+### ✅ 6. Reels Tarzı Dikey Akış, Deep Dive Modal & Monokrom Tema (`OmakaseTheme`)
+* **Tam Ekran Dikey Sayfalama:** `.scrollTargetBehavior(.viewAligned)` ile pürüzsüz geçiş ve SSE (Server-Sent Events) ile gerçek zamanlı metin akışı.
+* **Deep Dive Bottom Sheet Modal (`DeepDiveSheetView`):** Bir konunun derinliklerine inmek istendiğinde satır içi (inline) karmaşa yaratmadan açılan, kendi SSE akışına sahip özel okuma penceresi.
+* **Mürekkep ve Kağıt Estetiği (`OmakaseTheme`):** Karanlık, Aydınlık ve Sistem görünüm modlarını destekleyen monokrom tasarım dili ve çift dil (`TR` / `EN` — `L10n.swift`) desteği.
 
-### ✅ 7. Geliştirici Otomasyonu (Sweetpad Eşdeğeri Launch)
-* `scripts/launch-ios.sh` betiği ile fiziksel iPhone'a (`ADFC2ADA-EA3F-51A7-9C82-E2554869B97D`) tek komutla derleme, kurma ve başlatma.
-* `.agents/rules/sweetpad-launch.md` ve `.vscode/tasks.json` (`Cmd + Shift + B`) entegrasyonu.
+### ✅ 7. İnteraktif Web Platformu (`web/` — `getomakase.app`)
+* **Canlı Tadım Simülatörü:** Web ziyaretçilerinin iOS uygulamasındaki kategori seçimi, daktilo akışı, Deep Dive modalı ve okuma sayacını tarayıcıda deneyimleyebildiği interaktif önizleme.
+* **Çoklu Dağıtım Altyapısı:** Hem Cloudflare (`wrangler.json` — `getomakase`) hem de Firebase Hosting (`firebase.json`) ile statik dağıtım ve TestFlight bekleme listesi.
 
----
-
-## 2. Gelecek Özellikler Yol Haritası (v2 & v3)
-
-### 🔴 Spotify "Recently Played" Bento Kutusu (v2.0)
-Letterboxd'nin sinemada yarattığı büyüyü müzik alanına taşıma:
-* **Nasıl Çalışacak?** Bento kutusunda Film kategorisindeki Letterboxd gibi, Müzik kategorisinde en başta kalıcı bir **Spotify Kutusu** yer alacak.
-* **İçerik:** Kullanıcının son dinlediği şarkı/albüm üzerinden şarkının kayıt hikayesi, kullanılan sample'ın kökeni veya prodüktörün gizli kalmış bir kararı anlatılacak.
-* **Teknik:** Spotify Web API (Recently Played Tracks endpoint'i).
-
----
-
-### 🟡 Sesli Dinleme / Yürüyüş Modu (TTS - v2.1)
-* **Ne Sağlar?** Kullanıcı yürürken veya spor yaparken postları ekrana bakmadan kulaklıkla dinleyebilir.
-* **Teknik:**
-  - Faz 1: Apple'ın yerel `AVSpeechSynthesizer` motoru (sıfır maliyet, tamamen çevrimdışı çalışır).
-  - Faz 2: Google Cloud Text-to-Speech API ile stüdyo kalitesinde ultra-doğal Türkçe/İngilizce sesler.
+### ✅ 8. Çift Modlu Geliştirici Otomasyonu (`scripts/`)
+* [`scripts/launch-ios.sh`](file:///Users/kuzey/projects/omakase/scripts/launch-ios.sh): Fiziksel iPhone'a (`ADFC2ADA-EA3F-51A7-9C82-E2554869B97D`) tek komutla derleme, kurma ve başlatma.
+* [`scripts/launch-simulator.sh`](file:///Users/kuzey/projects/omakase/scripts/launch-simulator.sh): iOS Simulator (`iPhone 17`) üzerinde otomatik derleme ve başlatma.
+* [`.agents/`](file:///Users/kuzey/projects/omakase/.agents): Apple Agent Kit (v2.5.1) mimari, tasarım ve App Store denetim sözleşmeleri.
 
 ---
 
-### 🟡 Günlük Sabah Şef Menüsü (Daily Digest Notification - v2.1)
-* **Ne Sağlar?** Her sabah saat 08:30'da push bildirim: *"Günün Omakase menüsü hazır 🍣"*.
-* **Deneyim:** Kullanıcı uygulamayı açtığında beklemeden o günün aktif ilgi alanlarına göre arka planda taze hazırlanmış 3 post hazır bekler.
-* **Teknik:** Firebase Cloud Messaging (FCM) + Cloud Scheduler cron tetiklemesi.
+## 2. Sıradaki Adımlar ve Gelecek Yol Haritası
+
+### 🔴 v1.0 App Store Yayın Tamamlaması (Öncelik 1)
+[`docs/appstore_raporu.md`](file:///Users/kuzey/projects/omakase/docs/appstore_raporu.md) denetiminde belirlenen yayın öncesi zorunlu adımlar:
+1. `omakase/omakase/PrivacyInfo.xcprivacy` dosyasının eklenmesi (`CA92.1` + toplanan veri beyanları).
+2. **Sign in with Apple** entegrasyonu (Guideline 4.8).
+3. Uygulama içi **Hesap Silme (`deleteAccount`)** özelliği (Guideline 5.1.1v).
+4. **Kullanıcı Engelleme (`blockUser`)**, **Gönderi Bildirme (`reportPost`)** ve yorum/kullanıcı adı moderasyon filtresi (Guideline 1.2).
+5. `MyProfileSheet` içine **Destek / İletişim**, **Gizlilik Politikası** ve **Kullanım Koşulları** bağlantılarının eklenmesi + `firestore.rules` yetkilendirme sıkılaştırması.
 
 ---
 
-### 🟢 Instagram & X İçin Hikaye Kartı Export (v2.5)
-* **Ne Sağlar?** Beğenilen bir postu tek dokunuşla 9:16 oranında tipografik bir görsel olarak Instagram Story veya X'e aktarma.
-* **Teknik:** SwiftUI `ImageRenderer` API'si ile vektörel ekran görüntüsü render edilip sistem paylaşım sayfasına (UIActivityViewController) iletilecek.
-* **Büyüme Etkisi:** Organik kullanıcı ediniminde en yüksek dönüşüm sağlayan mekanizma.
+### 🟠 Spotify "Recently Played" Entegrasyonu (v2.0)
+Letterboxd entegrasyonunun sinema alanında yarattığı kişisel deneyimi müzik kategorisine taşıma:
+* **Deneyim:** Kullanıcının son dinlediği şarkı/albüm üzerinden kayıt hikayesi, kullanılan sample'ın kökeni veya prodüksiyon anekdotları üretilir.
+* **Teknik:** Spotify Web API (`Recently Played Tracks` endpoint'i).
 
 ---
 
-### 🟢 Goodreads / Kitap Entegrasyonu (v2.5)
-* Kullanıcının son okuduğu kitaplar üzerinden yazarın biyografisinden bilinmeyen bir detay veya kitabın yazılış felsefesi üzerine post üretimi.
+### 🟡 Sesli Dinleme / Yürüyüş Modu (TTS — v2.1)
+* **Deneyim:** Kullanıcı yürürken veya toplu taşımadayken şef yazılarını kulaklıkla dinleyebilir.
+* **Teknik:** Faz 1'de yerel `AVSpeechSynthesizer`, Faz 2'de doğal bulut tabanlı seslendirme.
 
 ---
 
-### 🔵 Çok Modlu (Multimodal) Görsel Analiz (v3.0)
-* Gemini multimodal yetenekleri kullanılarak post metinlerine ek olarak arşiv fotoğrafları, sahne analizleri veya AI üretimi görsel illüstrasyonların dahil edilmesi.
+### 🟡 Günlük Sabah Şef Menüsü (Daily Digest Notification — v2.1)
+* **Deneyim:** Her sabah belirlenen saatte kullanıcının seçili ilgi alanlarına göre taze demlenmiş 3 mikro-hikaye bildirimle sunulur.
+* **Teknik:** `UserNotifications` + Firebase Cloud Messaging (FCM).
+
+---
+
+### 🟢 Instagram & X İçin Tipografik Hikaye Kartı Export (v2.5)
+* **Deneyim:** Beğenilen bir postu tek dokunuşla 9:16 oranında monokrom kağıt/mürekkep estetiğinde görsel karta dönüştürüp sosyal medyada paylaşma.
+* **Teknik:** SwiftUI `ImageRenderer` API'si.
+
+---
+
+### 🟢 Goodreads / Kitap Günlüğü Entegrasyonu (v2.5)
+* Kullanıcının okuduğu kitapların RSS beslemesi üzerinden yazarın biyografik arka planı ve eserin tarihsel bağlamı üzerine mikro-hikaye üretimi.

@@ -1,8 +1,8 @@
 # 🍣 Omakase — App Store Gönderim Denetimi & Prodüksiyon Raporu
 
-> **Son Güncelleme:** 22 Ekim 2026  
+> **Son Güncelleme:** 12 Kasım 2026  
 > **Denetim Metodolojisi:** Apple Agent Kit — `workflow.app-store-submission` (`skill.app-store-review-guidelines.submission` → `skill.privacy.foundations` → `skill.xcode.foundations`)  
-> **Amaç:** Uygulamayı App Store Connect'e göndermeden önce kod tabanındaki **mevcut durumu**, **kritik eksikleri (red sebeplerini)** ve **hatalı/düzeltilmesi gereken yapılandırmaları** somut dosya kanıtlarıyla ortaya koymak.
+> **Amaç:** Uygulamanın ve web altyapısının (`omakase/`, `backend/`, `web/`) son haline göre App Store Connect gönderimi öncesindeki **mevcut durumu**, **kritik eksikleri (red sebeplerini)** ve **düzeltilmesi gereken yapılandırmaları** somut dosya kanıtlarıyla ortaya koymak.
 
 ---
 
@@ -26,9 +26,9 @@ Kod tabanında yapılan denetim sonucunda, uygulamanın şu anki haliyle App Sto
 |---|------|------------------|-------------------------------|--------------|
 | **1** | 🔴 **KRİTİK (Yükleme Engeli)** | **Kural 5.1.2** — `PrivacyInfo.xcprivacy` | Projede `PrivacyInfo.xcprivacy` dosyası **hiç yok**. `@AppStorage` / `UserDefaults` kullanıldığı için App Store Connect binary yüklemesini reddeder. | `omakase/omakase/` |
 | **2** | 🔴 **KRİTİK (Kesin Red)** | **Kural 4.8** — Sign in with Apple | Birincil hesap girişi için **Google Sign-In** sunuluyor ancak eşdeğer gizlilik özellikli **Sign in with Apple** seçeneği **yok**. | `Auth/AuthView.swift`, `Auth/AuthService.swift` |
-| **3** | 🔴 **KRİTİK (Kesin Red)** | **Kural 5.1.1(v)** — Hesap Silme | Uygulama içinde hesap oluşturma (E-posta ve Google) var, ancak Profil ekranında **Hesabı Sil (`deleteAccount`)** özelliği **yok** (yalnızca Çıkış Yap mevcut). | `Auth/AuthService.swift`, `Social/UserProfileSheet.swift` |
+| **3** | 🔴 **KRİTİK (Kesin Red)** | **Kural 5.1.1(v)** — Hesap Silme | Uygulama içinde hesap oluşturma (3 adımlı E-posta + `@username` ve Google) var, ancak Profil ekranında **Hesabı Sil (`deleteAccount`)** özelliği **yok** (yalnızca Çıkış Yap mevcut). | `Auth/AuthService.swift`, `Social/UserProfileSheet.swift` |
 | **4** | 🔴 **KRİTİK (Kesin Red)** | **Kural 1.2** — UGC Moderasyon (Kullanıcı Engelleme & Gönderi Şikayeti & Filtre) | 1) Kötü niyetli kullanıcıları **Engelleme (Block User)** özelliği hiç yok.<br>2) Topluluk gönderilerini (`SharedPost`) **Bildir (Report)** butonu yok (sadece yorumlarda var).<br>3) Yorum gönderirken (`CommentsView`) ve `@kullanıcı_adı` / görünür isim alırken (`AuthView`) `ContentModerationService` filtresi çalıştırılmıyor. | `Social/TimelinePostCard.swift`, `Social/UserProfileSheet.swift`, `Social/CommentsView.swift`, `Auth/AuthView.swift` |
-| **5** | 🔴 **KRİTİK (Kesin Red)** | **Kural 1.2 & 1.5** — Geliştirici İletişim Bilgisi | Uygulama içinde (`MyProfileSheet`) kullanıcıların geliştiriciye ulaşabileceği bir **Destek / İletişim** kanalı ve Gizlilik Politikası bağlantısı **yok**. | `Social/UserProfileSheet.swift` |
+| **5** | 🔴 **KRİTİK (Kesin Red)** | **Kural 1.2, 1.5 & 5.1.1(i)** — Uygulama İçi İletişim & Yasal Web Sayfaları | `web/index.html` üzerinde `mailto:destek@getomakase.app` yer alsa da; hem uygulama içinde (`MyProfileSheet`) **Destek / İletişim**, **Gizlilik Politikası** ve **Kullanım Koşulları (EULA)** bağlantıları yok, hem de `web/` altında bağımsız `/privacy` ve `/terms` sayfaları henüz yayınlanmamış. | `Social/UserProfileSheet.swift`, `web/index.html` |
 | **6** | 🔴 **KRİTİK (Güvenlik Açığı)** | **Kural 1.6** — Veri Güvenliği (`firestore.rules`) | `firestore.rules` içinde `allow read, write: if request.auth != null;` kuralı var. Giriş yapmış herhangi bir kullanıcı başka birinin profilini veya gönderisini silebilir/değiştirebilir. | `firestore.rules` |
 | **7** | 🟠 **YÜKSEK (İnceleme & ATS)** | **Kural 1.6 & 2.1(a)** — `Info.plist` ATS İstisnaları & Demo Hesap | 1) `Info.plist` içinde yerel geliştirme IP'si (`172.20.10.14`) için güvensiz HTTP istisnası (`NSExceptionAllowsInsecureHTTPLoads`) unutulmuş.<br>2) Uygulama açılışta zorunlu giriş (`AuthView`) istediği için App Store Connect inceleme notlarında **aktif bir Demo Hesap** verilmesi şarttır. | `omakase/omakase/Info.plist`, `ContentView.swift` |
 
@@ -40,9 +40,9 @@ Kod tabanında yapılan denetim sonucunda, uygulamanın şu anki haliyle App Sto
 * **Dayanak:** `knowledge.app-store-review-guidelines.login-services-equivalent-option`
 * **Kural Özeti:** Bir uygulama kullanıcının **birincil hesabını (primary account)** oluşturmak veya doğrulamak için üçüncü taraf/sosyal bir giriş servisi (örn. Google Sign-In) kullanıyorsa; veri toplamayı yalnızca ad ve e-posta ile sınırlayan, kullanıcının e-posta adresini gizlemesine olanak tanıyan ve reklam amacıyla etkileşim toplamayan eşdeğer bir giriş seçeneğini (**Sign in with Apple**) **aynı akışta ve eşit görünürlükte** sunmak zorundadır.
 * **Kod Tabanı Bulgusu (❌ Yanlış / Eksik):**
-  - `ContentView.swift` (`!authService.isAuthenticated`) ve `AuthView.swift` incelendiğinde, kullanıcının uygulamaya erişmek için kurduğu hesap birincil hesaptır.
-  - `AuthView.swift` üzerinde **"Google ile devam et"** ve **"E-posta ile Hesap Oluştur"** seçenekleri bulunmaktadır. Standart e-posta/şifre kaydı Apple'ın 4.8 kapsamındaki 3 şartını (özellikle e-posta adresini gizleyerek hesap açma şartını) **karşılamaz** ve 5 muafiyetten (yalnızca kendi hesap sistemini kullanma muafiyeti, Google Sign-In eklendiği anda düşer) hiçbirine girmez.
-* **Çözüm:** `AuthenticationServices` çerçevesi (`ASAuthorizationAppleIDProvider` / `SignInWithAppleButton`) kullanılarak Firebase Auth üzerinde Apple sağlayıcısı etkinleştirilmeli ve `AuthView.swift` karşılama ekranına Google Sign-In ile eşit boyutta **"Apple ile devam et"** butonu eklenmelidir.
+  - [`ContentView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/ContentView.swift) (`!authService.isAuthenticated`) ve [`AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift) incelendiğinde, kullanıcının uygulamaya erişmek için kurduğu hesap birincil hesaptır.
+  - [`AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift) üzerinde **"Google ile devam et"** ve 3 adımlı **"E-posta ile Hesap Oluştur"** seçenekleri bulunmaktadır. Standart e-posta/şifre kaydı Apple'ın 4.8 kapsamındaki 3 şartını (özellikle e-posta adresini gizleyerek hesap açma şartını) **karşılamaz** ve 5 muafiyetten (yalnızca kendi birinci parti hesap sistemini kullanma muafiyeti, Google Sign-In eklendiği anda düşer) hiçbirine girmez.
+* **Çözüm:** `AuthenticationServices` çerçevesi (`ASAuthorizationAppleIDProvider` / `SignInWithAppleButton`) kullanılarak Firebase Auth üzerinde Apple sağlayıcısı etkinleştirilmeli ve [`AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift) karşılama ekranına Google Sign-In ile eşit boyutta **"Apple ile devam et"** butonu eklenmelidir.
 
 ### 2.2. Kullanıcı Tarafından Oluşturulan İçerik (UGC) Moderasyonu — Kural 1.2
 * **Dayanak:** `knowledge.app-store-review-guidelines.user-generated-content-moderation`
@@ -52,37 +52,35 @@ Kod tabanında yapılan denetim sonucunda, uygulamanın şu anki haliyle App Sto
   3. **Kötü Niyetli Kullanıcıları Engelleme (Rule 3):** Kullanıcıyı servisten engelleme (`Block User`) — sadece sessize alma (mute) yeterli değildir.
   4. **Yayınlanmış İletişim Bilgisi (Rule 4):** Uygulama içinden erişilebilir geliştirici iletişim bilgisi.
 * **Kod Tabanı Bulgusu (❌ Eksikler):**
-  - **Filtreleme Eksiği:** `ContentModerationService.swift` ve backend `_BLOCKLIST_RE` yalnızca ilgi alanı (`interests`) seçiminde ve AI üretiminde çalışmaktadır. Ancak:
-    - `CommentsView.swift` içindeki `sendComment()` fonksiyonu yorum metnini `ContentModerationService.isAppropriate(text)` ile **kontrol etmeden** doğrudan Firestore'a yazmaktadır.
-    - `AuthView.swift` içindeki `displayName` ve `@username` adımlarında uygunsuz kelime filtresi **çalıştırılmamaktadır**.
-  - **Gönderi ve Profil Şikayet Eksiği:** `CommentsView.swift` içinde yorumlar için `reportComment` mevcuttur; ancak `TimelinePostCard.swift` (toplulukta paylaşılan gönderiler) ve `UserProfileSheet.swift` (kullanıcı profilleri) üzerinde **Bildir (Report)** seçeneği **bulunmamaktadır**.
-  - **Kullanıcı Engelleme (Block User) Eksiği:** `FirestoreService.swift`, `UserProfileSheet.swift` ve `TimelineView.swift` içinde bir kullanıcıyı engelleme (`blockUser`) işlevi **hiç yoktur**. Bir kullanıcı engellendiğinde, o kullanıcının gönderileri ve yorumları akıştan kaldırılmalı ve etkileşimi kesilmelidir.
+  - **Filtreleme Eksiği:** [`ContentModerationService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/ContentModerationService.swift) ve backend `_BLOCKLIST_RE` yalnızca ilgi alanı (`interests`) seçiminde ve AI üretiminde çalışmaktadır. Ancak:
+    - [`CommentsView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/CommentsView.swift) içindeki `sendComment()` fonksiyonu yorum metnini `ContentModerationService.isAppropriate(text)` ile **kontrol etmeden** doğrudan Firestore'a yazmaktadır.
+    - [`AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift) içindeki `displayName` ve `@username` adımlarında uygunsuz kelime filtresi **çalıştırılmamaktadır**.
+  - **Gönderi ve Profil Şikayet Eksiği:** [`CommentsView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/CommentsView.swift) içinde yorumlar için `reportComment` mevcuttur; ancak [`TimelinePostCard.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/TimelinePostCard.swift) (toplulukta paylaşılan gönderiler) ve [`UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift) (kullanıcı profilleri) üzerinde **Bildir (Report)** seçeneği **bulunmamaktadır**.
+  - **Kullanıcı Engelleme (Block User) Eksiği:** [`FirestoreService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift), [`UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift) ve [`TimelineView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/TimelineView.swift) içinde bir kullanıcıyı engelleme (`blockUser`) işlevi **hiç yoktur**. Bir kullanıcı engellendiğinde, o kullanıcının gönderileri ve yorumları akıştan anında kaldırılmalı ve etkileşimi kesilmelidir.
 
-### 2.3. Geliştirici İletişim Bilgileri — Kural 1.5
+### 2.3. Geliştirici İletişim Bilgileri ve Web Sayfaları — Kural 1.5 & 5.1.1(i)
 * **Dayanak:** `knowledge.app-store-review-guidelines.developer-contact-information`
 * **Kural Özeti:** Hem App Store Connect üzerindeki **Support URL** hem de **uygulamanın kendisi** (`MyProfileSheet` / Ayarlar ekranı) kullanıcıların geliştiriciye kolayca ulaşabileceği güncel bir iletişim yolu içermelidir.
 * **Kod Tabanı Bulgusu (❌ Eksik):**
-  - `MyProfileSheet` (`Social/UserProfileSheet.swift` satır 175–365) içinde yalnız Tercihler (Dil, Görünüm, Letterboxd), Gönderiler ve Çıkış Yap bölümleri vardır.
-  - "Destek / Bize Ulaşın" (`mailto:` veya destek sayfası), "Gizlilik Politikası" ve "Kullanım Koşulları (EULA)" bağlantıları **bulunmamaktadır**.
+  - [`web/index.html`](file:///Users/kuzey/projects/omakase/web/index.html#L783) alt bilgisinde `mailto:destek@getomakase.app` yer almaktadır; ancak `MyProfileSheet` ([`Social/UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift)) içinde yalnızca Tercihler (Dil, Görünüm, Letterboxd), Gönderiler ve Çıkış Yap bölümleri vardır.
+  - Uygulama içinde **"Destek / Bize Ulaşın"** (`mailto:destek@getomakase.app`), **"Gizlilik Politikası"** (`https://getomakase.app/privacy`) ve **"Kullanım Koşulları (EULA)"** (`https://getomakase.app/terms`) bağlantıları bulunmamaktadır.
 
 ### 2.4. Veri Toplama, Saklama ve Hesap Silme — Kural 5.1.1
 * **Dayanak:** `knowledge.app-store-review-guidelines.privacy-nutrition-label` & Guideline 5.1.1(v)
-* **Kod Tabanı Bulgusu (❌ Eksik & Eski Raporda Yanlış):**
-  - **Hesap Silme (`deleteAccount`) Yok:** Eski raporda *"Profil sekmesinde hesap silme işlevi yer almalıdır"* denmiş ancak kod tabanında (`AuthService.swift` ve `MyProfileSheet`) bu özellik **hiç yazılmamıştır**. Hesap açabilen her iOS uygulaması, kullanıcının hesabını ve ilişkili Firestore verilerini (`users/{uid}`, `shared_posts`) uygulama içinden silebilmesini zorunlu kılar.
-  - **Eski Rapordaki Anonim Akış Yanılgısı:** Eski raporda *"Uygulama genel feed deneyimi için zorunlu kayıt istemez"* ifadesi yer alıyordu. Ancak `ContentView.swift` satır 28'de `if !authService.isAuthenticated { AuthView(authService: authService) }` kontrolü bulunduğu için uygulama **giriş zorunludur (login-gated)**.
+* **Kod Tabanı Bulgusu (❌ Eksik):**
+  - **Hesap Silme (`deleteAccount`) Yok:** [`AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift) ve `MyProfileSheet` ([`UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift)) içinde hesap silme işlevi henüz yazılmamıştır. Hesap açabilen her iOS uygulaması, kullanıcının hesabını ve ilişkili Firestore verilerini (`users/{uid}`, `shared_posts`) uygulama içinden kalıcı olarak silebilmesini zorunlu kılar.
+  - **Giriş Zorunlu Yapı (Login-Gated):** [`ContentView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/ContentView.swift#L28) satırında `if !authService.isAuthenticated { AuthView(authService: authService) }` kontrolü bulunduğu için uygulama açılışta giriş zorunludur.
 
 ### 2.5. Uygulama Tamlığı ve Demo Hesap Zorunluluğu — Kural 2.1
 * **Dayanak:** `knowledge.app-store-review-guidelines.app-completeness`, `knowledge.app-store-review-guidelines.demo-account`
 * **Kural Özeti:**
   - Giriş ekranı arkasında kalan tüm özelliklerin incelenebilmesi için App Store Connect inceleme notlarında (**App Review Information**) çalışan bir **Demo Hesap (E-posta ve Şifre)** verilmesi ve inceleme süresince backend'in (`omakase-backend` Cloud Run servisi + Firebase) aktif olması zorunludur (`demo-account` Rule 1 & Rule 2).
-  - Uygulama içinde "Yakında / Coming Soon" gibi yer tutucu (placeholder) ekranlar bulunmamalıdır (`app-completeness` Rule 1).
-  - Eğer ilk sürümde uygulama içi satın alma / abonelik (IAP) tanımlanacaksa, ürünlerin inceleme anında çalışır olması ve **"Satın Alımları Geri Yükle" (`AppStore.sync()`)** butonunun yer alması (`knowledge.app-store-review-guidelines.digital-goods-iap`, `restore-purchases`) şarttır. İlk sürüm tamamen ücretsiz çıkacaksa App Store Connect'te yarım kalmış IAP ürünü bırakılmamalıdır.
+  - Uygulama içinde "Yakında / Coming Soon" gibi yer tutucu (placeholder) ekranlar bulunmamaktadır (`app-completeness` Rule 1 — ✅ Uyumlu).
 
 ### 2.6. Üçüncü Taraf İçerik Lisanslama (Letterboxd RSS) — Kural 5.2.1–5.2.3
 * **Dayanak:** `knowledge.app-store-review-guidelines.third-party-content-licensing`
-* **Durum (✅ Uyumlu — Dikkat Edilmesi Gereken Nokta):**
+* **Durum (✅ Uyumlu):**
   - Letterboxd logosu veya ticari markası görsel olarak kullanılmamakta, yalnızca kamuya açık RSS beslemesinden film adları okunarak Gemini ile özgün kültür/sinema yazıları üretilmektedir.
-  - **Uyarı (`third-party-content-licensing` Rule 3):** Üçüncü taraf bir servisin içeriğine erişimi doğrudan ücretli bir katman ("Letterboxd entegrasyonu sadece Pro'da") olarak satmak Kural 5.2.2 kapsamında ("monetizes access to content from a third-party service") belge/izin sorgulamasına yol açabilir. Bu nedenle Letterboxd RSS bağlantısını ücretsiz temel özellik olarak tutup, Pro abonelikte yüksek AI üretim kotasını / derinlemesine analiz kapasitesini konumlandırmak çok daha güvenlidir.
 
 ---
 
@@ -96,23 +94,76 @@ Kod tabanında yapılan denetim sonucunda, uygulamanın şu anki haliyle App Sto
 
 ### 3.1. `PrivacyInfo.xcprivacy` Dosyası Eksikliği (❌ Kritik Engel)
 Uygulama iOS 17+ hedeflidir ve `UserDefaults` (`@AppStorage("omakase.hasOnboarded")`, `@AppStorage("omakase.interests")`, `@AppStorage("omakase.language")`, `@AppStorage("omakase.appearance")`, `@AppStorage("omakase.letterboxd_username")`) kullanmaktadır.
-- `required-reason-api-declarations` **Rule 5** uyarınca: 1 Mayıs 2024'ten itibaren `UserDefaults` gibi Required-Reason API kullanan ancak `PrivacyInfo.xcprivacy` içinde geçerli gerekçe kodu bildirmeyen uygulamalar **App Store Connect tarafından yükleme anında reddedilir**.
+- `required-reason-api-declarations` **Rule 5** uyarınca: `UserDefaults` gibi Required-Reason API kullanan ancak `PrivacyInfo.xcprivacy` içinde geçerli gerekçe kodu bildirmeyen uygulamalar **App Store Connect tarafından yükleme anında reddedilir**.
 
 ### 3.2. Oluşturulması Gereken `omakase/omakase/PrivacyInfo.xcprivacy` Şeması
-Dosya tam olarak uygulama hedefinin kök kaynaklarında (`omakase/omakase/PrivacyInfo.xcprivacy`) yer almalı ve yalnızca Apple'ın belgelediği enum sabitlerini (`collected-data-types-declaration` Rule 1–4 ve `required-reason-api-declarations` Rule 1–2) içermelidir:
+Dosya tam olarak uygulama hedefinin kök kaynaklarında (`omakase/omakase/PrivacyInfo.xcprivacy`) yer almalı ve yalnızca Apple'ın belgelediği enum sabitlerini içermelidir:
 
-- **`NSPrivacyTracking`:** `false` (Uygulama IDFA veya reklam takibi yapmamaktadır).
-- **`NSPrivacyTrackingDomains`:** `[]` (Boş dizi).
-- **`NSPrivacyAccessedAPITypes`:**
-  - `NSPrivacyAccessedAPIType`: `NSPrivacyAccessedAPICategoryUserDefaults`
-  - `NSPrivacyAccessedAPITypeReasons`: `["CA92.1"]` *(Yalnızca uygulamanın kendisine erişilebilir kullanıcı tercihlerini okuma/yazma — `C56D.1` SDK kodu uygulama katmanında kesinlikle kullanılmamalıdır, Rule 3).*
-- **`NSPrivacyCollectedDataTypes`:**
-  1. `NSPrivacyCollectedDataTypeName` (`Linked: true`, `Tracking: false`, `Purposes: ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]`) — Görünür isim ve `@kullanıcı_adı`.
-  2. `NSPrivacyCollectedDataTypeEmailAddress` (`Linked: true`, `Tracking: false`, `Purposes: ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]`) — Firebase Auth e-posta adresi.
-  3. `NSPrivacyCollectedDataTypeUserID` (`Linked: true`, `Tracking: false`, `Purposes: ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]`) — Firebase UID.
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
+```
 
 ### 3.3. Üçüncü Taraf SDK İmzaları ve Gizlilik Raporu (`tracking-domains-and-third-party-sdk-signatures`)
-- Projede kullanılan `FirebaseAuth`, `FirebaseFirestore`, `FirebaseCore` ve `GoogleSignIn` paketleri, Apple'ın **"Privacy Manifest and Signature Required"** (12 Şubat 2025 zorunluluğu, Rule 3 & Rule 4) listesindedir.
+- Projede kullanılan `FirebaseAuth`, `FirebaseFirestore`, `FirebaseCore` ve `GoogleSignIn` paketleri, Apple'ın **"Privacy Manifest and Signature Required"** listesindedir.
 - Arşiv alındıktan sonra Xcode Organizer üzerinden **Product → Archive → Arşive Sağ Tıkla → Generate Privacy Report** (`manifest-file-structure-and-scope` Rule 5) çalıştırılarak hem uygulamanın hem de bağlı Firebase/GoogleSignIn SDK'larının beyanlarının eksiksiz birleştiği doğrulanmalıdır.
 
 ---
@@ -164,39 +215,43 @@ Dosya tam olarak uygulama hedefinin kök kaynaklarında (`omakase/omakase/Privac
 ## 5. Güncel Sistem Mimarisi ve Bileşen Durumu
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    SwiftUI iOS Client                       │
-│  - iOS 17+ • Reels Tarzı Tam Ekran Dikey Akış              │
-│  - Çok Adımlı Kayıt (Görünür İsim + @kullanıcı_adı + Google)│
-│  - Tam Ekran Kategori & 6'lı Alt Konu Seçici (BentoTasteBox)│
-│  - Topluluk (Community) Akışı & Kişi/Gönderi Arama          │
-│  - Letterboxd RSS Entegrasyonu & Okuma Süresi Sayacı        │
-└──────────────┬───────────────────────────────┬──────────────┘
-               │                               │
-               │ HTTPS (SSE Stream)            │ Firebase SDK
-               │ POST /feed/stream             │ (Auth + Cloud Firestore)
-               ▼                               ▼
-┌──────────────────────────────┐       ┌──────────────────────┐
-│  Google Cloud Run (Canlı)    │       │  Google Firebase     │
-│  FastAPI Backend             │       │  - Email & Google    │
-│  - _BLOCKLIST_RE Moderasyon  │       │  - Cloud Firestore   │
-│  - Server-Sent Events (SSE)  │       │  - firestore.rules   │
-└──────────────┬───────────────┘       └──────────────────────┘
-               │
-               │ google-genai SDK
-               ▼
-┌──────────────────────────────┐
-│   Google Gemini API          │
-│   - gemini-3.5-flash (Feed)  │
-│   - gemini-3.1-flash-lite    │
-└──────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Omakase Ekosistemi                              │
+├───────────────────────────────────┬─────────────────────────────────────┤
+│        SwiftUI iOS Client         │       Web Landing & Demo (web/)     │
+│  - iOS 17+ • Reels Dikey Akış     │  - getomakase (Cloudflare/Firebase) │
+│  - 3 Adımlı Kayıt (@username)     │  - Canlı Tadım (Interactive Demo)   │
+│  - 12 Kategori & 6'lı Alt Konu    │  - Deep Dive Modal Önizleme         │
+│  - Deep Dive Bottom Sheet Modal   │  - TR/EN Çoklu Dil & Koyu/Açık Tema │
+│  - Topluluk Akışı & Arama Barı    │  - TestFlight Bekleme Listesi       │
+└─────────────────┬─────────────────┴──────────────────┬──────────────────┘
+                  │                                    │
+                  │ HTTPS (SSE Stream)                 │ Firebase SDK
+                  │ POST /feed/stream                  │ (Auth + Cloud Firestore)
+                  ▼                                    ▼
+┌───────────────────────────────────┐        ┌────────────────────────────┐
+│     Google Cloud Run (Canlı)      │        │      Google Firebase       │
+│  FastAPI Backend                  │        │  - Email & Google Auth     │
+│  - _BLOCKLIST_RE Moderasyon       │        │  - Cloud Firestore         │
+│  - Server-Sent Events (SSE)       │        │  - firestore.rules         │
+│  - Letterboxd 50 Film RSS         │        │  - Firebase Hosting        │
+└─────────────────┬─────────────────┘        └────────────────────────────┘
+                  │
+                  │ google-genai SDK
+                  ▼
+┌───────────────────────────────────┐
+│        Google Gemini API          │
+│  - gemini-3.5-flash (Feed/Dive)   │
+│  - gemini-3.1-flash-lite (Topics) │
+└───────────────────────────────────┘
 ```
 
 | Bileşen | Durum | App Store Hazırlık Notu |
 |---------|-------|-------------------------|
-| **Kayıt & Giriş (`AuthView`)** | ⚠️ Kısmen Hazır | Çok adımlı E-posta kaydı (`displayName` + `@username`) ve Google Sign-In tamamlandı. **Sign in with Apple (Kural 4.8)** ve **Hesap Silme (Kural 5.1.1v)** eklenecek. |
-| **Kişisel Akış & Kategori Seçici** | ✅ Hazır | Gönderi yokken tam ekran açılan kategori sayfası, yatay kaydırmalı 12 kategori ve 6'lı alt konu ızgarası tamamlandı. |
-| **Topluluk (`TimelineView`)** | ⚠️ Kısmen Hazır | Arama çubuğu, `@kullanıcı_adı` gösterimi ve yorum raporlama aktif. **Kullanıcı Engelleme (Block User)**, **Gönderi Raporlama** ve **Yorum Filtresi (Kural 1.2)** eklenecek. |
+| **Kayıt & Giriş (`AuthView`)** | ⚠️ Kısmen Hazır | 3 adımlı E-posta kaydı (`displayName` + `@username` + canlı önizleme) ve Google Sign-In tamamlandı. **Sign in with Apple (Kural 4.8)** ve **Hesap Silme (Kural 5.1.1v)** eklenecek. |
+| **Kişisel Akış & Kategori Seçici (`BentoTasteBox`)** | ✅ Hazır | Gönderi yokken tam ekran açılan kategori sayfası, yatay kaydırmalı 12 kategori, 6'lı kompakt alt konu ızgarası, özel konu girişi ve Deep Dive bottom sheet modal tamamlandı. |
+| **Topluluk (`TimelineView`)** | ⚠️ Kısmen Hazır | Arama çubuğu, `@kullanıcı_adı` gösterimi, 5'li reaksiyonlar ve yorum raporlama aktif. **Kullanıcı Engelleme (Block User)**, **Gönderi Raporlama** ve **Yorum Filtresi (Kural 1.2)** eklenecek. |
+| **Web Tanıtım Sitesi (`web/`)** | ⚠️ Kısmen Hazır | `getomakase.app` arayüzü, interaktif demo ve iletişim e-postası (`destek@getomakase.app`) hazır. `/privacy` ve `/terms` yasal metin sayfaları eklenecek. |
 | **Gizlilik Manifestosu (`PrivacyInfo.xcprivacy`)** | ❌ Eksik | Paket kök dizinine `PrivacyInfo.xcprivacy` eklenecek (`CA92.1` + toplanan veri tipleri). |
 | **Firestore Güvenlik Kuralları** | ❌ Güvensiz | `firestore.rules` kullanıcı bazlı yetkilendirme (`request.auth.uid == userId`) ile sıkılaştırılacak. |
 | **Canlı Backend (Cloud Run)** | ✅ Hazır | `https://omakase-backend-20235796246.us-central1.run.app` üzerinde HTTPS ile çalışıyor; `GEMINI_API_KEY` istemcide değil sunucuda korunuyor (`data-security` Rule 3). |
@@ -214,7 +269,7 @@ App Store'a göndermeden önce sırasıyla tamamlanması gereken iş listesi:
   - `CommentsView.sendComment()` ve `AuthView` (`displayName` / `username`) içine `ContentModerationService.isAppropriate` kontrolü ekle.
   - `TimelinePostCard` içine "Gönderiyi Bildir" (`reportPost`) seçeneği ekle.
   - `UserProfileSheet` ve `TimelinePostCard` içine **"Kullanıcıyı Engelle" (`blockUser`)** özelliği ekle ve engellenen kullanıcıların içeriklerini akıştan filtrele.
-- [ ] **5. Uygulama İçi İletişim ve Yasal Bağlantılar (Kapı 1 — Kural 1.2 & 1.5):** `MyProfileSheet` içerisine "Destek / İletişim (`mailto:`)", "Gizlilik Politikası" ve "Kullanım Koşulları" satırlarını ekle.
+- [ ] **5. Uygulama İçi İletişim ve Yasal Bağlantılar (Kapı 1 — Kural 1.2 & 1.5):** `MyProfileSheet` içerisine "Destek / İletişim (`mailto:destek@getomakase.app`)", "Gizlilik Politikası" ve "Kullanım Koşulları" satırlarını ekle; `web/` üzerinde yasal sayfaları yayınla.
 - [ ] **6. `firestore.rules` Sıkılaştırması (Kapı 1 & 3 — Kural 1.6):** Herkesin her veriyi yazabildiği genel kuralı kaldırıp sahip bazlı (`authorId == request.auth.uid`, `userId == request.auth.uid`) kuralları devreye al.
 - [ ] **7. `Info.plist` Temizliği (Kapı 3 — Kural 1.6):** `Info.plist` içindeki `172.20.10.14` yerel IP HTTP istisnasını kaldır.
 - [ ] **8. Demo Hesap ve Arşiv Doğrulaması (Kapı 1 & 3 — Kural 2.1):** App Store Connect inceleme notları için bir demo hesap oluştur, Xcode Organizer'da **Validate App** ve **Generate Privacy Report** kontrollerini çalıştır.

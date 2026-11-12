@@ -1,7 +1,7 @@
 # 🔮 Omakase — Gelecek Stratejisi, Büyüme & Vizyon Raporu
 
-> **Son Güncelleme:** 11 Eylül 2026  
-> **Kapsam:** Pazar konumlandırması, rekabet analizi, kültürel veri savunma hattı (Moat), büyüme stratejisi ve uzun vadeli ürün vizyonu.
+> **Son Güncelleme:** 12 Kasım 2026  
+> **Kapsam:** Pazar konumlandırması, rekabet analizi, kültürel veri savunma hattı (Moat), topluluk ağ etkisi, web edinim hunisi (`getomakase.app`) ve uzun vadeli ürün vizyonu.
 
 ---
 
@@ -11,7 +11,7 @@
 2. [Omakase'nin Savunma Hattı (Moat Analizi)](#2-omakasenin-savunma-hattı-moat-analizi)
 3. [Doyum Psikolojisi & Okuma Süresi (Doomscrolling Karşıtı Model)](#3-doyum-psikolojisi--okuma-süresi)
 4. [Kültürel Entegrasyonlar Yol Haritası (Letterboxd, Spotify, Goodreads)](#4-kültürel-entegrasyonlar-yol-haritası)
-5. [Kullanıcı Büyüme (Growth) & Edinme Stratejisi](#5-kullanıcı-büyüme-growth--edinme-stratejisi)
+5. [Kullanıcı Büyüme (Growth) & Web Edinim Hunisi](#5-kullanıcı-büyüme-growth--web-edinim-hunisi)
 6. [Teknik Mimari & Vendor Risk Yönetimi](#6-teknik-mimari--vendor-risk-yönetimi)
 7. [Uzun Vadeli Vizyon (2026 - 2028)](#7-uzun-vadeli-vizyon-2026---2028)
 
@@ -20,94 +20,101 @@
 ## 1. Pazar Haritası & Konumlandırma
 
 ```mermaid
-quadrantChart
-    title Bilgi Keşfi & Sosyal Medya Ekosistemi - 2026
-    x-axis "Genel / Pasif Tüketim" --> "Kişiselleştirilmiş & Etkileşimli"
-    y-axis "Mevcut İçerik Özeti (Kürasyon)" --> "Yapay Zeka Sentezi (Üretim)"
-    quadrant-1 "Omakase Alanı (Kişisel Şef)"
-    quadrant-2 "AI Sohbet & Asistanlar"
-    quadrant-3 "Geleneksel RSS & Haber"
-    quadrant-4 "Algoritmik Sonsuz Akış"
-    Omakase: [0.88, 0.94]
-    TikTok: [0.70, 0.40]
-    Particle: [0.45, 0.65]
-    Perplexity: [0.55, 0.80]
-    ChatGPT: [0.40, 0.88]
-    Feedly: [0.50, 0.25]
-    Twitter-X: [0.35, 0.35]
+flowchart LR
+    subgraph Noise["Algoritmik Gürültü & Pasif Akış"]
+        A["TikTok / Reels<br/>(Sonsuz Kaydırma & Yüzeysel Tüketim)"]
+        B["X / Geleneksel Haber<br/>(Öfke & Anlık Gündem Odaklı)"]
+    end
+
+    subgraph Chat["Soru-Cevap Asistanları"]
+        C["ChatGPT / Perplexity<br/>(Boş Ekran Sendromu — Ne Soracağını Bilmek Gerekir)"]
+    end
+
+    subgraph OmakaseZone["Omakase Alanı (Kişisel Bilgi Şefi)"]
+        D["🍣 Omakase<br/>12 Kültür Kategorisi + 6'lı Alt Konu + Letterboxd Günlüğü<br/>+ 15-25 sn Sindirme Temposu + @username Topluluğu"]
+    end
+
+    Noise -.->|"Zihinsel Yorgunluktan Kaçış"| OmakaseZone
+    Chat -.->|"Sürtünmesiz Keşif İhtiyacı"| OmakaseZone
 ```
 
 ### Özgün Değer Önerisi (Unique Value Proposition)
-> **"Senin zevklerine ve kültürel alışkanlıklarına özel, anlık hazırlanan, derinlikli mikro-bilgi akışı."**
+> **"Algoritmaların gürültüsünden uzak, zihinsel damak tadınıza özel derinlikli kültür akışı."**
 
-Omakase kendini bir *"AI haber özetleyici"* olarak değil, kullanıcının zihinsel damak tadını besleyen bir **"Kişisel Bilgi Şefi"** olarak konumlandırır:
-* **Haber değil, zamansız merak ve kültür:** Gündemin yıpratıcı hızından uzak, sinema, bilim, felsefe, sanat ve teknoloji odaklı.
-* **Algoritma tahmini değil, doğrudan irade:** Kullanıcı Bento kutusundan o an ne tüketmek istediğini seçer.
+Omakase kendini bir *"AI haber özetleyici"* veya *"sohbet botu"* olarak değil, kullanıcının entelektüel merakını besleyen bir **"Kişisel Bilgi Şefi"** olarak konumlandırır:
+* **Haber değil, zamansız merak ve kültür:** Gündemin yıpratıcı hızından uzak; Sinema, Bilim, Felsefe, Sanat, Teknoloji, Tarih, Müzik, Edebiyat, Psikoloji, Mimari, Gastronomi ve Uzay odaklı 12 temel disiplin.
+* **Algoritma tahmini değil, bilinçli irade:** Kullanıcı ne tüketmek istediğini 12 kategori, anlık üretilen 6'lı alt konu karosu veya kendi yazdığı özel konu başlığıyla doğrudan seçer.
+* **Mürekkep ve kağıt sadeliği (`OmakaseTheme`):** Reklamsız, dikkat dağıtmayan monokrom tipografi ve editoryal okuma deneyimi.
 
 ---
 
 ## 2. Omakase'nin Savunma Hattı (Moat Analizi)
 
-Basit bir LLM wrapper'ı kolayca taklit edilebilir. Omakase'yi kopyalanamaz kılan dörtlü koruma hattı:
+Basit bir LLM arayüzü kolayca kopyalanabilir. Omakase'yi taklit edilemez kılan beşli koruma hattı:
 
 | Savunma Katmanı | Nasıl Çalışır? | Rakiplerin Taklit Zorluğu |
 |-----------------|----------------|---------------------------|
-| **1. Kültürel Veri Bağlantısı (Diary Moat)** | Kullanıcının Letterboxd'deki son 50 filmi, izleme tarihi ve puanları canlı girdi olarak kullanılır. | Kullanıcı her açtığında kendi izleme geçmişine özel post görür; bu veri Omakase dışında hiçbir sosyal mecrada yoktur. |
-| **2. Bento Keşif Izgarası (BentoTasteBox)** | 2048 oyun mekaniğiyle kategori çevirme (Roll), dinamik AI alt konu türetimi ve tek dokunuşla post üretimi. | Statik text arayüzlerine kıyasla benzersiz, dokunsal ve oyunlaştırılmış bir keşif hissi sunar. |
-| **3. Doyum & Cooldown Motoru** | Metin uzunluğuna göre 15-25 saniye akıllı bekleme zorunluluğu getirir. | Kullanıcıyı aptallaştıran hızlı kaydırma yerine metni gerçekten okutup sindirten bir deneyim yaratır. |
-| **4. Sosyal Damak Paylaşımı** | Beğenilen şef postları Firestore üzerinden profil timeline'ına dökülür. | Topluluk oluştukça kullanıcıların kendi bilgi kürasyonları ağ etkisi yaratır. |
+| **1. Kültürel Veri Bağlantısı (Diary Moat)** | Kullanıcının Letterboxd günlüğündeki son 50 filmi canlı girdi olarak kullanılır ve doğrulanmış kamera arkası anekdotlarına dönüştürülür. | Kullanıcı her açtığında kendi izleme geçmişine özel post görür; bu veri Omakase dışında hiçbir sosyal mecrada bu formatta işlenmez. |
+| **2. Sürtünmesiz Bento Keşif Motoru (`BentoTasteBox`)** | 12 kategori kapsülü, her kategoride korunan 6'lı kompakt alt konu ızgarası, isteğe bağlı yenileme ve özel konu girişi. | Sohbet botlarındaki "ne soracağım?" sürtünmesini sıfırlar; tek dokunuşla derinlikli mikro-hikaye başlatır. |
+| **3. Doyum & Cooldown Motoru** | Metin uzunluğuna göre 15–25 saniye akıllı okuma süresi ve canlı kum saati sayacı uygular. | Hızlı kaydırma (doomscrolling) alışkanlığını kırar, metni gerçekten okutup sindirten bir ritüel yaratır. |
+| **4. Deep Dive Bottom Sheet Mimarisi** | Okurun ilgisini çeken bir gönderide tek dokunuşla açılan modal pencerede konunun birincil kaynaklarına ve teknik detaylarına inilir. | Yüzeysel özet ile akademik derinlik arasındaki geçişi tek ekranda pürüzsüzce çözer. |
+| **5. `@username` Tabanlı Entelektüel Topluluk** | 3 adımlı kayıtla alınan `@kullanıcı_adı`, gönderi/kişi arama barı, 5'li reaksiyon sistemi (`🔥, 🧠, ❤️, 👏, 🤯`) ve yorumlar. | Kullanıcıların kendi kürasyonlarını paylaştığı yüksek sinyal-gürültü oranına sahip bir kültür ağı oluşturur. |
 
 ---
 
 ## 3. Doyum Psikolojisi & Okuma Süresi
 
-Sosyal medya uygulamalarının en büyük problemi **"Doomscrolling" (tüketim yorgunluğu)** problemidir. Kullanıcılar postları okumadan saniyede bir kaydırır ve birkaç dakika sonra boşluk hissine kapılıp uygulamayı siler.
+Sosyal medya uygulamalarının en büyük problemi **"Doomscrolling" (tüketim yorgunluğu)** döngüsüdür. Kullanıcılar metinleri okumadan saniyede bir kaydırır ve birkaç dakika sonra zihinsel yorgunlukla uygulamadan çıkar.
 
-Omakase bu döngüyü bilinçli olarak kırar:
-1. Bir post tamamlandığında kullanıcının kelime sayısına göre **okuma süresi (reading cooldown)** başlar.
-2. Bu süre boyunca yeni post üretimi ve seçim butonları kilitlenir; en alttaki kartta animasyonlu bir kum saati geri sayım yapar.
-3. Bu sayede kullanıcı bilgi parçasını okur, sindirir ve ancak sonrasında yeni bir posta geçer.
-4. **Sonuç:** Oturum süresi kaliteli artar, token maliyeti kontrol altında tutulur ve kullanıcıda "zamanımı verimli geçirdim" hissi oluşur.
+Omakase bu döngüyü bilinçli olarak tersine çevirir:
+1. Bir post tamamlandığında kelime sayısına göre **15–25 saniyelik okuma süresi (reading cooldown)** başlar.
+2. Bu süre boyunca yeni post üretimi ve kategori seçimleri kilitlenir; ekranın altında animasyonlu bir kum saati geri sayım yapar.
+3. Kullanıcı bilgiyi gerçekten okur, dilerse **Deep Dive** ile derinleşir veya **Topluluk** sekmesinde paylaşır.
+4. **Sonuç:** Oturum kalitesi yükselir, sunucu/token maliyeti doğal bir hız sınırlayıcıyla (rate-limiter) korunur ve kullanıcıda *"zamanımı değerli bir şey öğrenerek geçirdim"* doyumu oluşur.
 
 ---
 
 ## 4. Kültürel Entegrasyonlar Yol Haritası
 
-Letterboxd entegrasyonunun yakaladığı başarı, Omakase'nin diğer kültürel günlüklerle de entegre olabileceğini kanıtlamıştır:
+Letterboxd entegrasyonunun kanıtladığı model, kullanıcının diğer kültürel izleriyle genişletilecektir:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Kültürel Veri Entegrasyonları            │
 ├───────────────────┬───────────────────┬─────────────────────┤
-│ 🎬 LETTERBOXD     │ 🎵 SPOTIFY        │ 📚 GOODREADS / SBN  │
-│ (Tamamlandı ✅)    │ (v2 Hedefi)       │ (v3 Hedefi)         │
+│ 🎬 LETTERBOXD     │ 🎵 SPOTIFY        │ 📚 GOODREADS        │
+│ (Tamamlandı ✅)    │ (v2.0 Hedefi)     │ (v2.5 Hedefi)       │
 │ - Son 50 film     │ - Son çalınan     │ - Son okunan kitap  │
 │ - Kamera arkası   │ - Albüm yapım     │ - Felsefi analiz &  │
-│   doğrulanmış     │   anektodları     │   yazarın arka plan │
+│   doğrulanmış     │   anekdotları     │   yazarın arka plan │
 │   anekdotlar      │ - Sample hikayesi │   hikayesi          │
 └───────────────────┴───────────────────┴─────────────────────┘
 ```
 
 ---
 
-## 5. Kullanıcı Büyüme (Growth) & Edinme Stratejisi
+## 5. Kullanıcı Büyüme (Growth) & Web Edinim Hunisi
 
-### A. Mikro-Viralite (Instagram & X Paylaşım Kartları)
-* Omakase'de üretilen postların tipografisi ve tasarımı (Örn: *"Wong Kar-wai'nin Bitmeyen Mantı Sahnesi İşkencesi"*) doğrudan ekran görüntüsü alınıp Instagram Story veya X'te paylaşılabilecek şıklıktadır.
-* Kartların altına otomatik olarak eklenen *"omakase ile demlendi"* filigranı en güçlü organik edinim motorudur.
+### A. İnteraktif Web Deneyimi (`web/` — `getomakase.app`)
+* Statik ekran görüntüleri yerine, ziyaretçilerin web tarayıcısında doğrudan **Canlı Tadım (Interactive Demo)** yapabildiği, kategori seçip SSE daktilo akışını ve Deep Dive modalını deneyimleyebildiği bir web vitrini ([`web/index.html`](file:///Users/kuzey/projects/omakase/web/index.html)) yayındadır.
+* Web sitesi hem Türkçe hem İngilizce (`TR`/`EN`) ve Açık/Koyu tema desteğiyle küresel kullanıcı edinimine ve TestFlight bekleme listesi dönüşümüne hazırdır.
 
-### B. Sinema ve Kültür Toplulukları
-* Letterboxd kullanıcıları sinema hakkında derinlikli trivia öğrenmeye en hevesli kitleyi oluşturur. Sinema subreddit'leri, Letterboxd Discord sunucuları ve sinema kulüpleri ilk 10.000 kullanıcı için ana odaktır.
+### B. Mikro-Viralite & Topluluk Kürasyonu
+* Omakase'nin monokrom kağıt/mürekkep kart tasarımı ve çarpıcı başlıkları doğrudan ekran görüntüsü alınıp Instagram Story veya X'te paylaşılmaya uygundur.
+* Uygulama içi **Topluluk** sekmesindeki `@kullanıcı_adı` profilleri ve arama çubuğu, kullanıcıların birbirlerinin "zihinsel damak tadını" takip etmesini sağlar.
 
 ---
 
 ## 6. Teknik Mimari & Vendor Risk Yönetimi
 
-* **Google Cloud Run:** Sunucusuz, sıfır bakım gerektiren ve saniyede binlerce isteğe otomatik ölçeklenebilen mikroservis altyapısı.
-* **Model Çeşitliliği:** Şu an Gemini 3.5 Flash kullanılmaktadır. `google-genai` SDK soyutlaması sayesinde gerektiğinde Claude 3.5 Haiku veya GPT-4o-mini yedek model olarak dakikalar içinde devreye alınabilir.
+* **Google Cloud Run + Firebase + Cloudflare:**
+  - Arka uç (`backend/main.py`) Google Cloud Run üzerinde sunucusuz (serverless) olarak ölçeklenir.
+  - Kimlik doğrulama ve gerçek zamanlı topluluk veritabanı Firebase Auth & Cloud Firestore üzerinde çalışır.
+  - Web ön yüzü (`web/`) Cloudflare (`wrangler.json`) ve Firebase Hosting (`firebase.json`) ile çift yedekli dağıtılır.
+* **Model Çeşitliliği:** Ana içerik üretiminde `gemini-3.5-flash`, hızlı alt konu türetiminde `gemini-3.1-flash-lite` kullanılmaktadır. `google-genai` katmanı sayesinde model güncellemeleri istemciye yeni sürüm çıkmadan sunucu tarafında anında yapılabilir.
 
 ---
 
 ## 7. Uzun Vadeli Vizyon (2026 - 2028)
 
-Omakase'nin nihai hedefi, kullanıcının tüm dijital kültürel tüketimini (izledikleri, dinledikleri, okudukları) arkada birleştiren ve her sabah ona zihnini açacak 5 dakikalık şahsi bir günlük gazete / entelektüel bento menüsü sunan vazgeçilmez bir yaşam tarzı uygulamasına dönüşmektir.
+Omakase'nin nihai hedefi; kullanıcının tüm kültürel tüketimini (izlediği filmler, dinlediği albümler, okuduğu kitaplar ve merak ettiği disiplinler) tek bir zarif arayüzde birleştiren, algoritmik gürültü yerine entelektüel berraklık sunan birincil günlük okuma ritüeli olmaktır.

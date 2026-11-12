@@ -1,54 +1,60 @@
 # 🍣 Omakase
 
 > **Kişisel Yapay Zeka Kültür & Bilgi Akışı**  
-> Kullanıcının ilgi alanlarını ve Letterboxd izleme günlüğünü gerçek zamanlı olarak derinlikli, doğrulanmış mikro-hikayelere dönüştüren yerel iOS ve Cloud Run uygulaması.
+> Algoritmaların gürültüsünden uzak; kullanıcının 12 kültür kategorisindeki tercihlerini, özel konu başlıklarını ve Letterboxd izleme günlüğünü gerçek zamanlı olarak doğrulanmış, derinlikli mikro-hikayelere dönüştüren yerel iOS, Cloud Run ve Web platformu.
 
 ---
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    SwiftUI iOS Client                       │
-│  - iOS 17+ • Reels Tarzı Tam Ekran Dikey Akış              │
-│  - BentoTasteBox (2048 Tarzı Dokunsal Keşif Izgarası)       │
-│  - Letterboxd RSS Entegrasyonu (Son 50 Film + Fun-Fact)     │
-│  - Okuma Süresi Sayacı (Reading Cooldown & Scroll Kilidi)   │
-└──────────────┬───────────────────────────────┬──────────────┘
-               │                               │
-               │ HTTPS Server-Sent Events      │ Firebase SDK
-               │ POST /feed/stream             │ (Google Sign-In + Firestore)
-               ▼                               ▼
-┌──────────────────────────────┐       ┌──────────────────────┐
-│  Google Cloud Run (Canlı)    │       │  Google Firebase     │
-│  FastAPI Backend             │       │  - Firebase Auth     │
-│  - Çift Katmanlı Moderasyon  │       │  - Cloud Firestore   │
-│  - Server-Sent Events (SSE)  │       │  - firestore.rules   │
-└──────────────┬───────────────┘       └──────────────────────┘
-               │
-               │ google-genai SDK
-               ▼
-┌──────────────────────────────┐
-│   Google Gemini API          │
-│   - gemini-3.5-flash (Feed)  │
-│   - gemini-3.1-flash-lite    │
-└──────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Omakase Ekosistemi                              │
+├───────────────────────────────────┬─────────────────────────────────────┤
+│        SwiftUI iOS Client         │       Web Landing & Demo (web/)     │
+│  - iOS 17+ • Reels Dikey Akış     │  - getomakase (Cloudflare/Firebase) │
+│  - 3 Adımlı Kayıt (@username)     │  - Canlı Tadım (Interactive Demo)   │
+│  - 12 Kategori & 6'lı Alt Konu    │  - Deep Dive Modal Önizleme         │
+│  - Deep Dive Bottom Sheet Modal   │  - TR/EN Çoklu Dil & Koyu/Açık Tema │
+│  - Topluluk Akışı & Arama Barı    │  - TestFlight Bekleme Listesi       │
+└─────────────────┬─────────────────┴──────────────────┬──────────────────┘
+                  │                                    │
+                  │ HTTPS Server-Sent Events           │ Firebase SDK
+                  │ POST /feed/stream                  │ (Auth + Cloud Firestore)
+                  ▼                                    ▼
+┌───────────────────────────────────┐        ┌────────────────────────────┐
+│     Google Cloud Run (Canlı)      │        │      Google Firebase       │
+│  FastAPI Backend                  │        │  - Email & Google Auth     │
+│  - Çift Katmanlı Moderasyon       │        │  - Cloud Firestore         │
+│  - Server-Sent Events (SSE)       │        │  - firestore.rules         │
+│  - Letterboxd 50 Film RSS         │        │  - Firebase Hosting        │
+└─────────────────┬─────────────────┘        └────────────────────────────┘
+                  │
+                  │ google-genai SDK
+                  ▼
+┌───────────────────────────────────┐
+│        Google Gemini API          │
+│  - gemini-3.5-flash (Feed/Dive)   │
+│  - gemini-3.1-flash-lite (Topics) │
+└───────────────────────────────────┘
 ```
 
 ---
 
 ## 🚀 Öne Çıkan Özellikler
 
-* **🍱 BentoTasteBox (2048 Tarzı Keşif Izgarası):**
-  Altı ana kategori (Film, Bilim, Felsefe, Edebiyat vb.), dokunsal 3D kart çevirme ("Döndür") ve her kategoriye tıklandığında **Gemini 3.1 Flash-Lite** ile anında türetilen 10 dinamik alt konu karosu.
+* **🍱 BentoTasteBox (12 Kategori & 6'lı Alt Konu Izgarası):**
+  12 ana kültür kategorisi (*Sinema, Bilim, Felsefe, Sanat, Teknoloji, Tarih, Müzik, Edebiyat, Psikoloji, Mimari, Gastronomi, Uzay*), kategori değişiminde korunan 6'lı kompakt alt konu karosu, isteğe bağlı **Gemini 3.1 Flash-Lite** yenilemesi ve özel konu girişi.
+* **✨ Sürtünmesiz 3 Adımlı Kayıt & `@username` Kimliği:**
+  Twitter/X tarzı çok adımlı kayıt akışı (Görünür İsim, gerçek zamanlı Firestore müsaitlik kontrolüne sahip benzersiz `@kullanıcı_adı`, canlı profil önizleme kartı) ve Google Sign-In desteği.
 * **🎬 Letterboxd Entegrasyonu:**
   Kullanıcının Letterboxd günlüğünden son 50 filmi tek seferde çeker. Python seviyesinde rastgele hedef film kilidiyle (`random.choice`) çeşitliliği garanti eder ve doğrulanmış kamera arkası prodüksiyon anekdotlarına öncelik verir.
 * **⏳ Okuma Süresi & Doomscrolling Koruması (Reading Cooldown):**
-  Metin uzunluğuna göre 15 - 25 saniye akıllı sindirme süresi uygular. Bu sürede normal scroll ve butonlar kilitlenir; son kartta animasyonlu bir kum saati canlı geri sayım yapar.
-* **📱 Reels Tarzı Tam Ekran Dikey Akış:**
-  Instagram Reels formatında sayfalama (`.viewAligned`). SSE üzerinden gelen kelimeler daktilo efektiyle anlık olarak ekrana akar.
-* **🐇 Deep Dive (Tavşan Deliği):**
-  Bir konuyu daha derin öğrenmek istediğinizde tek tıkla o konuya özel uzun follow-up gönderisi üretir.
-* **👥 Sosyal & Yer İmleri:**
-  Google Sign-In ile profil oluşturma, beğenilen şef postlarını Firestore timeline'ında toplulukla paylaşma ve çevrimdışı yer imleme (`BookmarkStore`).
+  Metin uzunluğuna göre 15–25 saniye akıllı sindirme süresi uygular. Bu sürede yeni post üretimi ve kategori seçimleri kilitlenir; animasyonlu bir kum saati canlı geri sayım yapar.
+* **📱 Reels Tarzı Dikey Akış & Deep Dive Modal:**
+  `.viewAligned` tam ekran dikey sayfalama, SSE üzerinden daktilo efektiyle akan metinler ve tek dokunuşla açılan **Deep Dive Bottom Sheet Modal** (`DeepDiveSheetView`).
+* **👥 Topluluk (`Community`), Arama & Yer İmleri:**
+  Beğenilen şef yazılarını `@username` profili üzerinden toplulukla paylaşma, gönderi/kişi arama barı, 5'li ifade sistemi (`🔥, 🧠, ❤️, 👏, 🤯`), yorumlar ve çevrimdışı yer imleri (`BookmarkStore`).
+* **🌐 İnteraktif Web Deneyimi (`web/`):**
+  Tarayıcı üzerinde çalışan Canlı Tadım simülatörü, Deep Dive önizlemesi, TR/EN dil geçişi ve TestFlight bekleme listesi.
 
 ---
 
@@ -56,31 +62,46 @@
 
 ```
 omakase/
-├── .agents/                 # Antigravity kural ve yetenek tanımları
-│   └── rules/sweetpad-launch.md
+├── .agents/                 # Apple Agent Kit (v2.5.1) yönlendirme, yetenek ve bilgi sözleşmeleri
+│   ├── AGENTS.md            # Ajan başlangıç prosedürü ve katman kuralları
+│   ├── knowledge/           # HIG, SwiftUI, Xcode, Privacy ve App Review sözleşmeleri
+│   ├── references/          # Resmi Apple dokümantasyon referansları
+│   ├── skills/              # Yönlendirme indeksleri (skills/index.md) ve yetenekler
+│   └── workflows/           # Çoklu yetenek iş akışları (app-store-submission, authentication vb.)
 ├── .vscode/                 # IDE ayarları ve derleme görevleri (Cmd+Shift+B)
 │   └── tasks.json
 ├── backend/                 # FastAPI & Google GenAI mikroservisi
 │   ├── Dockerfile           # Cloud Run deployment konteyneri
-│   ├── main.py              # SSE stream ve Letterboxd endpoint'leri
+│   ├── main.py              # SSE stream, Deep Dive ve Letterboxd endpoint'leri
 │   └── requirements.txt
-├── docs/                    # Detaylı mimari, strateji ve hukuk raporları
-│   ├── appstore_raporu.md   # App Store prodüksiyon ve review kılavuzu
-│   ├── fikri_mulkiyet.md    # Marka, telif ve Letterboxd adil kullanım raporu
-│   ├── gelecek_stratejisi.md# Moat, büyüme ve kültürel entegrasyon vizyonu
-│   ├── ozellik_fikirleri.md # Tamamlananlar ve v2/v3 özellik yol haritası
-│   └── xcode_konfigurasyon.md # Xcode derleme ve ATS ayarları raporu
-├── omakase/                 # SwiftUI iOS projesi
+├── docs/                    # Detaylı mimari, strateji, PMF/pazarlama, App Store ve hukuk raporları
+│   ├── appstore_raporu.md   # Apple Agent Kit tabanlı App Store gönderim ve uyumluluk denetimi
+│   ├── fikri_mulkiyet.md    # Marka, telif, Apple marka kuralları ve Letterboxd adil kullanım raporu
+│   ├── gelecek_stratejisi.md# Moat analizi, doyum psikolojisi ve kültürel entegrasyon vizyonu
+│   ├── ozellik_fikirleri.md # Tamamlanan 8 temel sistem ve v1/v2/v3 özellik yol haritası
+│   ├── urun_analizi_ve_pazarlama.md # Product-Market Fit (PMF), ICP, birim ekonomisi ve ASO/GTM raporu
+│   └── xcode_konfigurasyon.md # Xcode derleme, Simulator/Cihaz otomasyonu ve Archive kılavuzu
+├── omakase/                 # SwiftUI iOS projesi (iOS 17.0+)
 │   ├── omakase.xcodeproj    # Xcode proje paketi
 │   └── omakase/             # Swift kaynak kodları
-│       ├── Feed/            # ReelsPostCard, FeedView, FeedViewModel
+│       ├── Auth/            # AuthView (3 adımlı kayıt), AuthService
+│       ├── Feed/            # FeedView, FeedViewModel, DeepDiveSheetView
 │       ├── Interests/       # BentoTasteBox, InterestCategory
+│       ├── Models/          # UserProfile (@username), SharedPost, BookmarkStore
 │       ├── Networking/      # SSEClient, LetterboxdService
-│       ├── Social/          # TimelineView, TimelinePostCard
-│       └── Services/        # ContentModerationService, PostCacheService
+│       ├── Social/          # TimelineView, TimelinePostCard, UserProfileSheet, UserSearchView
+│       └── Services/        # FirestoreService, ContentModerationService, PostCacheService
 ├── scripts/
-│   └── launch-ios.sh        # Fiziksel iPhone'a otomatik derleme & başlatma betiği
-├── firestore.rules          # Firestore güvenlik kuralları
+│   ├── launch-ios.sh        # Fiziksel iPhone'a otomatik derleme & başlatma betiği
+│   └── launch-simulator.sh  # iOS Simulator'da otomatik derleme & başlatma betiği
+├── web/                     # İnteraktif tanıtım web sitesi (getomakase.app)
+│   ├── index.html           # Canlı Tadım simülatörü, özellikler, felsefe ve SSS
+│   ├── style.css            # Monokrom açık/koyu tema stilleri
+│   ├── app.js               # İnteraktif demo motoru ve TR/EN çeviri katmanı
+│   └── assets/              # İkonlar ve ekran görselleri
+├── firebase.json            # Firestore kuralları ve Firebase Hosting yapılandırması
+├── firestore.rules          # Cloud Firestore güvenlik kuralları
+├── wrangler.json            # Cloudflare statik varlık dağıtım yapılandırması (getomakase)
 ├── GEMINI.md                # Çalışma alanı geliştirici kuralları
 └── README.md
 ```
@@ -89,16 +110,14 @@ omakase/
 
 ## 🛠️ Hızlı Başlangıç
 
-### 1. iOS Uygulamasını Fiziksel Cihazda Çalıştırma (Sweetpad / Script)
-
-Uygulama, bağlı olan iPhone'unuzu otomatik tespit edip derleyen ve açan özel bir betikle donatılmıştır:
+### 1. iOS Uygulamasını Çalıştırma (Fiziksel Cihaz veya Simulator)
 
 ```bash
-# Terminalden:
+# Bağlı fiziksel iPhone üzerinde derleyip başlatmak için (veya Cmd + Shift + B):
 ./scripts/launch-ios.sh
 
-# Veya IDE içerisinden:
-# Cmd + Shift + B kısayolu ile doğrudan çalıştırabilirsiniz.
+# iOS Simulator (iPhone 17) üzerinde derleyip başlatmak için:
+./scripts/launch-simulator.sh
 ```
 
 ### 2. Canlı Backend Bilgisi
@@ -107,7 +126,7 @@ Backend Google Cloud Run üzerinde canlı yayındadır:
 * **Canlı URL:** `https://omakase-backend-20235796246.us-central1.run.app`
 * **Sağlık Kontrolü:** `curl https://omakase-backend-20235796246.us-central1.run.app/health`
 
-İstemci varsayılan olarak bu canlı servise bağlanır. Dilerseniz lokal olarak çalıştırmak için:
+Lokal olarak çalıştırmak için:
 
 ```bash
 cd backend
@@ -125,8 +144,9 @@ Detaylı rapor ve analizler için `docs/` klasörünü inceleyebilirsiniz:
 
 | Doküman | Açıklama |
 |---------|----------|
-| [📄 App Store Raporu](docs/appstore_raporu.md) | Canlı Cloud Run mimarisi, Gemini 3.5 Flash maliyeti, Apple Review uyumluluğu ve StoreKit 2. |
-| [⚖️ Fikri Mülkiyet Raporu](docs/fikri_mulkiyet.md) | Letterboxd RSS kullanımının hukuki boyutu, marka koruması ve prompt ticari sırları. |
-| [🔮 Gelecek Stratejisi](docs/gelecek_stratejisi.md) | Moat analizi, doomscrolling karşıtı doyum psikolojisi ve Spotify/Goodreads vizyonu. |
-| [💡 Özellik Haritası](docs/ozellik_fikirleri.md) | Tamamlanan 7 temel sistem ve v2/v3 önceliklendirilmiş özellik havuzu. |
-| [🔧 Xcode Konfigürasyon Raporu](docs/xcode_konfigurasyon.md) | ATS yönetimi, Release build hazırlığı ve launch otomasyonu. |
+| [📄 App Store Raporu](docs/appstore_raporu.md) | Apple Agent Kit tabanlı App Review, `PrivacyInfo.xcprivacy` ve Xcode gönderim denetimi. |
+| [📈 Ürün Analizi, PMF & Pazarlama](docs/urun_analizi_ve_pazarlama.md) | Product-Market Fit hipotezi, hedef personalar (ICP), AARRR hunisi, birim ekonomisi ve App Store (ASO) vitrin stratejisi. |
+| [⚖️ Fikri Mülkiyet Raporu](docs/fikri_mulkiyet.md) | Letterboxd RSS adil kullanımı, Apple marka kuralları, prompt ticari sırları ve UGC hukuku. |
+| [🔮 Gelecek Stratejisi](docs/gelecek_stratejisi.md) | 5 katmanlı Moat analizi, doyum psikolojisi, web edinim hunisi ve kültürel entegrasyon vizyonu. |
+| [💡 Özellik Haritası](docs/ozellik_fikirleri.md) | Tamamlanan 8 temel sistem (3 adımlı `@username` kaydı, 12 kategori, Topluluk, Web) ve v2/v3 yol haritası. |
+| [🔧 Xcode Konfigürasyon Raporu](docs/xcode_konfigurasyon.md) | Fiziksel cihaz & Simulator otomasyonu, ATS temizliği ve Organizer Archive/Validate prosedürü. |
