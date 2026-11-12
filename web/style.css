@@ -443,10 +443,16 @@ button {
   opacity: 0.9;
 }
 
-.btn-appstore svg {
+.btn-appstore .apple-logo-img {
   width: 20px;
   height: 20px;
-  fill: currentColor;
+  object-fit: contain;
+  filter: invert(1);
+  transition: filter var(--transition-fast);
+}
+
+[data-theme="dark"] .btn-appstore .apple-logo-img {
+  filter: none;
 }
 
 .hero-meta {
