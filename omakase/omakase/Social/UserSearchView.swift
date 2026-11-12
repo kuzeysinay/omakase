@@ -28,35 +28,7 @@ struct UserSearchView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
 
-                if isSearching {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                } else if results.isEmpty && !query.isEmpty {
-                    Spacer()
-                    ContentUnavailableView {
-                        Label(l10n.noUsersFound, systemImage: "person.slash")
-                    }
-                    Spacer()
-                } else if results.isEmpty {
-                    Spacer()
-                    VStack(spacing: 8) {
-                        Image(systemName: "person.2.gobackward")
-                            .font(.system(size: 36, weight: .light))
-                            .foregroundStyle(.secondary)
-                        Text(l10n.searchUsersHint)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                } else {
-                    List {
-                        ForEach(results) { user in
-                            userRow(user)
-                        }
-                    }
-                    .listStyle(.plain)
-                }
+                contentArea
             }
             .navigationTitle(l10n.findPeople)
             .navigationBarTitleDisplayMode(.inline)
@@ -88,12 +60,42 @@ struct UserSearchView: View {
                 }
             }
         }
-        .sheet(item: Binding(
-            get: { selectedProfileUid.map { ProfileDestination(uid: $0) } },
-            set: { selectedProfileUid = $0?.uid }
-        )) { dest in
-            UserProfileSheet(targetUid: dest.uid, authService: authService)
+        .sheet(item: $selectedProfileUid) { uid in
+            UserProfileSheet(userId: uid, authService: authService)
                 .presentationDetents([.large])
+        }
+    }
+
+    @ViewBuilder
+    private var contentArea: some View {
+        if isSearching {
+            Spacer()
+            ProgressView()
+            Spacer()
+        } else if results.isEmpty && !query.isEmpty {
+            Spacer()
+            ContentUnavailableView {
+                Label(l10n.noUsersFound, systemImage: "person.slash")
+            }
+            Spacer()
+        } else if results.isEmpty {
+            Spacer()
+            VStack(spacing: 8) {
+                Image(systemName: "person.2.gobackward")
+                    .font(.system(size: 36, weight: .light))
+                    .foregroundStyle(.secondary)
+                Text(l10n.searchUsersHint)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        } else {
+            List {
+                ForEach(results) { user in
+                    userRow(user)
+                }
+            }
+            .listStyle(.plain)
         }
     }
 

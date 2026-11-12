@@ -73,9 +73,7 @@ final class AuthService: NSObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
-                self?.signOut()
-            }
+            self?.signOut()
         }
 
         // Check Apple ID credential state on foreground (Rule 2).
@@ -84,7 +82,7 @@ final class AuthService: NSObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 await self?.verifyPersistedAppleCredentialState()
             }
         }
@@ -416,20 +414,20 @@ final class AuthService: NSObject {
 
     private func verifyPersistedAppleCredentialState() async {
         guard let appleUserID = await Self.readKeychainAppleUserID(), !appleUserID.isEmpty else { return }
-        ASAuthorizationAppleIDProvider().getCredentialState(forUserID: appleUserID) { [weak self] state, _ in
-            Task { @MainActor in
-                guard let self else { return }
-                switch state {
-                case .authorized:
-                    break // Trust cached session (Rule 3)
-                case .revoked, .notFound:
-                    self.signOut() // Discard stale session (Rule 4)
-                case .transferred:
-                    await self.migrateAppleUserIdentifier(from: appleUserID) // Distinct migration handling (Rule 5)
-                @unknown default:
-                    self.signOut()
-                }
+        do {
+            let state = try await ASAuthorizationAppleIDProvider().credentialState(forUserID: appleUserID)
+            switch state {
+            case .authorized:
+                break // Trust cached session (Rule 3)
+            case .revoked, .notFound:
+                signOut() // Discard stale session (Rule 4)
+            case .transferred:
+                await migrateAppleUserIdentifier(from: appleUserID) // Distinct migration handling (Rule 5)
+            @unknown default:
+                signOut()
             }
+        } catch {
+            // Transient or network error; keep existing session
         }
     }
 
@@ -635,9 +633,7 @@ extension AuthService: ASAuthorizationControllerDelegate, ASAuthorizationControl
         switch authError.code {
         case .canceled:
             break
-        case .failed, .invalidResponse, .notHandled, .unknown:
-            errorMessage = authError.localizedDescription
-        @unknown default:
+        default:
             errorMessage = authError.localizedDescription
         }
     }

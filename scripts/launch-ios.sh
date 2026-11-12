@@ -10,11 +10,8 @@ set -e
 WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$WORKSPACE_ROOT/omakase"
 
-# 1. Detect target physical device UUID, fallback to paired iPhone if not parsed
-DEVICE_ID=$(xcrun devicectl list devices 2>/dev/null | grep -E -o '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -n 1)
-if [ -z "$DEVICE_ID" ]; then
-    DEVICE_ID="ADFC2ADA-EA3F-51A7-9C82-E2554869B97D"
-fi
+# 1. Target physical iPhone (Kuzey iPhone'u)
+DEVICE_ID="ADFC2ADA-EA3F-51A7-9C82-E2554869B97D"
 
 echo "🚀 Target Device: $DEVICE_ID"
 echo "🔨 Building Omakase scheme..."

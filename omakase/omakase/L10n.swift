@@ -89,6 +89,13 @@ struct L10n {
         }
     }
 
+    var clearSearch: String {
+        switch lang {
+        case .english: "Clear search"
+        case .turkish: "Aramayı temizle"
+        }
+    }
+
     var feedMoreActionsA11y: String {
         switch lang {
         case .english: "More actions"
