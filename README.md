@@ -80,7 +80,7 @@ omakase/
 │   ├── gelecek_stratejisi.md# Moat analizi, doyum psikolojisi ve kültürel entegrasyon vizyonu
 │   ├── ozellik_fikirleri.md # Tamamlanan 8 temel sistem ve v1/v2/v3 özellik yol haritası
 │   ├── urun_analizi_ve_pazarlama.md # Product-Market Fit (PMF), ICP, birim ekonomisi ve ASO/GTM raporu
-│   └── xcode_konfigurasyon.md # Xcode derleme, Simulator/Cihaz otomasyonu ve Archive kılavuzu
+│   └── siber_guvenlik_raporu.md # API anahtarları, Cloud Run, Firestore, iOS ve Web güvenlik denetimi
 ├── omakase/                 # SwiftUI iOS projesi (iOS 17.0+)
 │   ├── omakase.xcodeproj    # Xcode proje paketi
 │   └── omakase/             # Swift kaynak kodları
@@ -144,9 +144,9 @@ Detaylı rapor ve analizler için `docs/` klasörünü inceleyebilirsiniz:
 
 | Doküman | Açıklama |
 |---------|----------|
-| [📄 App Store Raporu](docs/appstore_raporu.md) | Apple Agent Kit tabanlı App Review, `PrivacyInfo.xcprivacy` ve Xcode gönderim denetimi. |
+| [📄 App Store Raporu](docs/appstore_raporu.md) | Apple Agent Kit tabanlı App Review, `PrivacyInfo.xcprivacy`, Xcode yapılandırma ve Archive/Validate denetimi. |
+| [🛡️ Siber Güvenlik Raporu](docs/siber_guvenlik_raporu.md) | API anahtarları, Cloud Run backend, Firestore kuralları, iOS istemci ve Web siber güvenlik analizi. |
 | [📈 Ürün Analizi, PMF & Pazarlama](docs/urun_analizi_ve_pazarlama.md) | Product-Market Fit hipotezi, hedef personalar (ICP), AARRR hunisi, birim ekonomisi ve App Store (ASO) vitrin stratejisi. |
 | [⚖️ Fikri Mülkiyet Raporu](docs/fikri_mulkiyet.md) | Letterboxd RSS adil kullanımı, Apple marka kuralları, prompt ticari sırları ve UGC hukuku. |
 | [🔮 Gelecek Stratejisi](docs/gelecek_stratejisi.md) | 5 katmanlı Moat analizi, doyum psikolojisi, web edinim hunisi ve kültürel entegrasyon vizyonu. |
 | [💡 Özellik Haritası](docs/ozellik_fikirleri.md) | Tamamlanan 8 temel sistem (3 adımlı `@username` kaydı, 12 kategori, Topluluk, Web) ve v2/v3 yol haritası. |
-| [🔧 Xcode Konfigürasyon Raporu](docs/xcode_konfigurasyon.md) | Fiziksel cihaz & Simulator otomasyonu, ATS temizliği ve Organizer Archive/Validate prosedürü. |

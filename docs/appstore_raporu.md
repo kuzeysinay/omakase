@@ -116,6 +116,30 @@
 * [`L10n.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/L10n.swift) içindeki geliştiriciye yönelik bağlantı hata metinleri (`OMAKASE_API_URL`, `uvicorn` vb.) son kullanıcıya uygun mesajlarla değiştirildi.
 * `AppIcon.appiconset/omakase.png` dosyası `sips -g all` ile kontrol edildi: `1024×1024`, `RGB`, `hasAlpha: no`, `sRGB IEC61966-2.1` (✅ App Store ikon standartlarına tam uyumlu).
 
+### 4.3. Derleme Yapılandırmaları (`Debug` vs `Release`), Yetenekler (`Capabilities`) ve Cihaz Otomasyonu
+* **Dayanak:** [`knowledge.xcode.build-configurations`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/build-configurations.md) (Rule 1–3) & [`knowledge.xcode.entitlements-capabilities`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/entitlements-capabilities.md) (Rule 1–4)
+* **Per-Configuration Yapılandırma (`build-configurations` Rule 1–3):** `Debug` ve `Release` arasında farklı olması gereken değerler **"Any Configuration"** yerine ilgili sütuna tanımlanmalı; `#if DEBUG` koşulları `SWIFT_ACTIVE_COMPILATION_CONDITIONS` üzerinden doğrulanmalıdır.
+
+| Ortam | `OMAKASE_API_URL` Değeri | Kullanım Amacı |
+|-------|--------------------------|----------------|
+| **Canlı (Cloud Run — Varsayılan)** | `https://omakase-backend-20235796246.us-central1.run.app` | Fiziksel cihaz, Simulator, TestFlight ve App Store Release |
+| **Lokal (Localhost — Geliştirme)** | `http://127.0.0.1:8000` | Yalnızca lokal FastAPI (`uvicorn`) testi yapılırken |
+
+* **Capabilities & Entitlements (`entitlements-capabilities` Rule 1–4):** `Sign in with Apple` yeteneği `.entitlements` dosyası elle düzenlenerek değil, mutlaka Xcode'da **omakase target → Signing & Capabilities → + Capability** üzerinden eklenmelidir ki Apple Developer Portal üzerindeki App ID ve Provisioning Profile otomatik güncellensin.
+* **Otomasyon Betikleri:** Fiziksel iPhone doğrulaması için [`scripts/launch-ios.sh`](file:///Users/kuzey/projects/omakase/scripts/launch-ios.sh) (`ADFC2ADA-EA3F-51A7-9C82-E2554869B97D`), Simulator doğrulaması için [`scripts/launch-simulator.sh`](file:///Users/kuzey/projects/omakase/scripts/launch-simulator.sh) (`45BCCBC2-5804-4E7A-BF2C-8E3FE4C47134`) kullanılmaktadır.
+
+### 4.4. App Store Arşivleme (`Archive`) ve Dağıtım (`Export`) Prosedürü
+* **Dayanak:** [`knowledge.xcode.archive-process`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/archive-process.md) & [`knowledge.xcode.export-options`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/export-options.md)
+
+App Store Connect veya TestFlight'a paket gönderirken uyulması gereken zorunlu sıra:
+
+1. **Hedef Cihaz Seçimi (`archive-process` Rule 1):** Xcode üst çubuğunda hedef olarak bir Simulator değil, **"Any iOS Device (arm64)"** veya bağlı fiziksel iPhone seçilmelidir (Simulator seçiliyken `Product → Archive` menüsü devre dışıdır).
+2. **Release Konfigürasyonu Kontrolü (`archive-process` Rule 4):** `Edit Scheme → Archive` altında Build Configuration değerinin **Release** olduğu doğrulanmalıdır.
+3. **Gizlilik Raporu Kontrolü (`manifest-file-structure-and-scope` Rule 5):** `Product → Archive` tamamlandıktan sonra açılan Organizer penceresinde arşive sağ tıklayıp **Generate Privacy Report** seçilerek uygulama ve Firebase/GoogleSignIn SDK gizlilik bildirimlerinin birleştiği teyit edilmelidir.
+4. **Yerel Doğrulama (`archive-process` Rule 2 & `export-options` Rule 3):** **"Distribute App"** butonuna basmadan önce mutlaka **"Validate App"** çalıştırılmalı; dağıtım yöntemi veya imzalama seçeneği değiştirilirse yeniden doğrulama yapılmalıdır.
+5. **Dağıtım ve Otomatik İmzalama (`export-options` Rule 1 & Rule 2):** **Distribute App → App Store Connect** seçilmeli ve proje Automatic Signing kullandığı için dışa aktarım sırasında da **Automatic Signing** tercih edilmelidir.
+6. **Arşivin ve `dSYMs` Sembollerinin Saklanması (`archive-process` Rule 3):** Yükleme başarılı olduktan sonra Organizer içindeki `.xcarchive` **kesinlikle silinmemelidir**; üretim ortamındaki çökme raporlarını (crash logs) sembolize etmek için gereken `dSYMs` dosyaları yalnızca bu arşiv içinde yer alır.
+
 ---
 
 ## 5. Güncel Sistem Mimarisi ve Bileşen Durumu
