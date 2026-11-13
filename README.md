@@ -82,15 +82,23 @@ omakase/
 │   ├── urun_analizi_ve_pazarlama.md # Product-Market Fit (PMF), ICP, birim ekonomisi ve ASO/GTM raporu
 │   └── siber_guvenlik_raporu.md # API anahtarları, Cloud Run, Firestore, iOS ve Web güvenlik denetimi
 ├── omakase/                 # SwiftUI iOS projesi (iOS 17.0+)
-│   ├── omakase.xcodeproj    # Xcode proje paketi
-│   └── omakase/             # Swift kaynak kodları
+│   ├── omakase.xcodeproj    # Xcode proje paketi & paylaşımlı şema (xcshareddata)
+│   └── omakase/             # Swift kaynak kodları ve uygulama kaynakları
+│       ├── App/             # omakaseApp, ContentView, MainTabView
 │       ├── Auth/            # AuthView (3 adımlı kayıt), AuthService
-│       ├── Feed/            # FeedView, FeedViewModel, DeepDiveSheetView
-│       ├── Interests/       # BentoTasteBox, InterestCategory
-│       ├── Models/          # UserProfile (@username), SharedPost, BookmarkStore
-│       ├── Networking/      # SSEClient, LetterboxdService
-│       ├── Social/          # TimelineView, TimelinePostCard, UserProfileSheet, UserSearchView
-│       └── Services/        # FirestoreService, ContentModerationService, PostCacheService
+│       ├── Onboarding/      # OnboardingView, InterestsEditorForm
+│       ├── Feed/            # FeedView, FeedViewModel, InlineTasteBar, AdjustTastesSheet, BookmarkStore, BookmarksSheet, ShareCardView
+│       ├── Interests/       # BentoTasteBox, CategoryGridView, InterestCategory
+│       ├── Social/          # TimelineView, TimelineViewModel, TimelinePostCard, CommentsView, UserProfileSheet, UserSearchView
+│       ├── Profile/         # ProfileTabView
+│       ├── Models/          # Post, CachedPost, SharedPost, Comment, Reaction, UserProfile (@username)
+│       ├── Networking/      # SSEClient (APITokenProvider), CategoryExpansionService, InterestSuggestor, LetterboxdService
+│       ├── Services/        # FirestoreService, ContentModerationService, PostCacheService, ShareService
+│       ├── Localization/    # AppLanguage, L10n, LanguagePicker
+│       ├── Theme/           # OmakaseTheme, AppAppearance
+│       ├── Assets.xcassets/ # Uygulama ikonu, logo ve renk varlıkları
+│       ├── Info.plist       # Uygulama izin ve yapılandırma tanımları
+│       └── PrivacyInfo.xcprivacy # Apple App Privacy Manifest (Required Reason API & veri beyanı)
 ├── scripts/
 │   ├── launch-ios.sh        # Fiziksel iPhone'a otomatik derleme & başlatma betiği
 │   └── launch-simulator.sh  # iOS Simulator'da otomatik derleme & başlatma betiği

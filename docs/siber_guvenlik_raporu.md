@@ -134,7 +134,7 @@ flowchart LR
 * [`SSEClient.swift#L26-L40`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L26-L40) içindeki `APITokenProvider.baseURL` ile `http://127.0.0.1:8000` fallback'i yalnızca `#if DEBUG` derlemelerine izole edilmiş; `Release` derlemelerinde güvenli HTTPS Cloud Run adresi zorunlu kılınmıştır.
 
 ### 6.2. [✅ ÇÖZÜLDÜ — S-09] Kimlik Doğrulama Parola Politikası & Web Güvenlik Başlıkları
-* [`AuthService.swift#L154`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift#L154), [`AuthView.swift#L52`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift#L52) ve [`L10n.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/L10n.swift#L652-L657) üzerinde yeni hesap kayıtları için minimum şifre uzunluğu **8 karaktere** çıkarılmıştır (mevcut kullanıcıların giriş akışı etkilenmez).
+* [`AuthService.swift#L154`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift#L154), [`AuthView.swift#L52`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift#L52) ve [`Localization/L10n.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Localization/L10n.swift#L652-L657) üzerinde yeni hesap kayıtları için minimum şifre uzunluğu **8 karaktere** çıkarılmıştır (mevcut kullanıcıların giriş akışı etkilenmez).
 * [`firebase.json`](file:///Users/kuzey/projects/omakase/firebase.json#L12-L42) içine `Strict-Transport-Security`, `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy` ve `Permissions-Policy` başlıkları eklenmiştir.
 
 ---
