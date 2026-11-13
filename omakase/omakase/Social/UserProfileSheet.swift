@@ -316,10 +316,12 @@ struct MyProfileSheet: View {
                                     .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
-                            Text(profile?.email ?? authService.email ?? "")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                                .multilineTextAlignment(.center)
+                            if let email = authService.email, !email.isEmpty {
+                                Text(email)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .multilineTextAlignment(.center)
+                            }
                         }
 
                         // Stats pill

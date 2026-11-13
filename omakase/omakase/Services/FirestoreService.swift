@@ -62,18 +62,22 @@ final class FirestoreService {
         }()
 
         if !snapshot.exists {
+            // Do not store private `email` in the publicly readable `users/{uid}` document (S-04 PII protection).
             let profile = UserProfile(
                 id: user.uid,
                 displayName: resolvedName,
                 username: resolvedUsername,
-                email: user.email ?? "",
+                email: "",
                 photoURL: user.photoURL?.absoluteString,
                 interests: [],
                 createdAt: .now
             )
             try ref.setData(from: profile)
         } else {
-            var updates: [String: Any] = [:]
+            var updates: [String: Any] = [
+                // Scrub any legacy `email` field from public user profile document
+                "email": FieldValue.delete()
+            ]
             if let custom = customDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines), !custom.isEmpty {
                 updates["displayName"] = custom
                 updates["searchableName"] = custom.lowercased()
@@ -85,9 +89,7 @@ final class FirestoreService {
                     updates["searchableUsername"] = clean.lowercased()
                 }
             }
-            if !updates.isEmpty {
-                try await ref.updateData(updates)
-            }
+            try await ref.updateData(updates)
         }
 
         _ = try? await fetchBlockedUIDs(currentUid: user.uid)

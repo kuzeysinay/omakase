@@ -10,16 +10,18 @@ import Foundation
 
 enum CategoryExpansionService {
 
-    /// The backend base URL — mirrors InterestSuggestor's resolution logic.
-    private static let baseURL: URL = {
-        if
-            let raw = Bundle.main.object(forInfoDictionaryKey: "OMAKASE_API_URL") as? String,
-            let url = URL(string: raw)
-        {
-            return url
+    /// The backend base URL — centralized via `APITokenProvider.baseURL`.
+    private static var baseURL: URL { APITokenProvider.baseURL }
+
+    private static func performAuthedRequest(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        let authed = await APITokenProvider.shared.authorizedRequest(request)
+        let (data, response) = try await URLSession.shared.data(for: authed)
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            let retried = await APITokenProvider.shared.authorizedRequest(request, forceRefresh: true)
+            return try await URLSession.shared.data(for: retried)
         }
-        return URL(string: "http://127.0.0.1:8000")!
-    }()
+        return (data, response)
+    }
 
     // MARK: - Public
 
@@ -50,7 +52,7 @@ enum CategoryExpansionService {
             request.httpBody = bodyData
 
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
+                let (data, response) = try await performAuthedRequest(request)
                 if Task.isCancelled { throw CancellationError() }
 
                 if let http = response as? HTTPURLResponse,
@@ -87,7 +89,7 @@ enum CategoryExpansionService {
             fallbackReq.httpBody = fallbackData
 
             do {
-                let (fData, fResp) = try await URLSession.shared.data(for: fallbackReq)
+                let (fData, fResp) = try await performAuthedRequest(fallbackReq)
                 if Task.isCancelled { throw CancellationError() }
 
                 if let fHttp = fResp as? HTTPURLResponse,

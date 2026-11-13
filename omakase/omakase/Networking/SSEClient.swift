@@ -8,6 +8,59 @@
 //
 
 import Foundation
+import FirebaseAuth
+
+/// Centralizes backend base URL resolution and Firebase Auth Bearer token attachment
+/// (`knowledge.networking.authenticated-requests` Rules 1-4 & `knowledge.xcode.build-configurations`).
+actor APITokenProvider {
+    static let shared = APITokenProvider()
+
+    private var refreshTask: Task<String?, Never>?
+
+    /// Resolves `OMAKASE_API_URL` from `Info.plist`, falling back to localhost only in `DEBUG` builds.
+    nonisolated static let baseURL: URL = {
+        if
+            let raw = Bundle.main.object(forInfoDictionaryKey: "OMAKASE_API_URL") as? String,
+            let url = URL(string: raw)
+        {
+            return url
+        }
+        #if DEBUG
+        return URL(string: "http://127.0.0.1:8000")!
+        #else
+        return URL(string: "https://omakase-backend-20235796246.us-central1.run.app")!
+        #endif
+    }()
+
+    /// Attaches `Authorization: Bearer <token>` to the request when a user is signed in.
+    /// Never logs the token value (`authenticated-requests` Rule 4).
+    func authorizedRequest(_ request: URLRequest, forceRefresh: Bool = false) async -> URLRequest {
+        var authed = request
+        if let token = await fetchToken(forceRefresh: forceRefresh) {
+            authed.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        return authed
+    }
+
+    /// Single-flight token fetch/refresh (`authenticated-requests` Rule 2).
+    func fetchToken(forceRefresh: Bool = false) async -> String? {
+        if forceRefresh, let existing = refreshTask {
+            return await existing.value
+        }
+        let task = Task<String?, Never> {
+            guard let user = Auth.auth().currentUser else { return nil }
+            return try? await user.getIDToken(forcingRefresh: forceRefresh)
+        }
+        if forceRefresh {
+            refreshTask = task
+        }
+        let token = await task.value
+        if forceRefresh {
+            refreshTask = nil
+        }
+        return token
+    }
+}
 
 struct SSEEvent: Sendable {
     var event: String
@@ -67,7 +120,15 @@ enum SSEClient {
                     config.timeoutIntervalForRequest = timeout
                     config.timeoutIntervalForResource = max(timeout, 300)
                     let session = URLSession(configuration: config)
-                    let (bytes, response) = try await session.bytes(for: request)
+
+                    let authedRequest = await APITokenProvider.shared.authorizedRequest(request)
+                    var (bytes, response) = try await session.bytes(for: authedRequest)
+
+                    if let firstHttp = response as? HTTPURLResponse, firstHttp.statusCode == 401 {
+                        // Single-flight 401 token refresh and retry once (Rule 2)
+                        let retryRequest = await APITokenProvider.shared.authorizedRequest(request, forceRefresh: true)
+                        (bytes, response) = try await session.bytes(for: retryRequest)
+                    }
 
                     guard let http = response as? HTTPURLResponse else {
                         throw SSEError.badResponse(status: -1)

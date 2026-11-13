@@ -18,16 +18,8 @@ struct InterestSuggestResponse: Sendable {
 
 enum InterestSuggestor {
 
-    /// The backend base URL.  Mirrors the resolution logic in FeedViewModel.
-    private static let baseURL: URL = {
-        if
-            let raw = Bundle.main.object(forInfoDictionaryKey: "OMAKASE_API_URL") as? String,
-            let url = URL(string: raw)
-        {
-            return url
-        }
-        return URL(string: "http://127.0.0.1:8000")!
-    }()
+    /// The backend base URL — centralized via `APITokenProvider.baseURL`.
+    private static var baseURL: URL { APITokenProvider.baseURL }
 
     // MARK: - Public
 
@@ -59,7 +51,12 @@ enum InterestSuggestor {
         request.httpBody = bodyData
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let authed = await APITokenProvider.shared.authorizedRequest(request)
+            var (data, response) = try await URLSession.shared.data(for: authed)
+            if let firstHttp = response as? HTTPURLResponse, firstHttp.statusCode == 401 {
+                let retried = await APITokenProvider.shared.authorizedRequest(request, forceRefresh: true)
+                (data, response) = try await URLSession.shared.data(for: retried)
+            }
             if Task.isCancelled { throw CancellationError() }
             guard let http = response as? HTTPURLResponse else {
                 return InterestSuggestResponse(suggestions: [], loadingIssue: "Invalid server response.")

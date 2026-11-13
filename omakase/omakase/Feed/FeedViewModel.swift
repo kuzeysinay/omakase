@@ -19,18 +19,8 @@ final class FeedViewModel {
 
     // MARK: - Config
 
-    /// The backend URL. Override by adding `OMAKASE_API_URL` as a string in
-    /// the app target's Info.plist. Defaults to the value below, which works
-    /// for the iOS Simulator talking to a backend running on the same Mac.
-    private let baseURL: URL = {
-        if
-            let raw = Bundle.main.object(forInfoDictionaryKey: "OMAKASE_API_URL") as? String,
-            let url = URL(string: raw)
-        {
-            return url
-        }
-        return URL(string: "http://127.0.0.1:8000")!
-    }()
+    /// The backend URL — centralized via `APITokenProvider.baseURL`.
+    private let baseURL: URL = APITokenProvider.baseURL
 
     /// Mirrors UI language for localized transport errors and API payload `language`.
     private var contentLanguage: AppLanguage = .english

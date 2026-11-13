@@ -29,6 +29,14 @@ echo "📦 Installing app onto device: $APP_PATH"
 xcrun devicectl device install app --device "$DEVICE_ID" "$APP_PATH"
 
 echo "✨ Launching kuzeysinay.omakase on device..."
-xcrun devicectl device process launch --device "$DEVICE_ID" kuzeysinay.omakase
-
-echo "🎉 Build & Run (Launch) completed successfully!"
+if LAUNCH_OUT=$(xcrun devicectl device process launch --device "$DEVICE_ID" kuzeysinay.omakase 2>&1); then
+    echo "$LAUNCH_OUT"
+    echo "🎉 Build & Run (Launch) completed successfully!"
+else
+    if echo "$LAUNCH_OUT" | grep -q "Locked"; then
+        echo "ℹ️ App built and installed on device ($DEVICE_ID). Device screen is currently locked; unlock your iPhone to open Omakase."
+        exit 0
+    fi
+    echo "$LAUNCH_OUT" >&2
+    exit 1
+fi

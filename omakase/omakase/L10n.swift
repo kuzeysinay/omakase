@@ -651,8 +651,8 @@ struct L10n {
 
     var authErrorWeakPassword: String {
         switch lang {
-        case .english: "Password must be at least 6 characters."
-        case .turkish: "Şifre en az 6 karakter olmalıdır."
+        case .english: "Password must be at least 8 characters."
+        case .turkish: "Şifre en az 8 karakter olmalıdır."
         }
     }
 
@@ -805,15 +805,15 @@ struct L10n {
 
     var authPasswordHintValid: String {
         switch lang {
-        case .english: "6+ characters"
-        case .turkish: "6+ karakter tamam"
+        case .english: "8+ characters"
+        case .turkish: "8+ karakter tamam"
         }
     }
 
     var authPasswordHintRequirement: String {
         switch lang {
-        case .english: "Minimum 6 characters"
-        case .turkish: "En az 6 karakter"
+        case .english: "Minimum 8 characters"
+        case .turkish: "En az 8 karakter"
         }
     }
 

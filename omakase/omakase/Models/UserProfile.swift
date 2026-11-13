@@ -55,6 +55,20 @@ struct UserProfile: Codable, Identifiable, Equatable, Sendable {
         self.searchableUsername = self.username?.lowercased()
     }
 
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        username = try c.decodeIfPresent(String.self, forKey: .username)
+        // `email` is omitted from public Firestore documents to prevent PII harvesting (S-04).
+        email = (try? c.decodeIfPresent(String.self, forKey: .email)) ?? ""
+        photoURL = try c.decodeIfPresent(String.self, forKey: .photoURL)
+        interests = (try? c.decodeIfPresent([String].self, forKey: .interests)) ?? []
+        createdAt = (try? c.decodeIfPresent(Date.self, forKey: .createdAt)) ?? .now
+        searchableName = (try? c.decodeIfPresent(String.self, forKey: .searchableName)) ?? displayName.lowercased()
+        searchableUsername = try c.decodeIfPresent(String.self, forKey: .searchableUsername) ?? username?.lowercased()
+    }
+
     /// Normalizes a raw string into a valid Twitter-style handle (lowercase a-z, 0-9, underscore, dot).
     static func sanitizeUsername(_ raw: String) -> String {
         let transliterated = raw

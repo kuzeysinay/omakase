@@ -160,8 +160,7 @@ service cloud.firestore {
 
       match /following/{targetUid} {
         allow read: if isAuthenticated();
-        allow create, update: if isAuthenticated() &&
-          (request.auth.uid == userId || request.auth.uid == targetUid) &&
+        allow create, update: if isOwner(userId) &&
           isValidFollowDoc(request.resource.data);
         allow delete: if isAuthenticated() &&
           (request.auth.uid == userId || request.auth.uid == targetUid);
@@ -170,7 +169,8 @@ service cloud.firestore {
       match /followers/{followerUid} {
         allow read: if isAuthenticated();
         allow create, update: if isAuthenticated() &&
-          (request.auth.uid == followerUid || request.auth.uid == userId) &&
+          request.auth.uid == followerUid &&
+          !exists(/databases/$(database)/documents/users/$(userId)/blocked_users/$(request.auth.uid)) &&
           isValidFollowDoc(request.resource.data);
         allow delete: if isAuthenticated() &&
           (request.auth.uid == followerUid || request.auth.uid == userId);
@@ -205,13 +205,25 @@ service cloud.firestore {
             .hasOnly(['reactionCounts', 'totalReactions', 'commentCount', 'reportedBy']) &&
            request.resource.data.authorId == resource.data.authorId &&
            request.resource.data.text == resource.data.text &&
-           request.resource.data.title == resource.data.title)
+           request.resource.data.title == resource.data.title &&
+           (!('commentCount' in request.resource.data) ||
+            (request.resource.data.commentCount is int &&
+             request.resource.data.commentCount >= 0 &&
+             request.resource.data.commentCount - resource.data.get('commentCount', 0) >= -1 &&
+             request.resource.data.commentCount - resource.data.get('commentCount', 0) <= 1)) &&
+           (!('totalReactions' in request.resource.data) ||
+            (request.resource.data.totalReactions is int &&
+             request.resource.data.totalReactions >= 0)) &&
+           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['reportedBy']) ||
+            (request.resource.data.reportedBy is list &&
+             request.auth.uid in request.resource.data.reportedBy &&
+             request.resource.data.reportedBy.size() >= resource.data.get('reportedBy', []).size())))
         );
 
       match /reactions/{reactionUid} {
         allow read: if isAuthenticated();
         allow create, update: if isAuthenticated() &&
-          (request.auth.uid == reactionUid || isPostAuthor(postId)) &&
+          request.auth.uid == reactionUid &&
           isValidReaction(request.resource.data);
         allow delete: if isAuthenticated() &&
           (request.auth.uid == reactionUid || isPostAuthor(postId));
@@ -234,7 +246,10 @@ service cloud.firestore {
              request.resource.data.authorId == resource.data.authorId) ||
             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportedBy']) &&
              request.resource.data.authorId == resource.data.authorId &&
-             request.resource.data.text == resource.data.text)
+             request.resource.data.text == resource.data.text &&
+             request.resource.data.reportedBy is list &&
+             request.auth.uid in request.resource.data.reportedBy &&
+             request.resource.data.reportedBy.size() >= resource.data.get('reportedBy', []).size())
           );
       }
     }

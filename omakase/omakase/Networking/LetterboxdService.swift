@@ -40,16 +40,8 @@ struct LetterboxdFilmsResponse: Codable, Sendable {
 
 enum LetterboxdService {
 
-    /// Mirrors the resolution logic in FeedViewModel / InterestSuggestor.
-    private static let baseURL: URL = {
-        if
-            let raw = Bundle.main.object(forInfoDictionaryKey: "OMAKASE_API_URL") as? String,
-            let url = URL(string: raw)
-        {
-            return url
-        }
-        return URL(string: "http://127.0.0.1:8000")!
-    }()
+    /// Centralized backend base URL (`APITokenProvider.baseURL`).
+    private static var baseURL: URL { APITokenProvider.baseURL }
 
     // MARK: - Public
 
@@ -77,7 +69,12 @@ enum LetterboxdService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = bodyData
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let authed = await APITokenProvider.shared.authorizedRequest(request)
+        var (data, response) = try await URLSession.shared.data(for: authed)
+        if let firstHttp = response as? HTTPURLResponse, firstHttp.statusCode == 401 {
+            let retried = await APITokenProvider.shared.authorizedRequest(request, forceRefresh: true)
+            (data, response) = try await URLSession.shared.data(for: retried)
+        }
         if Task.isCancelled { throw CancellationError() }
 
         guard let http = response as? HTTPURLResponse else {

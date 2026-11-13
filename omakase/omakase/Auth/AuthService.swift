@@ -73,7 +73,9 @@ final class AuthService: NSObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.signOut()
+            Task { @MainActor [weak self] in
+                self?.signOut()
+            }
         }
 
         // Check Apple ID credential state on foreground (Rule 2).
@@ -151,7 +153,7 @@ final class AuthService: NSObject {
             errorMessage = l10n.authErrorInvalidEmail
             return
         }
-        guard password.count >= 6 else {
+        guard password.count >= 8 else {
             errorMessage = l10n.authErrorWeakPassword
             return
         }

@@ -50,7 +50,7 @@ struct AuthView: View {
     }
 
     private var isPasswordValid: Bool {
-        password.count >= 6
+        password.count >= 8
     }
 
     private var trimmedDisplayName: String {
