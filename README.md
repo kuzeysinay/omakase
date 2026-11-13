@@ -71,8 +71,15 @@ omakase/
 ├── .vscode/                 # IDE ayarları ve derleme görevleri (Cmd+Shift+B)
 │   └── tasks.json
 ├── backend/                 # FastAPI & Google GenAI mikroservisi
-│   ├── Dockerfile           # Cloud Run deployment konteyneri
-│   ├── main.py              # SSE stream, Deep Dive ve Letterboxd endpoint'leri
+│   ├── app/                 # Modüler backend mimarisi
+│   │   ├── config.py        # Ortam değişkenleri, CORS ve Gemini güvenlik ayarları
+│   │   ├── security.py      # Firebase JWT doğrulama, rate limiter ve girdi filtreleri
+│   │   ├── schemas.py       # Pydantic istek/yanıt modelleri ve alan doğrulayıcıları
+│   │   ├── prompts.py       # Küratör sistem talimatları ve 12 dönüşümlü post formatı
+│   │   ├── routers/         # APIRouter uç noktaları (feed.py, interests.py, letterboxd.py)
+│   │   └── services/        # İş mantığı katmanı (gemini_service.py, letterboxd_service.py)
+│   ├── main.py              # FastAPI uygulama giriş noktası (uvicorn main:app)
+│   ├── Dockerfile           # Cloud Run deployment konteyneri (non-root appuser)
 │   └── requirements.txt
 ├── docs/                    # Detaylı mimari, strateji, PMF/pazarlama, App Store ve hukuk raporları
 │   ├── appstore_raporu.md   # Apple Agent Kit tabanlı App Store gönderim ve uyumluluk denetimi

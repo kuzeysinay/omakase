@@ -1,7 +1,29 @@
-# Omakase — backend
+# Omakase — Backend
 
-A small FastAPI service that streams Gemini-generated social posts to the
-iOS app via Server-Sent Events (SSE).
+A modular FastAPI service that streams Gemini-generated culture posts to the
+iOS app via Server-Sent Events (SSE), protected by Firebase ID token verification
+and per-user sliding-window rate limiting.
+
+## Architecture (`backend/`)
+
+```text
+backend/
+├── app/
+│   ├── config.py                  # Env vars, CORS origins, Gemini client & safety settings
+│   ├── security.py                # Firebase ID token auth, rate limiter & input sanitizers
+│   ├── schemas.py                 # Pydantic request schemas & validators
+│   ├── prompts.py                 # System instructions, 12 rotating post formats & prompt builders
+│   ├── routers/
+│   │   ├── feed.py                # POST /feed/stream, POST /feed/deep-dive
+│   │   ├── interests.py           # POST /interests/suggest, POST /interests/expand-category
+│   │   └── letterboxd.py          # POST /letterboxd/films
+│   └── services/
+│       ├── gemini_service.py      # SSE token streaming engine & suggestion generator
+│       └── letterboxd_service.py  # Hardened Letterboxd RSS fetcher & XML parser
+├── main.py                        # FastAPI app factory & router registration (uvicorn main:app)
+├── Dockerfile                     # Cloud Run container (unprivileged appuser)
+└── requirements.txt
+```
 
 ## Quickstart
 
