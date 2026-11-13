@@ -51,6 +51,11 @@ struct BentoTasteBox: View {
     @State private var manualText: String = ""
     @FocusState private var isManualFieldFocused: Bool
 
+    // Nested vertical scroll -> return to previous post handoff
+    @State private var didScrollDeepInGrid: Bool = false
+    @State private var hasTriggeredPullBack: Bool = false
+    @State private var scrollResetTask: Task<Void, Never>?
+
     private var l10n: L10n { L10n(lang: appLanguage) }
 
     var body: some View {
@@ -165,6 +170,7 @@ struct BentoTasteBox: View {
                     // Large, easy-to-tap Back Button (min 48pt height)
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        resetGridScrollState()
                         withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
                             mode = .rootCategories
                             currentSubInterests = []
@@ -288,74 +294,77 @@ struct BentoTasteBox: View {
         }
     }
 
-    // MARK: - Bento Grid Canvas (Full-Page Scrollable Categories & Sub-Topics)
+    // MARK: - Bento Grid Canvas (2x6 Vertically Scrollable Categories & Sub-Topics)
 
     private var bentoGridCanvas: some View {
-        GeometryReader { geo in
-            let spacing: CGFloat = 12
-            // Size columns so 2 full columns fit comfortably and the 3rd column peeks from the right edge
-            let tileW = max(162, (geo.size.width - 52) / 2.12)
-
-            ZStack {
-                switch mode {
-                case .rootCategories:
-                    let rowCount = 3
-                    let tileH = max(96, (geo.size.height - CGFloat(rowCount - 1) * spacing) / CGFloat(rowCount))
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHGrid(
-                            rows: Array(
-                                repeating: GridItem(.fixed(tileH), spacing: spacing),
-                                count: rowCount
-                            ),
-                            spacing: spacing
+        ZStack {
+            switch mode {
+            case .rootCategories:
+                verticalBentoScroll(id: "root", spacing: 12) {
+                    ForEach(InterestCategory.presets) { category in
+                        RootBentoTile(
+                            category: category,
+                            language: appLanguage,
+                            isDisabled: isGenerating
                         ) {
-                            ForEach(InterestCategory.presets) { category in
-                                RootBentoTile(
-                                    category: category,
-                                    language: appLanguage,
-                                    isDisabled: isGenerating,
-                                    width: tileW,
-                                    height: tileH
-                                ) {
-                                    openCategory(category)
-                                }
-                            }
+                            openCategory(category)
                         }
-                        .padding(.horizontal, 18)
                     }
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.96).combined(with: .opacity),
-                        removal: .scale(scale: 1.03).combined(with: .opacity)
-                    ))
+                }
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 0.96).combined(with: .opacity),
+                    removal: .scale(scale: 1.03).combined(with: .opacity)
+                ))
 
-                case .subInterests(let category):
-                    let rowCount = 3
-                    let subSpacing: CGFloat = 10
-                    let tileH = max(92, (geo.size.height - CGFloat(rowCount - 1) * subSpacing) / CGFloat(rowCount))
-                    let subTileW = (geo.size.width - 36 - subSpacing) / 2.06
-
-                    subInterestsBentoGrid(
-                        tileW: subTileW,
-                        tileH: tileH,
-                        spacing: subSpacing,
-                        category: category
-                    )
+            case .subInterests(let category):
+                subInterestsBentoGrid(spacing: 10, category: category)
                     .transition(.asymmetric(
                         insertion: .scale(scale: 1.04).combined(with: .opacity),
                         removal: .scale(scale: 0.95).combined(with: .opacity)
                     ))
-                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private func verticalBentoScroll<Content: View>(
+        id: String,
+        spacing: CGFloat,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        let columns = [
+            GridItem(.flexible(), spacing: spacing),
+            GridItem(.flexible(), spacing: spacing)
+        ]
+
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVGrid(columns: columns, spacing: spacing) {
+                content()
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 4)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(
+                            key: BentoGridScrollOffsetKey.self,
+                            value: proxy.frame(in: .named("bentoGridScroll-\(id)")).minY
+                        )
+                }
+            )
+        }
+        .id(id)
+        .coordinateSpace(name: "bentoGridScroll-\(id)")
+        .scrollBounceBehavior(.basedOnSize)
+        .onPreferenceChange(BentoGridScrollOffsetKey.self) { minY in
+            handleGridScrollOffset(minY)
         }
     }
 
-    // MARK: - Sub-Interests Bento Grid (Compact 3x2 Visible = 6 at once, 12 Total)
+    // MARK: - Sub-Interests Bento Grid (2x6 Vertical = 12 Total)
 
     private func subInterestsBentoGrid(
-        tileW: CGFloat,
-        tileH: CGFloat,
         spacing: CGFloat,
         category: InterestCategory
     ) -> some View {
@@ -363,58 +372,45 @@ struct BentoTasteBox: View {
         let topicsCount = isFilmCategory ? 11 : 12
         let displayTopics = Array(currentSubInterests.prefix(topicsCount).enumerated())
 
-        return ScrollView(.horizontal, showsIndicators: false) {
-            LazyHGrid(
-                rows: [
-                    GridItem(.fixed(tileH), spacing: spacing),
-                    GridItem(.fixed(tileH), spacing: spacing),
-                    GridItem(.fixed(tileH), spacing: spacing),
-                ],
-                spacing: spacing
-            ) {
-                if isFilmCategory {
-                    LetterboxdBentoTile(
-                        username: storedLetterboxdUsername,
-                        isDisabled: isGenerating || isCooldownActive,
-                        l10n: l10n,
-                        width: tileW,
-                        height: tileH,
-                        onTap: {
-                            guard !isGenerating && !isCooldownActive else { return }
-                            let clean = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
-                            if clean.isEmpty {
-                                onPromptLetterboxdUsername?()
-                            } else {
-                                mode = .rootCategories
-                                onSelectLetterboxdPost?()
-                            }
-                        },
-                        onEditUsername: {
+        return verticalBentoScroll(id: "sub-\(category.id)", spacing: spacing) {
+            if isFilmCategory {
+                LetterboxdBentoTile(
+                    username: storedLetterboxdUsername,
+                    isDisabled: isGenerating || isCooldownActive,
+                    l10n: l10n,
+                    onTap: {
+                        guard !isGenerating && !isCooldownActive else { return }
+                        let clean = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if clean.isEmpty {
                             onPromptLetterboxdUsername?()
-                        },
-                        onDisconnectUsername: {
-                            storedLetterboxdUsername = ""
-                            isLetterboxdActive = false
+                        } else {
+                            resetGridScrollState()
+                            mode = .rootCategories
+                            onSelectLetterboxdPost?()
                         }
-                    )
-                }
-
-                ForEach(displayTopics, id: \.element) { index, topic in
-                    let tileIndex = isFilmCategory ? (index + 1) : index
-                    SubInterestBentoTile(
-                        title: topic,
-                        isRevealed: tileIndex < revealedTilesCount,
-                        isDisabled: isGenerating || isCooldownActive,
-                        isRefreshing: isRefreshingSubInterests,
-                        width: tileW,
-                        height: tileH,
-                        onTap: {
-                            selectDedicatedTopic(topic)
-                        }
-                    )
-                }
+                    },
+                    onEditUsername: {
+                        onPromptLetterboxdUsername?()
+                    },
+                    onDisconnectUsername: {
+                        storedLetterboxdUsername = ""
+                        isLetterboxdActive = false
+                    }
+                )
             }
-            .padding(.horizontal, 18)
+
+            ForEach(displayTopics, id: \.element) { index, topic in
+                let tileIndex = isFilmCategory ? (index + 1) : index
+                SubInterestBentoTile(
+                    title: topic,
+                    isRevealed: tileIndex < revealedTilesCount,
+                    isDisabled: isGenerating || isCooldownActive,
+                    isRefreshing: isRefreshingSubInterests,
+                    onTap: {
+                        selectDedicatedTopic(topic)
+                    }
+                )
+            }
         }
     }
 
@@ -427,16 +423,52 @@ struct BentoTasteBox: View {
             Text(
                 mode == .rootCategories
                     ? (appLanguage == .turkish
-                        ? "Tüm kategorileri görmek için yana kaydır (\(InterestCategory.presets.count) kategori)"
-                        : "Swipe sideways to browse all \(InterestCategory.presets.count) categories")
+                        ? "Tüm kategorileri görmek için aşağı kaydır (\(InterestCategory.presets.count) kategori)"
+                        : "Scroll down to browse all \(InterestCategory.presets.count) categories")
                     : (appLanguage == .turkish
-                        ? "Daha fazla alt konu için yana kaydır"
-                        : "Swipe sideways for more subtopics")
+                        ? "Daha fazla alt konu için aşağı kaydır"
+                        : "Scroll down for more subtopics")
             )
             .font(.caption.weight(.medium))
             Spacer()
         }
         .foregroundStyle(.secondary)
+    }
+
+    private func resetGridScrollState() {
+        scrollResetTask?.cancel()
+        scrollResetTask = nil
+        didScrollDeepInGrid = false
+        hasTriggeredPullBack = false
+    }
+
+    private func handleGridScrollOffset(_ minY: CGFloat) {
+        if minY < -18 {
+            didScrollDeepInGrid = true
+            scrollResetTask?.cancel()
+            scrollResetTask = nil
+            return
+        }
+
+        if minY >= -8 && minY <= 12 {
+            hasTriggeredPullBack = false
+            if didScrollDeepInGrid && scrollResetTask == nil {
+                scrollResetTask = Task {
+                    try? await Task.sleep(for: .milliseconds(250))
+                    guard !Task.isCancelled else { return }
+                    didScrollDeepInGrid = false
+                    scrollResetTask = nil
+                }
+            }
+            return
+        }
+
+        if hasExistingPosts && !didScrollDeepInGrid && !hasTriggeredPullBack && minY > 56 {
+            hasTriggeredPullBack = true
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            isManualFieldFocused = false
+            onScrollToLastPost?()
+        }
     }
 
     // MARK: - Active Interests Ribbon (Large Tappable Pills)
@@ -603,6 +635,7 @@ struct BentoTasteBox: View {
     private func openCategory(_ category: InterestCategory) {
         guard !isGenerating else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        resetGridScrollState()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
             mode = .subInterests(category: category)
         }
@@ -644,7 +677,7 @@ struct BentoTasteBox: View {
 
                 guard synthesisTaskId == taskId else { return }
 
-                // Ensure we have 12 topics for the 3x4 grid, topping up from fallback pool if needed
+                // Ensure we have 12 topics for the 2x6 grid, topping up from fallback pool if needed
                 if freshTopics.count < 12 {
                     var pool = category.fallbackInterests(for: appLanguage).filter {
                         !currentSubInterests.contains($0) && !freshTopics.contains($0)
@@ -697,6 +730,7 @@ struct BentoTasteBox: View {
         guard !isGenerating && !isCooldownActive else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         isManualFieldFocused = false
+        resetGridScrollState()
         mode = .rootCategories
         onSelectDedicatedTopic?(topic)
     }
@@ -771,14 +805,12 @@ struct BentoTasteBox: View {
     }
 }
 
-// MARK: - Root Bento Tile (Level 0 - Large Full-Page Card)
+// MARK: - Root Bento Tile (Level 0 - 2x6 Grid Card)
 
 private struct RootBentoTile: View {
     let category: InterestCategory
     let language: AppLanguage
     let isDisabled: Bool
-    let width: CGFloat
-    let height: CGFloat
     let onTap: () -> Void
 
     @State private var isPressed: Bool = false
@@ -796,12 +828,12 @@ private struct RootBentoTile: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .center) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
                             .fill(OmakaseTheme.wash)
-                            .frame(width: 42, height: 42)
+                            .frame(width: 36, height: 36)
 
                         Image(systemName: category.iconName)
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(isDisabled ? Color.secondary.opacity(0.5) : OmakaseTheme.ink)
                     }
                     .scaleEffect(isPressed ? 1.08 : 1.0)
@@ -812,21 +844,21 @@ private struct RootBentoTile: View {
                     ZStack {
                         Circle()
                             .fill(Color.primary.opacity(0.05))
-                            .frame(width: 28, height: 28)
+                            .frame(width: 26, height: 26)
 
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 10.5, weight: .bold))
                             .foregroundStyle(isPressed ? Color.primary : Color.secondary)
                     }
                     .offset(x: isPressed ? 2.5 : 0)
                     .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
                 }
 
-                Spacer(minLength: 2)
+                Spacer(minLength: 4)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(category.localizedName(for: language))
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(isDisabled ? Color.secondary : Color.primary)
                         .lineLimit(1)
 
@@ -836,9 +868,9 @@ private struct RootBentoTile: View {
                         .lineLimit(1)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(width: width, height: height, alignment: .leading)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 96, maxHeight: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
@@ -866,15 +898,13 @@ private struct RootBentoTile: View {
     }
 }
 
-// MARK: - Sub-Interest Bento Tile (Full-Canvas 3x2 Single-Shot Dedicated Post Generator)
+// MARK: - Sub-Interest Bento Tile (2x6 Single-Shot Dedicated Post Generator)
 
 private struct SubInterestBentoTile: View {
     let title: String
     let isRevealed: Bool
     let isDisabled: Bool
     let isRefreshing: Bool
-    let width: CGFloat
-    let height: CGFloat
     let onTap: () -> Void
 
     @State private var isPressed: Bool = false
@@ -890,10 +920,10 @@ private struct SubInterestBentoTile: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(OmakaseTheme.wash)
-                            .frame(width: 34, height: 34)
+                            .frame(width: 32, height: 32)
 
                         Image(systemName: "sparkles")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 13.5, weight: .semibold))
                             .foregroundStyle(isDisabled ? Color.secondary.opacity(0.6) : OmakaseTheme.ink)
                     }
                     .scaleEffect(isPressed ? 1.12 : 1.0)
@@ -904,7 +934,7 @@ private struct SubInterestBentoTile: View {
                     ZStack {
                         Circle()
                             .fill(Color.primary.opacity(0.05))
-                            .frame(width: 28, height: 28)
+                            .frame(width: 26, height: 26)
 
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 10, weight: .bold))
@@ -914,17 +944,17 @@ private struct SubInterestBentoTile: View {
                     .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
                 }
 
-                Spacer(minLength: 2)
+                Spacer(minLength: 4)
 
                 Text(title)
-                    .font(.system(size: 15.5, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .foregroundStyle(isDisabled ? Color.secondary : Color.primary)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(width: width, height: height, alignment: .leading)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 94, maxHeight: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
@@ -991,8 +1021,6 @@ private struct LetterboxdBentoTile: View {
     let username: String
     let isDisabled: Bool
     let l10n: L10n
-    let width: CGFloat
-    let height: CGFloat
     let onTap: () -> Void
     let onEditUsername: () -> Void
     let onDisconnectUsername: () -> Void
@@ -1014,10 +1042,10 @@ private struct LetterboxdBentoTile: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color(hex: 0x00E054).opacity(0.18))
-                            .frame(width: 34, height: 34)
+                            .frame(width: 32, height: 32)
 
                         Image(systemName: isConnected ? "popcorn.fill" : "film.stack.fill")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color(hex: 0x00E054))
                     }
 
@@ -1041,11 +1069,11 @@ private struct LetterboxdBentoTile: View {
                         .foregroundStyle(Color(hex: 0x00E054).opacity(0.9))
                 }
 
-                Spacer(minLength: 2)
+                Spacer(minLength: 4)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(isConnected ? l10n.letterboxdRecentFilms : l10n.letterboxdConnectDiary)
-                        .font(.system(size: 14.5, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Color.white)
                         .lineLimit(2)
 
@@ -1057,9 +1085,9 @@ private struct LetterboxdBentoTile: View {
                     }
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(width: width, height: height, alignment: .leading)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 94, maxHeight: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color(hex: 0x14181C))
@@ -1113,5 +1141,12 @@ private struct LetterboxdBentoTile: View {
                 }
             }
         }
+    }
+}
+
+private struct BentoGridScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }

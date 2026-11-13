@@ -331,12 +331,69 @@ struct MyProfileSheet: View {
                         .background(Color(.tertiarySystemGroupedBackground),
                                     in: RoundedRectangle(cornerRadius: 12))
 
+                        if let interests = profile?.interests, !interests.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(l10n.yourTastes)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                FlowLayoutShared(spacing: 6) {
+                                    ForEach(interests, id: \.self) { tag in
+                                        Text(tag)
+                                            .font(.caption).fontWeight(.medium)
+                                            .padding(.horizontal, 10).padding(.vertical, 4)
+                                            .background(Color.primary.opacity(0.08), in: Capsule())
+                                            .foregroundStyle(.primary)
+                                    }
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 4)
+                        }
+
                         Spacer().frame(height: 8)
                     }
                     .frame(maxWidth: .infinity)
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
+
+                // MARK: - Posts
+                Section(userPosts.isEmpty ? l10n.profilePosts : "\(l10n.profilePosts) (\(userPosts.count))") {
+                    if isLoadingPosts {
+                        HStack { Spacer(); ProgressView(); Spacer() }
+                            .padding(.vertical, 8)
+                    } else if userPosts.isEmpty {
+                        HStack(spacing: 10) {
+                            Image(systemName: "rectangle.stack")
+                                .foregroundStyle(.secondary)
+                            Text(l10n.noPostsYet)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 12)
+                    } else {
+                        ForEach(userPosts) { post in
+                            TimelinePostCard(
+                                post: post,
+                                authService: authService,
+                                onAuthorTap: { },
+                                onDelete: {
+                                    Task {
+                                        if let postId = post.id {
+                                            try? await FirestoreService.shared.deleteSharedPost(postId: postId)
+                                            withAnimation {
+                                                userPosts.removeAll { $0.id == post.id }
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                            .listRowSeparator(.hidden)
+                        }
+                    }
+                }
 
                 // MARK: - Preferences
                 Section(l10n.profilePreferences) {
@@ -366,7 +423,7 @@ struct MyProfileSheet: View {
                             Text(l10n.appearanceLabel)
                         } icon: {
                             Image(systemName: current.iconName)
-                                .foregroundStyle(current.iconColor)
+                                .foregroundStyle(.primary)
                         }
                     }
 
@@ -375,20 +432,21 @@ struct MyProfileSheet: View {
                         tempLetterboxdUsername = storedLetterboxdUsername
                         isShowingLetterboxdPrompt = true
                     } label: {
-                        HStack {
+                        HStack(spacing: 8) {
                             Label {
-                                if storedLetterboxdUsername.isEmpty {
-                                    Text(l10n.updateLetterboxdButton)
-                                } else {
-                                    Text("Letterboxd: @\(storedLetterboxdUsername)")
-                                }
+                                Text("Letterboxd")
+                                    .foregroundStyle(.primary)
                             } icon: {
                                 Image(systemName: "film")
+                                    .foregroundStyle(.primary)
                             }
-                            .foregroundStyle(.secondary)
                             Spacer()
+                            Text(storedLetterboxdUsername.isEmpty ? l10n.letterboxdConnectDiary : "@\(storedLetterboxdUsername)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
                             Image(systemName: "chevron.right")
-                                .font(.caption.bold())
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(.tertiary)
                         }
                     }
@@ -454,39 +512,6 @@ struct MyProfileSheet: View {
                     }
                 }
 
-                // MARK: - Posts
-                Section(l10n.profilePosts) {
-                    if isLoadingPosts {
-                        HStack { Spacer(); ProgressView(); Spacer() }
-                            .padding(.vertical, 8)
-                    } else if userPosts.isEmpty {
-                        Text(l10n.noPostsYet)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 8)
-                    } else {
-                        ForEach(userPosts) { post in
-                            TimelinePostCard(
-                                post: post,
-                                authService: authService,
-                                onAuthorTap: { },
-                                onDelete: {
-                                    Task {
-                                        if let postId = post.id {
-                                            try? await FirestoreService.shared.deleteSharedPost(postId: postId)
-                                            withAnimation {
-                                                userPosts.removeAll { $0.id == post.id }
-                                            }
-                                        }
-                                    }
-                                }
-                            )
-                            .listRowInsets(EdgeInsets())
-                            .listRowSeparator(.hidden)
-                        }
-                    }
-                }
-
                 // MARK: - Account / Sign Out & Delete Account (Guideline 5.1.1(v))
                 Section(l10n.profileAccount) {
                     Button {
@@ -495,7 +520,6 @@ struct MyProfileSheet: View {
                     } label: {
                         Label(l10n.signOut, systemImage: "rectangle.portrait.and.arrow.right")
                             .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .disabled(isDeletingAccount)
 
@@ -507,10 +531,8 @@ struct MyProfileSheet: View {
                                 ProgressView().controlSize(.small)
                                 Text(l10n.deleteAccount)
                             }
-                            .frame(maxWidth: .infinity, alignment: .center)
                         } else {
                             Label(l10n.deleteAccount, systemImage: "trash")
-                                .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
                     .disabled(isDeletingAccount)
