@@ -26,7 +26,17 @@ if [ -z "$APP_PATH" ] || [ ! -d "$APP_PATH" ]; then
 fi
 
 echo "📦 Installing app onto device: $APP_PATH"
-xcrun devicectl device install app --device "$DEVICE_ID" "$APP_PATH"
+for attempt in 1 2 3; do
+    if xcrun devicectl device install app --device "$DEVICE_ID" "$APP_PATH"; then
+        break
+    fi
+    if [ "$attempt" -eq 3 ]; then
+        echo "❌ Failed to install app onto device after 3 attempts."
+        exit 1
+    fi
+    echo "⚠️ Transient device connection reset (attempt $attempt/3); retrying install..."
+    sleep 1
+done
 
 echo "✨ Launching kuzeysinay.omakase on device..."
 if LAUNCH_OUT=$(xcrun devicectl device process launch --device "$DEVICE_ID" kuzeysinay.omakase 2>&1); then

@@ -86,6 +86,7 @@ omakase/
 │   ├── fikri_mulkiyet.md    # Marka, telif, Apple marka kuralları ve Letterboxd adil kullanım raporu
 │   ├── gelecek_stratejisi.md# Moat analizi, doyum psikolojisi ve kültürel entegrasyon vizyonu
 │   ├── ozellik_fikirleri.md # Tamamlanan 8 temel sistem ve v1/v2/v3 özellik yol haritası
+│   ├── pazarlama_ve_dagitim_stratejisi.md # Küresel dağıtım (US/UK), TikTok otomasyonu ve Paid UA stratejisi
 │   ├── urun_analizi_ve_pazarlama.md # Product-Market Fit (PMF), ICP, birim ekonomisi ve ASO/GTM raporu
 │   └── siber_guvenlik_raporu.md # API anahtarları, Cloud Run, Firestore, iOS ve Web güvenlik denetimi
 ├── omakase/                 # SwiftUI iOS projesi (iOS 17.0+)
@@ -161,7 +162,8 @@ Detaylı rapor ve analizler için `docs/` klasörünü inceleyebilirsiniz:
 |---------|----------|
 | [📄 App Store Raporu](docs/appstore_raporu.md) | Apple Agent Kit tabanlı App Review, `PrivacyInfo.xcprivacy`, Xcode yapılandırma ve Archive/Validate denetimi. |
 | [🛡️ Siber Güvenlik Raporu](docs/siber_guvenlik_raporu.md) | API anahtarları, Cloud Run backend, Firestore kuralları, iOS istemci ve Web siber güvenlik analizi. |
-| [📈 Ürün Analizi, PMF & Pazarlama](docs/urun_analizi_ve_pazarlama.md) | Product-Market Fit hipotezi, hedef personalar (ICP), AARRR hunisi, birim ekonomisi ve App Store (ASO) vitrin stratejisi. |
+| [🚀 Küresel Pazarlama & Dağıtım Stratejisi](docs/pazarlama_ve_dagitim_stratejisi.md) | Tier-1 küresel açılım (US/UK), otomatize TikTok Photo Mode büyüme motoru, Paid UA matematiği ve sıfır bütçeli dağıtım kanalları. |
+| [📈 Ürün Analizi & PMF Raporu](docs/urun_analizi_ve_pazarlama.md) | Product-Market Fit hipotezi, hedef personalar (ICP), AARRR hunisi, birim ekonomisi ve App Store (ASO) vitrin stratejisi. |
 | [⚖️ Fikri Mülkiyet Raporu](docs/fikri_mulkiyet.md) | Letterboxd RSS adil kullanımı, Apple marka kuralları, prompt ticari sırları ve UGC hukuku. |
 | [🔮 Gelecek Stratejisi](docs/gelecek_stratejisi.md) | 5 katmanlı Moat analizi, doyum psikolojisi, web edinim hunisi ve kültürel entegrasyon vizyonu. |
 | [💡 Özellik Haritası](docs/ozellik_fikirleri.md) | Tamamlanan 8 temel sistem (3 adımlı `@username` kaydı, 12 kategori, Topluluk, Web) ve v2/v3 yol haritası. |
