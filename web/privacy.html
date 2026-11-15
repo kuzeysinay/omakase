@@ -7,53 +7,10 @@
   <meta name="description" content="Omakase iOS uygulaması ve web sitesi gizlilik politikası, toplanan veriler ve hesap silme hakları.">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <link rel="apple-touch-icon" href="assets/app-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <style>
-    .legal-wrap {
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 120px 24px 80px;
-    }
-    .legal-card {
-      background: var(--bg-surface, #ffffff);
-      border: 1px solid var(--border-subtle, rgba(0,0,0,0.08));
-      border-radius: 20px;
-      padding: 40px 36px;
-      margin-bottom: 32px;
-    }
-    .legal-card h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 8px;
-    }
-    .legal-meta {
-      font-size: 0.875rem;
-      opacity: 0.65;
-      margin-bottom: 28px;
-    }
-    .legal-card h2 {
-      font-size: 1.2rem;
-      font-weight: 600;
-      margin-top: 28px;
-      margin-bottom: 10px;
-    }
-    .legal-card p, .legal-card li {
-      font-size: 0.98rem;
-      line-height: 1.7;
-      opacity: 0.88;
-      margin-bottom: 12px;
-    }
-    .legal-card ul {
-      padding-left: 20px;
-      margin-bottom: 16px;
-    }
-    .lang-divider {
-      border: none;
-      border-top: 1px solid var(--border-subtle, rgba(0,0,0,0.1));
-      margin: 40px 0;
-    }
-  </style>
 </head>
 <body>
   <header class="navbar">
@@ -63,7 +20,11 @@
         <span class="brand-name">omakase</span>
       </a>
       <div class="nav-actions">
-        <a href="terms.html" class="ctrl-pill">Kullanım Koşulları / Terms</a>
+        <button id="theme-toggle" class="ctrl-icon-btn" aria-label="Temayı Değiştir">
+          <svg class="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <svg class="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+        <a href="terms.html" class="ctrl-pill">Koşullar / Terms</a>
         <a href="index.html" class="btn-primary">Ana Sayfa</a>
       </div>
     </div>
@@ -73,7 +34,7 @@
     <!-- TURKISH -->
     <article class="legal-card" lang="tr">
       <h1>Gizlilik Politikası</h1>
-      <p class="legal-meta">Son Güncelleme: 12 Kasım 2026 • Yürürlük Tarihi: 12 Kasım 2026</p>
+      <p class="legal-meta">Son Güncelleme: 15 Kasım 2026 • Yürürlük Tarihi: 12 Kasım 2026</p>
 
       <p>
         Omakase ("biz", "uygulama"), kullanıcılarının mahremiyetine ve zihinsel dinginliğine saygı duyar. Bu Gizlilik Politikası, Omakase iOS uygulamasını ve <strong>getomakase.app</strong> web sitesini kullandığınızda hangi verilerin işlendiğini, nasıl korunduğunu ve haklarınızı açıklar.
@@ -81,10 +42,10 @@
 
       <h2>1. Toplanan Veriler ve Kullanım Amaçları</h2>
       <ul>
-        <li><strong>Hesap ve Kimlik Bilgileri (Ad, E-posta, Kullanıcı Kimliği / UID, @kullanıcı_adı):</strong> Apple ile Giriş Yap (Sign in with Apple), Google ile Giriş Yap veya E-posta/Şifre ile kayıt olduğunuzda Firebase Authentication ve Cloud Firestore üzerinde yalnızca kimlik doğrulama ve topluluk profilinizi oluşturma amacıyla saklanır.</li>
-        <li><strong>Tercihler ve İlgi Alanları:</strong> Seçtiğiniz kültür kategorileri, alt konular ve dil tercihleri size özel içerik akışı üretmek için cihazınızda (<code>UserDefaults</code>) ve hesabınızla ilişkili olarak saklanır.</li>
+        <li><strong>Hesap ve Kimlik Bilgileri (Ad, E-posta, Kullanıcı Kimliği / UID, @kullanıcı_adı):</strong> Sign in with Apple (Apple ile Giriş Yap), Google ile Giriş Yap veya E-posta/Şifre ile kayıt olduğunuzda Firebase Authentication ve Cloud Firestore üzerinde yalnızca kimlik doğrulama ve topluluk profilinizi oluşturma amacıyla saklanır.</li>
+        <li><strong>Tercihler, İlgi Alanları ve Kaydedilen Koleksiyonlar:</strong> Seçtiğiniz 12 kültür kategorisi, alt konular, dil tercihleri ve kaydettiğiniz gönderiler (<code>BookmarkStore</code>) çevrimdışı erişim ve kişiselleştirilmiş akış üretimi için cihazınızda (<code>UserDefaults</code>) ve hesabınızla ilişkili olarak saklanır.</li>
         <li><strong>Topluluk İçerikleri (Paylaşılan Yazılar, Yorumlar, İfadeler):</strong> Topluluk sekmesinde paylaştığınız gönderiler ve yorumlar diğer kayıtlı kullanıcılar tarafından görüntülenebilir.</li>
-        <li><strong>İsteğe Bağlı Letterboxd Kullanıcı Adı:</strong> Yalnızca kendi isteğinizle girdiğinizde herkese açık RSS akışınız okunarak film zevkinize uygun konular önerilir; şifreniz asla istenmez.</li>
+        <li><strong>İsteğe Bağlı Letterboxd Kullanıcı Adı:</strong> Yalnızca kendi isteğinizle girdiğinizde herkese açık RSS izleme günlüğünüz okunarak film zevkinize uygun konular sentezlenir; şifreniz asla istenmez.</li>
       </ul>
 
       <h2>2. Üçüncü Taraf Hizmetler ve Veri Paylaşımı</h2>
@@ -93,7 +54,7 @@
       </p>
       <ul>
         <li><strong>Google Firebase (Authentication &amp; Cloud Firestore):</strong> Güvenli oturum açma ve topluluk veritabanı barındırma.</li>
-        <li><strong>Google Cloud Run &amp; Gemini API:</strong> Seçtiğiniz ilgi alanlarına göre gerçek zamanlı mikro-hikayeler üretmek için kullanılır. Kişisel kimlik bilgileriniz (e-posta vb.) yapay zekâ istemlerine dahil edilmez.</li>
+        <li><strong>Google Cloud Run &amp; Gemini API (Gemini 3.1 Flash-Lite):</strong> Seçtiğiniz ilgi alanlarına göre gerçek zamanlı mikro-hikayeler ve derin okuma (Deep Dive) makaleleri üretmek için kullanılır. Kişisel kimlik bilgileriniz (e-posta vb.) yapay zekâ istemlerine dahil edilmez.</li>
         <li><strong>Apple Identity Services (Sign in with Apple):</strong> Apple kimliğinizle güvenli ve gizlilik odaklı giriş yapmanızı sağlar.</li>
       </ul>
 
@@ -102,7 +63,7 @@
         Hesabınızı ve ilişkili tüm verilerinizi dilediğiniz an doğrudan uygulama içinden kalıcı olarak silebilirsiniz:
       </p>
       <ul>
-        <li>Uygulamada <strong>Topluluk → Profilim (sağ üstteki profil simgesi) → Hesabı Sil</strong> adımlarını izleyin.</li>
+        <li>Uygulamada alt sekme çubuğundan <strong>Profil → Hesabı Sil</strong> (veya Topluluk sekmesinin sağ üst köşesindeki profil simgesinden <strong>Profilim → Hesabı Sil</strong>) adımlarını izleyin.</li>
         <li>Onay verdiğiniz anda Firebase Authentication kaydınız, Firestore kullanıcı profiliniz, takip/takipçi bağlantılarınız, engelleme listeniz ve paylaştığınız tüm topluluk gönderileri kalıcı olarak silinir.</li>
       </ul>
 
@@ -122,7 +83,7 @@
     <!-- ENGLISH -->
     <article class="legal-card" lang="en">
       <h1>Privacy Policy</h1>
-      <p class="legal-meta">Last Updated: November 12, 2026 • Effective Date: November 12, 2026</p>
+      <p class="legal-meta">Last Updated: November 15, 2026 • Effective Date: November 12, 2026</p>
 
       <p>
         Omakase ("we", "our", or "the App") respects your privacy. This Privacy Policy explains what information we collect when you use the Omakase iOS application and <strong>getomakase.app</strong>, how we use and protect it, and how you can exercise your rights.
@@ -131,9 +92,9 @@
       <h2>1. Information We Collect &amp; Purpose</h2>
       <ul>
         <li><strong>Account &amp; Identity Data (Name, Email Address, User ID, @username):</strong> Collected via Sign in with Apple, Sign in with Google, or Email/Password authentication using Firebase Authentication and Cloud Firestore strictly for account management and community features.</li>
-        <li><strong>Reading Preferences &amp; Interests:</strong> Your selected cultural categories, subtopics, and language settings are stored locally (<code>UserDefaults</code>) and in your profile to personalize your knowledge feed.</li>
+        <li><strong>Reading Preferences, Interests &amp; Saved Collections:</strong> Your selected 12 cultural categories, subtopics, language settings, and saved bookmarks (<code>BookmarkStore</code>) are stored locally on your device (<code>UserDefaults</code>) and in your profile to personalize your knowledge feed and provide offline access.</li>
         <li><strong>User-Generated Content (Shared Posts, Comments, Reactions):</strong> Content you voluntarily share to the Community tab is visible to other authenticated users.</li>
-        <li><strong>Optional Letterboxd Username:</strong> If provided, we read your public Letterboxd RSS feed to tailor film topics. We never ask for your Letterboxd password.</li>
+        <li><strong>Optional Letterboxd Username:</strong> If provided, we read your public Letterboxd RSS diary feed to tailor film topics. We never ask for your Letterboxd password.</li>
       </ul>
 
       <h2>2. Zero Tracking &amp; Third-Party Service Providers</h2>
@@ -142,7 +103,7 @@
       </p>
       <ul>
         <li><strong>Google Firebase (Authentication &amp; Cloud Firestore):</strong> For secure authentication and cloud data storage.</li>
-        <li><strong>Google Cloud Run &amp; Gemini API:</strong> For generating real-time cultural micro-stories based on your selected topics. Personal identifiers (such as your email) are never sent to the AI model.</li>
+        <li><strong>Google Cloud Run &amp; Gemini API (Gemini 3.1 Flash-Lite):</strong> For generating real-time cultural micro-stories and Deep Dive expansions based on your selected topics. Personal identifiers (such as your email) are never sent to the AI model.</li>
         <li><strong>Sign in with Apple:</strong> For privacy-preserving authentication on iOS.</li>
       </ul>
 
@@ -151,7 +112,7 @@
         You may permanently delete your account and all associated data at any time directly inside the iOS app:
       </p>
       <ul>
-        <li>Navigate to <strong>Community → My Profile (top-right profile icon) → Delete Account</strong> and confirm.</li>
+        <li>Navigate to the bottom tab bar <strong>Profile → Delete Account</strong> (or via the top-right profile icon in the Community tab) and confirm.</li>
         <li>Upon confirmation, your Firebase Authentication credentials, Firestore user profile, followers/following records, block list, and shared community posts are permanently deleted.</li>
       </ul>
 
@@ -161,5 +122,22 @@
       </p>
     </article>
   </main>
+
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const saved = localStorage.getItem('omakase_theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
+      const btn = document.getElementById('theme-toggle');
+      if (btn) {
+        btn.addEventListener('click', function () {
+          const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+          root.setAttribute('data-theme', next);
+          localStorage.setItem('omakase_theme', next);
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

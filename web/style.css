@@ -30,9 +30,10 @@
 
   --accent-live: #111111;
   --accent-dot: #10B981;
+  --letterboxd-green: #00E054;
 
-  --nav-bg: rgba(250, 250, 250, 0.86);
-  --modal-overlay: rgba(0, 0, 0, 0.45);
+  --nav-bg: rgba(250, 250, 250, 0.88);
+  --modal-overlay: rgba(0, 0, 0, 0.48);
   
   --radius-xs: 6px;
   --radius-sm: 10px;
@@ -73,7 +74,7 @@
   --accent-live: #F5F5F7;
   --accent-dot: #34D399;
 
-  --nav-bg: rgba(0, 0, 0, 0.84);
+  --nav-bg: rgba(0, 0, 0, 0.86);
   --modal-overlay: rgba(0, 0, 0, 0.76);
 
   --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.45);
@@ -101,19 +102,21 @@ html {
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
   text-rendering: optimizeLegibility;
+  overflow-x: clip;
 }
 
 body {
   background-color: var(--bg-color);
   color: var(--ink-primary);
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
   transition: background-color var(--transition-smooth), color var(--transition-smooth);
 }
 
 img, svg {
   display: block;
   max-width: 100%;
+  flex-shrink: 0;
 }
 
 a {
@@ -149,8 +152,12 @@ button {
 
 .section-header {
   text-align: center;
-  max-width: 660px;
+  max-width: 680px;
   margin: 0 auto 52px;
+}
+
+.phil-header {
+  margin-bottom: 24px;
 }
 
 .section-tag {
@@ -170,15 +177,16 @@ button {
 }
 
 .section-title {
-  font-size: clamp(1.9rem, 3.6vw, 2.55rem);
+  font-size: clamp(1.75rem, 3.6vw, 2.55rem);
   font-weight: 700;
   letter-spacing: -0.032em;
   line-height: 1.15;
   margin-bottom: 14px;
+  overflow-wrap: break-word;
 }
 
 .section-desc {
-  font-size: 1.075rem;
+  font-size: clamp(0.96rem, 1.5vw, 1.075rem);
   color: var(--ink-secondary);
   line-height: 1.62;
 }
@@ -214,6 +222,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .brand {
@@ -223,6 +232,7 @@ button {
   font-weight: 600;
   font-size: 1.1rem;
   letter-spacing: -0.015em;
+  flex-shrink: 0;
 }
 
 .brand-logo {
@@ -244,7 +254,7 @@ button {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: 28px;
   list-style: none;
 }
 
@@ -253,6 +263,7 @@ button {
   font-weight: 500;
   color: var(--ink-secondary);
   transition: color var(--transition-fast);
+  white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -263,10 +274,11 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .ctrl-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 34px;
@@ -277,6 +289,7 @@ button {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--ink-primary);
+  white-space: nowrap;
   transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
@@ -302,6 +315,7 @@ button {
   border-radius: var(--radius-full);
   font-size: 0.84rem;
   font-weight: 600;
+  white-space: nowrap;
   transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
@@ -323,6 +337,7 @@ button {
   border-radius: var(--radius-full);
   font-size: 0.92rem;
   font-weight: 600;
+  white-space: nowrap;
   transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 
@@ -341,6 +356,7 @@ button {
   border-radius: var(--radius-sm);
   background: var(--wash);
   border: 1px solid var(--stroke);
+  flex-shrink: 0;
 }
 
 .mobile-drawer {
@@ -351,10 +367,10 @@ button {
   right: 0;
   background: var(--paper-color);
   border-bottom: 1px solid var(--stroke);
-  padding: 20px 24px;
+  padding: 18px 24px 22px;
   z-index: 99;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   box-shadow: var(--shadow-card);
 }
 
@@ -362,16 +378,23 @@ button {
   display: flex;
 }
 
-.mobile-drawer a {
-  font-size: 1.02rem;
+.mobile-drawer a:not(.btn-primary) {
+  font-size: 1rem;
   font-weight: 600;
-  padding: 8px 0;
+  padding: 9px 0;
   border-bottom: 1px solid var(--wash);
+}
+
+.mobile-cta-btn {
+  margin-top: 8px;
+  height: 42px;
+  text-align: center;
+  width: 100%;
 }
 
 /* ==========================================================================
    HERO SECTION
-   ========================================================================= */
+   ========================================================================== */
 
 .hero {
   padding-top: 132px;
@@ -381,9 +404,13 @@ button {
 
 .hero-grid {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 56px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 52px;
   align-items: center;
+}
+
+.hero-text-col {
+  min-width: 0;
 }
 
 .hero-badge {
@@ -398,22 +425,24 @@ button {
   border-radius: var(--radius-full);
   margin-bottom: 24px;
   color: var(--ink-secondary);
+  max-width: 100%;
 }
 
 .hero-title {
-  font-size: clamp(2.35rem, 4.5vw, 3.45rem);
+  font-size: clamp(2rem, 4.4vw, 3.4rem);
   font-weight: 700;
   letter-spacing: -0.036em;
   line-height: 1.1;
   margin-bottom: 22px;
+  overflow-wrap: break-word;
 }
 
 .hero-subtitle {
-  font-size: 1.16rem;
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
   color: var(--ink-secondary);
   line-height: 1.64;
   margin-bottom: 34px;
-  max-width: 520px;
+  max-width: 530px;
 }
 
 .hero-cta-group {
@@ -427,6 +456,7 @@ button {
 .btn-appstore {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 11px;
   height: 46px;
   padding: 0 22px;
@@ -441,6 +471,15 @@ button {
 .btn-appstore:hover {
   transform: translateY(-1px);
   opacity: 0.9;
+}
+
+.btn-appstore-sub {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 500;
+  opacity: 0.78;
+  line-height: 1.1;
+  text-align: left;
 }
 
 .btn-appstore .apple-logo-img {
@@ -459,7 +498,7 @@ button {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
+  gap: 14px 20px;
   font-size: 0.84rem;
   color: var(--ink-tertiary);
 }
@@ -475,10 +514,11 @@ button {
   height: 4px;
   border-radius: 50%;
   background: var(--ink-tertiary);
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
-   LIVE INTERACTIVE IPHONE 16 PRO MOCKUP
+   LIVE INTERACTIVE IPHONE MOCKUP (4 SCREENS + 3 NATIVE TABS)
    ========================================================================== */
 
 .hero-device-wrapper {
@@ -486,6 +526,8 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
+  min-width: 0;
+  width: 100%;
 }
 
 .device-stage {
@@ -493,24 +535,30 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 14px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .device-screen-tabs {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 4px;
   padding: 4px;
   background: var(--wash);
   border: 1px solid var(--stroke);
-  border-radius: var(--radius-full);
+  border-radius: 22px;
+  max-width: 100%;
 }
 
 .device-tab-pill {
-  padding: 5px 14px;
+  padding: 6px 13px;
   border-radius: var(--radius-full);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--ink-secondary);
+  white-space: nowrap;
   transition: all var(--transition-fast);
 }
 
@@ -521,19 +569,22 @@ button {
 
 .iphone-frame {
   position: relative;
-  width: 316px;
-  height: 628px;
+  width: min(100%, 324px);
+  min-height: 626px;
   background: #141416;
   border-radius: 50px;
   padding: 10px;
   box-shadow: var(--shadow-floating), 0 0 0 1.5px var(--stroke-strong);
+  display: flex;
+  flex-direction: column;
   transition: transform var(--transition-spring), box-shadow var(--transition-smooth);
 }
 
 .iphone-screen {
   position: relative;
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 606px;
   border-radius: 40px;
   overflow: hidden;
   background: var(--paper-color);
@@ -547,15 +598,15 @@ button {
   top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  width: 84px;
-  height: 22px;
+  width: 82px;
+  height: 21px;
   background: #000000;
   border-radius: 20px;
   z-index: 15;
 }
 
 .ios-statusbar {
-  height: 40px;
+  height: 38px;
   padding: 10px 22px 0;
   display: flex;
   align-items: center;
@@ -576,7 +627,7 @@ button {
   display: none;
   flex: 1;
   flex-direction: column;
-  overflow: hidden;
+  min-height: 0;
 }
 
 .ios-view.active {
@@ -590,7 +641,7 @@ button {
 }
 
 .ios-navbar {
-  height: 38px;
+  height: 36px;
   padding: 0 16px;
   display: flex;
   align-items: center;
@@ -612,7 +663,7 @@ button {
 }
 
 .ios-cooldown-line {
-  height: 2.5px;
+  height: 3px;
   width: 100%;
   background: var(--wash);
   overflow: hidden;
@@ -625,28 +676,60 @@ button {
   background: var(--ink-primary);
 }
 
-/* View 1: Feed Card */
+/* View 1: Feed Card (ReelsPostCard) */
 .ios-feed-card {
   flex: 1;
-  padding: 18px 16px 12px;
+  padding: 14px 16px 10px;
   display: flex;
   flex-direction: column;
 }
 
-.ios-post-top {
+.ios-post-header-block {
+  margin-bottom: 10px;
+}
+
+.ios-post-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ios-post-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.26;
+  letter-spacing: -0.015em;
+}
+
+.ios-more-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--wash);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.56rem;
+  color: var(--ink-secondary);
+  flex-shrink: 0;
+}
+
+.ios-post-date-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 5px;
+  color: var(--ink-tertiary);
 }
 
 .ios-post-date {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   color: var(--ink-tertiary);
 }
 
 .ios-hourglass-pill {
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 700;
   font-family: var(--font-mono);
   padding: 3px 8px;
@@ -656,31 +739,23 @@ button {
   color: var(--ink-secondary);
 }
 
-.ios-post-title {
-  font-size: 1.02rem;
-  font-weight: 700;
-  line-height: 1.28;
-  letter-spacing: -0.015em;
-  margin-bottom: 10px;
-}
-
 .ios-post-body {
-  font-size: 0.78rem;
-  line-height: 1.62;
+  font-size: 0.77rem;
+  line-height: 1.58;
   color: var(--ink-primary);
   opacity: 0.92;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .ios-tag-row {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .ios-tag {
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 500;
   padding: 3px 8px;
   border-radius: var(--radius-full);
@@ -689,40 +764,44 @@ button {
   color: var(--ink-secondary);
 }
 
-.ios-card-actions {
+/* Native 4-Icon Action Bar matching FeedView.swift */
+.ios-reels-actionbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-top: 12px;
+  gap: 12px;
+  padding-top: 10px;
   border-top: 1px solid var(--stroke);
   margin-top: auto;
 }
 
-.ios-action-left {
+.ios-reel-btn {
   display: flex;
-  gap: 10px;
-  font-size: 0.68rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.6rem;
   font-weight: 600;
-  color: var(--ink-secondary);
+  color: var(--ink-primary);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
-.ios-deepdive-pill {
-  font-size: 0.66rem;
-  font-weight: 600;
-  padding: 4px 9px;
-  border-radius: var(--radius-full);
-  background: var(--chip-bg);
-  color: var(--chip-text);
+.ios-reel-btn:hover {
+  opacity: 0.75;
+  transform: translateY(-1px);
+}
+
+.ios-reel-spacer {
+  flex: 1;
 }
 
 .ios-swipe-hint {
-  margin-top: 12px;
+  margin-top: 10px;
   padding: 7px 10px;
   width: 100%;
   border-radius: var(--radius-sm);
   background: var(--wash);
   border: 1px dashed var(--stroke);
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 600;
   color: var(--ink-secondary);
   display: flex;
@@ -737,39 +816,65 @@ button {
   color: var(--ink-primary);
 }
 
-/* View 2: Full-Screen Bento Categories */
+/* View 2: Full-Screen 2x6 Bento Categories */
+.ios-back-post-banner {
+  margin: 4px 14px 4px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: var(--wash);
+  border: 1px solid var(--stroke);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  text-align: left;
+}
+
+.ios-back-post-banner:hover {
+  background: var(--wash-hover);
+  color: var(--ink-primary);
+}
+
 .ios-bento-header {
-  padding: 4px 16px 10px;
+  padding: 4px 16px 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .ios-bento-header h4 {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .ios-bento-header p {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   color: var(--ink-secondary);
+  line-height: 1.3;
 }
 
 .ios-bento-grid {
-  padding: 0 16px;
+  padding: 0 14px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
   flex: 1;
   align-content: start;
 }
 
 .ios-bento-tile {
-  padding: 10px;
+  padding: 9px 10px;
   border-radius: 13px;
   background: var(--wash);
   border: 1px solid var(--stroke);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  min-width: 0;
 }
 
 .ios-tile-top {
@@ -780,30 +885,30 @@ button {
 }
 
 .ios-tile-icon {
-  width: 24px;
-  height: 24px;
+  width: 23px;
+  height: 23px;
   border-radius: 7px;
   background: var(--paper-color);
   border: 1px solid var(--stroke);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
 }
 
 .ios-tile-chev {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--ink-tertiary);
   font-weight: 700;
 }
 
 .ios-tile-name {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
 }
 
 .ios-tile-sub {
-  font-size: 0.62rem;
+  font-size: 0.59rem;
   color: var(--ink-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -811,10 +916,10 @@ button {
 }
 
 .ios-bento-bottom {
-  padding: 8px 16px 10px;
+  padding: 7px 14px 9px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   margin-top: auto;
 }
 
@@ -824,8 +929,23 @@ button {
   overflow: hidden;
 }
 
+.ios-chip-letterboxd {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 224, 84, 0.14);
+  border: 1px solid rgba(0, 224, 84, 0.45);
+  color: #00A83E;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .ios-chip-letterboxd {
+  color: #00E054;
+}
+
 .ios-chip-active {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 600;
   padding: 3px 8px;
   border-radius: var(--radius-full);
@@ -835,7 +955,7 @@ button {
 }
 
 .ios-chip-inactive {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 500;
   padding: 3px 8px;
   border-radius: var(--radius-full);
@@ -853,7 +973,7 @@ button {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.65rem;
+  font-size: 0.63rem;
   color: var(--ink-tertiary);
 }
 
@@ -862,9 +982,8 @@ button {
   padding: 6px 14px 10px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 8px;
   flex: 1;
-  overflow: hidden;
 }
 
 .ios-search-bar {
@@ -875,18 +994,18 @@ button {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   color: var(--ink-tertiary);
 }
 
 .ios-shared-card {
-  padding: 10px 12px;
+  padding: 10px 11px;
   border-radius: 13px;
   background: var(--wash);
   border: 1px solid var(--stroke);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .ios-author-row {
@@ -895,22 +1014,36 @@ button {
   gap: 7px;
 }
 
+.ios-author-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.ios-more-dots {
+  font-size: 0.6rem;
+  color: var(--ink-tertiary);
+}
+
 .ios-avatar {
   width: 22px;
   height: 22px;
   border-radius: 50%;
   background: var(--chip-bg);
   color: var(--chip-text);
-  font-size: 0.65rem;
+  font-size: 0.64rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .ios-author-name {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ios-handle {
@@ -919,32 +1052,33 @@ button {
 }
 
 .ios-author-time {
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   color: var(--ink-tertiary);
 }
 
 .ios-shared-title {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  line-height: 1.28;
+  line-height: 1.26;
 }
 
 .ios-shared-body {
-  font-size: 0.66rem;
-  line-height: 1.48;
+  font-size: 0.64rem;
+  line-height: 1.45;
   color: var(--ink-secondary);
 }
 
 .ios-reactions-row {
   display: flex;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-top: 2px;
 }
 
 .ios-react-pill {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 600;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: var(--radius-full);
   background: var(--paper-color);
   border: 1px solid var(--stroke);
@@ -954,7 +1088,124 @@ button {
   border-color: var(--ink-primary);
 }
 
-/* Bottom Tab Bar inside iPhone */
+/* View 4: Profile Tab (ProfileTabView / MyProfileSheet) */
+.ios-profile-wrap {
+  padding: 6px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: 1;
+}
+
+.ios-profile-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 10px 10px;
+  background: var(--wash);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+}
+
+.ios-profile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 5px;
+}
+
+.ios-profile-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.ios-profile-handle {
+  font-size: 0.66rem;
+  color: var(--ink-secondary);
+  margin-bottom: 8px;
+}
+
+.ios-profile-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: var(--paper-color);
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 5px 0;
+}
+
+.ios-stat-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.6rem;
+  color: var(--ink-secondary);
+}
+
+.ios-stat-box strong {
+  font-size: 0.76rem;
+  color: var(--ink-primary);
+}
+
+.ios-stat-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--stroke);
+}
+
+.ios-settings-group {
+  background: var(--wash);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ios-settings-row {
+  padding: 8px 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.ios-settings-row:last-child {
+  border-bottom: none;
+}
+
+.ios-row-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.ios-row-right {
+  font-size: 0.62rem;
+  color: var(--ink-secondary);
+  font-weight: 500;
+}
+
+.ios-lb-connected {
+  color: #00A83E;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .ios-lb-connected {
+  color: #00E054;
+}
+
+/* Bottom Tab Bar inside iPhone (Exact 3 Tabs) */
 .ios-tabbar {
   height: 48px;
   border-top: 1px solid var(--stroke);
@@ -963,6 +1214,7 @@ button {
   grid-template-columns: repeat(3, 1fr);
   padding: 4px 12px 6px;
   flex-shrink: 0;
+  margin-top: auto;
 }
 
 .ios-tab-item {
@@ -971,7 +1223,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  font-size: 0.62rem;
+  font-size: 0.61rem;
   font-weight: 600;
   color: var(--ink-tertiary);
   transition: color var(--transition-fast);
@@ -998,29 +1250,31 @@ button {
   box-shadow: var(--shadow-card);
   overflow: hidden;
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: minmax(330px, 395px) minmax(0, 1fr);
   transition: background-color var(--transition-smooth), border-color var(--transition-smooth);
 }
 
 /* Left: 12-Category Bento Panel */
 .sim-controls {
-  padding: 28px;
+  padding: 26px;
   border-right: 1px solid var(--stroke);
   display: flex;
   flex-direction: column;
   gap: 18px;
   background: var(--bg-color);
+  min-width: 0;
 }
 
 .sim-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   margin-bottom: 4px;
 }
 
 .sim-control-header h4 {
-  font-size: 1.05rem;
+  font-size: 1.04rem;
   font-weight: 700;
 }
 
@@ -1040,6 +1294,8 @@ button {
   font-size: 0.76rem;
   font-weight: 600;
   color: var(--ink-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
 }
 
@@ -1050,7 +1306,7 @@ button {
 
 .tastes-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1062,11 +1318,18 @@ button {
   background: var(--paper-color);
   border: 1px solid var(--stroke);
   border-radius: var(--radius-sm);
-  font-size: 0.8rem;
+  font-size: 0.79rem;
   font-weight: 600;
   color: var(--ink-primary);
   text-align: left;
+  min-width: 0;
   transition: all var(--transition-fast);
+}
+
+.taste-chip-btn .chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .taste-chip-btn:hover {
@@ -1108,10 +1371,12 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .subtopics-label {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--ink-secondary);
   text-transform: uppercase;
@@ -1133,12 +1398,13 @@ button {
 .subtopic-pill {
   font-size: 0.75rem;
   font-weight: 500;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: var(--radius-full);
   background: var(--wash);
   border: 1px solid var(--stroke);
   color: var(--ink-primary);
   cursor: pointer;
+  text-align: left;
   transition: all var(--transition-fast);
 }
 
@@ -1152,13 +1418,25 @@ button {
   border-color: var(--chip-bg);
 }
 
+.subtopic-pill.letterboxd-pill {
+  border-color: rgba(0, 224, 84, 0.45);
+  background: rgba(0, 224, 84, 0.10);
+}
+
+.subtopic-pill.letterboxd-pill.active {
+  background: #14181C;
+  color: #00E054;
+  border-color: #00E054;
+}
+
 .sim-actions {
   margin-top: auto;
 }
 
 .btn-generate {
   width: 100%;
-  height: 44px;
+  min-height: 44px;
+  padding: 8px 16px;
   border-radius: var(--radius-sm);
   background: var(--chip-bg);
   color: var(--chip-text);
@@ -1187,6 +1465,7 @@ button {
   flex-direction: column;
   background: var(--paper-color);
   position: relative;
+  min-width: 0;
 }
 
 .sim-top-cooldown-track {
@@ -1204,38 +1483,46 @@ button {
 }
 
 .post-card-container {
-  max-width: 620px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 36px 40px;
+  padding: 34px 36px;
   width: 100%;
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
 }
 
 .post-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: 14px;
   margin-bottom: 18px;
+}
+
+.post-header-main {
+  min-width: 0;
+  flex: 1;
 }
 
 .post-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
+  gap: 6px 8px;
+  font-size: 0.78rem;
   color: var(--ink-tertiary);
   margin-bottom: 8px;
   font-family: var(--font-mono);
 }
 
 .post-title {
-  font-size: 1.4rem;
+  font-size: clamp(1.2rem, 2.2vw, 1.42rem);
   font-weight: 700;
   line-height: 1.28;
   letter-spacing: -0.02em;
+  overflow-wrap: break-word;
 }
 
 .live-badge {
@@ -1255,12 +1542,13 @@ button {
 }
 
 .post-body {
-  font-size: 1.06rem;
+  font-size: clamp(0.96rem, 1.4vw, 1.06rem);
   line-height: 1.72;
   color: var(--ink-primary);
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   min-height: 136px;
   white-space: pre-line;
+  overflow-wrap: break-word;
 }
 
 .typewriter-cursor {
@@ -1282,11 +1570,11 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .tag-badge {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 500;
   padding: 4px 12px;
   background: var(--wash);
@@ -1297,8 +1585,10 @@ button {
 
 .post-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 14px;
   padding-top: 18px;
   border-top: 1px solid var(--stroke);
   margin-top: auto;
@@ -1306,17 +1596,20 @@ button {
 
 .action-btn-group {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 18px;
+  gap: 14px 18px;
 }
 
 .action-icon-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 500;
   color: var(--ink-secondary);
+  white-space: nowrap;
+  padding: 4px 0;
   transition: color var(--transition-fast);
 }
 
@@ -1325,16 +1618,18 @@ button {
 }
 
 .deep-dive-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 7px 14px;
+  padding: 8px 15px;
   background: var(--wash);
   border: 1px solid var(--stroke);
   border-radius: var(--radius-full);
   font-size: 0.84rem;
   font-weight: 600;
   color: var(--ink-primary);
+  white-space: nowrap;
   transition: all var(--transition-fast);
 }
 
@@ -1345,23 +1640,24 @@ button {
 }
 
 /* ==========================================================================
-   FEATURES GRID (2x2 ARCHITECTURAL BENTO GRID)
+   FEATURES GRID (6-CARD ARCHITECTURAL BENTO GRID)
    ========================================================================== */
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
 }
 
 .feature-card {
   background: var(--paper-color);
   border: 1px solid var(--stroke);
   border-radius: var(--radius-lg);
-  padding: 36px;
+  padding: 32px 28px;
   box-shadow: var(--shadow-subtle);
   display: flex;
   flex-direction: column;
+  min-width: 0;
   transition: transform var(--transition-spring), border-color var(--transition-fast), box-shadow var(--transition-smooth);
 }
 
@@ -1381,20 +1677,21 @@ button {
   align-items: center;
   justify-content: center;
   color: var(--ink-primary);
-  margin-bottom: 22px;
+  margin-bottom: 20px;
 }
 
 .feature-title {
-  font-size: 1.22rem;
+  font-size: 1.15rem;
   font-weight: 700;
   margin-bottom: 10px;
   letter-spacing: -0.015em;
+  line-height: 1.3;
 }
 
 .feature-desc {
-  font-size: 0.95rem;
+  font-size: 0.93rem;
   color: var(--ink-secondary);
-  line-height: 1.64;
+  line-height: 1.62;
 }
 
 /* ==========================================================================
@@ -1411,15 +1708,16 @@ button {
 
 .comparison-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 28px;
-  margin-top: 40px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 36px;
 }
 
 .comparison-col {
-  padding: 32px;
+  padding: 30px;
   border-radius: var(--radius-md);
   border: 1px solid var(--stroke);
+  min-width: 0;
 }
 
 .comparison-col.bad {
@@ -1435,7 +1733,7 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 1.08rem;
+  font-size: 1.06rem;
   font-weight: 700;
   margin-bottom: 18px;
 }
@@ -1444,6 +1742,7 @@ button {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .comp-indicator.muted {
@@ -1469,6 +1768,11 @@ button {
   line-height: 1.52;
 }
 
+.comp-symbol {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
 .comparison-col.bad .comparison-item {
   color: var(--ink-secondary);
 }
@@ -1478,7 +1782,7 @@ button {
    ========================================================================== */
 
 .faq-list {
-  max-width: 740px;
+  max-width: 760px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -1503,9 +1807,11 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 1.02rem;
+  gap: 16px;
+  font-size: 1.01rem;
   font-weight: 600;
   text-align: left;
+  line-height: 1.4;
 }
 
 .faq-icon {
@@ -1526,11 +1832,11 @@ button {
   padding: 0 26px;
   font-size: 0.94rem;
   color: var(--ink-secondary);
-  line-height: 1.62;
+  line-height: 1.64;
 }
 
 .faq-item.active .faq-answer {
-  max-height: 240px;
+  max-height: 520px;
   padding-bottom: 22px;
 }
 
@@ -1563,17 +1869,19 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  width: 100%;
 }
 
 .waitlist-form {
   display: flex;
   gap: 10px;
-  max-width: 430px;
+  max-width: 440px;
   width: 100%;
 }
 
 .waitlist-input {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 46px;
   padding: 0 18px;
   border-radius: var(--radius-full);
@@ -1607,6 +1915,7 @@ button {
   font-weight: 600;
   font-size: 0.9rem;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: opacity var(--transition-fast);
 }
 
@@ -1636,7 +1945,7 @@ button {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 20px 24px;
   margin-bottom: 28px;
 }
 
@@ -1650,14 +1959,21 @@ button {
 
 .footer-links {
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 12px 22px;
   list-style: none;
+}
+
+.footer-links a:hover {
+  color: var(--ink-primary);
 }
 
 .footer-bottom {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
   border-top: 1px solid var(--stroke);
   padding-top: 22px;
   font-size: 0.78rem;
@@ -1665,7 +1981,7 @@ button {
 }
 
 /* ==========================================================================
-   MODAL / SHEET (DEEP DIVE READER)
+   MODALS / SHEETS (DEEP DIVE READER & SHARE CARD PREVIEW)
    ========================================================================== */
 
 .modal-backdrop {
@@ -1692,7 +2008,7 @@ button {
   background: var(--paper-color);
   width: 100%;
   max-width: 620px;
-  max-height: 85vh;
+  max-height: 86vh;
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
   box-shadow: var(--shadow-floating);
@@ -1712,19 +2028,30 @@ button {
   background: var(--stroke-strong);
   border-radius: 3px;
   margin: 12px auto 6px;
+  flex-shrink: 0;
 }
 
 .modal-header {
-  padding: 16px 24px;
+  padding: 14px 24px;
   border-bottom: 1px solid var(--stroke);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .modal-header-title {
   font-weight: 700;
-  font-size: 1.02rem;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.modal-fish-icon {
+  flex-shrink: 0;
 }
 
 .modal-close-btn {
@@ -1736,6 +2063,7 @@ button {
   align-items: center;
   justify-content: center;
   color: var(--ink-secondary);
+  flex-shrink: 0;
   transition: background var(--transition-fast);
 }
 
@@ -1745,26 +2073,173 @@ button {
 }
 
 .modal-body {
-  padding: 26px 24px 44px;
+  padding: 24px 24px max(36px, env(safe-area-inset-bottom));
   overflow-y: auto;
-  font-size: 1.02rem;
+  font-size: 1rem;
   line-height: 1.72;
   color: var(--ink-primary);
+}
+
+/* Paper Share Card Preview (ShareCardView.swift #F5F0E8 Replica) */
+.share-modal-body {
+  display: flex;
+  justify-content: center;
+  padding: 20px 20px max(32px, env(safe-area-inset-bottom));
+}
+
+.paper-share-card {
+  width: 100%;
+  max-width: 380px;
+  background: #F5F0E8;
+  color: #1A1A1A;
+  border-radius: 20px;
+  padding: 32px 26px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(26, 26, 26, 0.12);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.paper-card-brand {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  color: rgba(26, 26, 26, 0.42);
+}
+
+.paper-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.paper-card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #1A1A1A;
+}
+
+.paper-card-text {
+  font-size: 0.9rem;
+  line-height: 1.62;
+  color: rgba(26, 26, 26, 0.86);
+}
+
+.paper-card-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.paper-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.paper-tag-pill {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(26, 26, 26, 0.26);
+  color: rgba(26, 26, 26, 0.75);
+}
+
+.paper-card-date {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(26, 26, 26, 0.46);
+}
+
+/* ==========================================================================
+   LEGAL PAGES (PRIVACY.HTML & TERMS.HTML)
+   ========================================================================== */
+
+.legal-wrap {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 112px 24px 72px;
+}
+
+.legal-card {
+  background: var(--paper-color);
+  border: 1px solid var(--stroke);
+  border-radius: 20px;
+  padding: 40px 36px;
+  margin-bottom: 32px;
+  box-shadow: var(--shadow-subtle);
+}
+
+.legal-card h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.legal-meta {
+  font-size: 0.85rem;
+  color: var(--ink-tertiary);
+  margin-bottom: 24px;
+}
+
+.legal-card h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-top: 26px;
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.legal-card p, .legal-card li {
+  font-size: 0.95rem;
+  line-height: 1.68;
+  color: var(--ink-secondary);
+  margin-bottom: 12px;
+}
+
+.legal-card strong, .legal-card a {
+  color: var(--ink-primary);
+}
+
+.legal-card ul {
+  padding-left: 20px;
+  margin-bottom: 16px;
+}
+
+.lang-divider {
+  border: none;
+  border-top: 1px solid var(--stroke);
+  margin: 36px 0;
 }
 
 /* ==========================================================================
    RESPONSIVE DESIGN BREAKPOINTS
    ========================================================================== */
 
+@media (max-width: 1024px) {
+  .features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 992px) {
   .hero-grid {
     grid-template-columns: 1fr;
     text-align: center;
-    gap: 48px;
+    gap: 44px;
   }
 
   .hero-subtitle {
-    margin: 0 auto 32px;
+    margin: 0 auto 30px;
   }
 
   .hero-cta-group {
@@ -1784,35 +2259,41 @@ button {
     border-bottom: 1px solid var(--stroke);
   }
 
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-
   .comparison-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .nav-links {
+  .nav-links,
+  .nav-cta-desktop {
     display: none;
   }
 
   .mobile-toggle {
-    display: flex;
+    display: inline-flex;
   }
 
   .section {
     padding: 68px 0;
   }
 
-  .hero {
-    padding-top: 108px;
-    padding-bottom: 56px;
+  .section-header {
+    margin-bottom: 36px;
   }
 
-  .tastes-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .hero {
+    padding-top: 104px;
+    padding-bottom: 52px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .feature-card {
+    padding: 26px 22px;
   }
 
   .post-card-container {
@@ -1820,19 +2301,133 @@ button {
   }
 
   .philosophy-card {
-    padding: 36px 22px;
+    padding: 32px 20px;
+    border-radius: var(--radius-lg);
+  }
+
+  .comparison-col {
+    padding: 22px 18px;
+  }
+
+  .faq-question {
+    padding: 18px 20px;
+    font-size: 0.96rem;
+  }
+
+  .faq-answer {
+    padding: 0 20px;
+    font-size: 0.9rem;
   }
 
   .cta-banner {
     padding: 44px 22px;
+    border-radius: var(--radius-lg);
   }
 
   .waitlist-form {
     flex-direction: column;
   }
 
+  .waitlist-input {
+    flex: 0 0 auto;
+    width: 100%;
+    height: 46px;
+  }
+
+  .waitlist-submit {
+    width: 100%;
+    height: 46px;
+  }
+
+  .footer {
+    padding: 40px 0 28px;
+  }
+
   .footer-content {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .legal-wrap {
+    padding: 96px 16px 56px;
+  }
+
+  .legal-card {
+    padding: 28px 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 0 16px;
+  }
+
+  .sim-controls {
+    padding: 20px 16px;
+  }
+
+  .tastes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .post-card-header {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .post-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .action-btn-group {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .deep-dive-btn {
+    width: 100%;
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-cta-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-appstore,
+  .btn-secondary {
+    width: 100%;
+  }
+
+  .device-tab-pill {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+  }
+
+  .iphone-frame {
+    border-radius: 42px;
+    padding: 8px;
+    min-height: 590px;
+  }
+
+  .iphone-screen {
+    border-radius: 34px;
+    min-height: 574px;
+  }
+
+  .ctrl-pill {
+    padding: 0 9px;
+    font-size: 0.75rem;
   }
 }

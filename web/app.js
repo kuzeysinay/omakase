@@ -3,9 +3,9 @@
  * Features:
  * - Dark/Light Mode Sync (Paper & OLED Black)
  * - Dual Language (TR / EN)
- * - Interactive iPhone 16 Pro 3-Screen Showcase (Feed, 12-Category Bento, Community)
- * - 12-Category Bento Simulator with Subtopic Pills, SSE Typewriter & Top 3px Cooldown Bar
- * - Deep Dive Sheet Reader, FAQ Accordion, and Inline Waitlist Feedback
+ * - Interactive iPhone 4-Screen Showcase (Feed, 2x6 Bento, Community, Profile) + 3-Tab Native Bar
+ * - 12-Category Bento Simulator with Subtopic Pills, Letterboxd Diary Mode, SSE Typewriter & Top 3px Cooldown Bar
+ * - Deep Dive Sheet Reader, #F5F0E8 Paper ShareCardView Modal, FAQ Accordion, and Waitlist Feedback
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,39 +19,54 @@ document.addEventListener('DOMContentLoaded', () => {
       "nav.philosophy": "Felsefe",
       "nav.faq": "SSS",
       "nav.getApp": "İndir",
+      "nav.getAppFull": "Uygulamayı İndir",
 
       "hero.badge": "iOS 17+ • Kişisel Kültür & Bilgi Akışı",
       "hero.title": "Algoritmaların gürültüsünden uzak, zihinsel damak tadınıza özel akış.",
-      "hero.subtitle": "12 kültür kategorisini, dinamik alt konuları ve kendi merakınızı gerçek zamanlı, doğrulanmış mikro-hikayelere dönüştüren kişisel bilgi şefiniz.",
+      "hero.subtitle": "12 kültür disiplinini, hiper-spesifik alt konuları ve Letterboxd izleme günlüğünüzü gerçek zamanlı, doğrulanmış mikro-hikayelere dönüştüren kişisel bilgi şefiniz.",
       "hero.appStoreLabel": "App Store",
       "hero.downloadCta": "iOS için İndir",
       "hero.tryDemo": "Canlı Tadımı Dene ↓",
-      "hero.meta1": "12 Kültür Kategorisi",
-      "hero.meta2": "18 sn Sindirme Koruması",
-      "hero.meta3": "Seçkin Topluluk Akışı",
+      "hero.meta1": "2×6 Bento & 12 Disiplin",
+      "hero.meta2": "15–25 sn Sindirme Koruması",
+      "hero.meta3": "Letterboxd & @kullanıcı_adı Ağı",
 
-      "device.tabFeed": "Akış",
-      "device.tabBento": "Kategoriler",
+      "device.tabFeed": "Akışım",
+      "device.tabBento": "Bento Keşif",
       "device.tabCommunity": "Topluluk",
+      "device.tabProfile": "Profil",
+      "device.actDive": "İncele",
       "device.feedDate": "Bugün • 09:41",
       "device.feedTitle": "Tadao Ando ve Işığın Betondaki Tapınağı",
       "device.feedBody": "Osaka'daki Işık Kilisesi'nde Tadao Ando, haçı altın ya da mermerle değil; çıplak beton duvara açtığı yarıklardan içeri sızan gün ışığıyla inşa etti. Güneş hareket ettikçe kilisenin içindeki ışık kesişimi yer değiştirir. Ando için mimarlık bir form değil, doğanın mekana bıraktığı gölgedir.",
-      "device.swipeForBento": "Yeni konu seçmek için kaydır",
-      "device.catCount": "Kategori",
+      "device.swipeForBento": "Yeni post için aşağı kaydır",
+      "device.backToPost": "Son gönderiye dönmek için dokun",
       "device.bentoHeading": "Kategoriler",
       "device.bentoSub": "Bir kategori seç ve alt konuya dokunarak yeni post üret",
+      "device.subFilm": "Kubrick f/0.7 · Kuleşov",
+      "device.subMusic": "Röntgen Plak · Köln Piyano",
+      "device.subSci": "Oklo Reaktörü · Tardigrad",
+      "device.subFood": "Garum · 1814 Bira Tufanı",
+      "device.subHist": "1518 Dans Vebası · Voynich",
+      "device.subTech": "Apollo İp RAM · Lav Lambası",
       "device.inputPlaceholder": "Kendi konunu yaz veya ilgi ekle…",
       "device.communitySearch": "Kişi (@kullanıcı) veya gönderi ara…",
       "device.shared1Title": "Miles Davis ve Kind of Blue'nun Modal Sessizliği",
       "device.shared1Body": "1959 ilkbaharında Miles Davis, stüdyoya giren Bill Evans ve John Coltrane'e geleneksel akor şemaları yerine sadece birkaç mod notasından ibaret kağıtlar verdi…",
-      "device.shared2Title": "Kuantum Eşevresizliği ve Gözlemci",
+      "device.shared2Title": "Oklo: 2 Milyar Yıllık Doğal Nükleer Reaktör",
+      "device.followers": "Takipçi",
+      "device.following": "Takip",
+      "device.savedPosts": "Kaydedilmiş Gönderiler",
+      "device.langRow": "Dil",
+      "device.themeRow": "Görünüm",
+      "device.themeVal": "Mürekkep & Kağıt",
 
       "demo.tag": "İnteraktif Deneyim",
       "demo.title": "Canlı Şef Tadımı",
-      "demo.desc": "12 kültür kategorisinden birini seçin, alt konulara göz atın ve şefin sizin için anlık mikro-hikaye hazırlamasını deneyimleyin.",
-      "demo.bentoTitle": "Bento Keşif Izgarası",
-      "demo.bentoSub": "12 ana kategoriden birine dokunun:",
-      "demo.subtopicsLabel": "Alt Konular",
+      "demo.desc": "12 kültür disiplininden birini seçin, ezber bozan alt konulara dokunun ve şefin sizin için gerçek zamanlı mikro-hikaye hazırlamasını deneyimleyin.",
+      "demo.bentoTitle": "2×6 Bento Keşif Matrisi",
+      "demo.bentoSub": "12 ana kültür disiplininden birine dokunun:",
+      "demo.subtopicsLabel": "Alt Konular (Tavşan Delikleri)",
       "demo.spin": "Rastgele",
       "demo.startStream": "Şeften Yeni Tadım İste",
       "demo.cooldownReady": "Sindirme koruması hazır",
@@ -71,20 +86,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
       "action.reread": "Yeniden",
       "action.share": "Paylaş",
+      "action.export": "Dışa Aktar",
       "action.save": "Kaydet",
       "action.deepdive": "Derinlemesine İncele",
 
+      "shareModal.heading": "Paylaşım Kartı Önizlemesi (1080 × 1350)",
+
       "features.tag": "Sistem Mimarisi",
-      "features.title": "Düşünceyi Besleyen Sade Bir Deneyim",
-      "features.desc": "Dikkati parçalayan sonsuz kaydırma döngülerine karşı, bilinçli keşfi ve zihinsel dinginliği önceleyen dört temel yapı taşı.",
-      "features.f1Title": "Tam Ekran Bento Keşif Izgarası",
-      "features.f1Desc": "Film, Bilim, Felsefe, Sanat, Tarih ve Teknoloji dahil 12 ana kültür kategorisi. Bir kategoriye dokunduğunuzda dinamik alt konular açılır; dilerseniz kendi merak ettiğiniz özel bir başlığı yazıp anında şef yazısı üretebilirsiniz.",
-      "features.f2Title": "Okuma Süresi & Doyum Koruması",
-      "features.f2Desc": "Metin uzunluğuna göre 15 ile 25 saniye arasında akıllı sindirme süresi uygular. Üst bar boyunca ilerleyen ince sayaç tamamlanana kadar yeni üretime ara verilir; refleksif kaydırma yerine gerçek okuma teşvik edilir.",
-      "features.f3Title": "Canlı Akış & Derinlemesine İnceleme",
-      "features.f3Desc": "Tam ekran dikey sayfalama yapısında kelimeler gerçek zamanlı olarak ekrana akar. İlginizi çeken bir anekdotun perde arkasını merak ettiğinizde tek dokunuşla kapsamlı inceleme katmanını açabilirsiniz.",
-      "features.f4Title": "Seçkin Topluluk & Ortak Hafıza",
-      "features.f4Desc": "Kendinize özel @kullanıcı_adı kimliğinizle sizi etkileyen hikayeleri topluluk akışında paylaşın. Kişi ve gönderi aramasıyla zevklerinize yakın okurları takip edin, tepkiler ve yorumlarla sohbete katılın.",
+      "features.title": "Düşünceyi Besleyen Altı Yapı Taşı",
+      "features.desc": "Dikkati parçalayan sonsuz kaydırma döngülerine ve sohbet botlarının 'ne soracağım?' boşluğuna karşı bilinçli keşfi önceleyen yerel iOS mimarisi.",
+      "features.f1Title": "2×6 Dikey Bento & Sıfır Gecikmeli Keşif",
+      "features.f1Desc": "Film, Müzik, Bilim, Yemek, Tarih, Spor, Teknoloji, Doğa, Sanat, Felsefe, Seyahat ve Oyun dahil 12 kültür disiplini. Her kategoride oturumlar arası tekrar etmeyen 12'lik alt konu ızgarası, arka planda Gemini 3.1 Flash-Lite ön-belleklemesi ve özel konu girişi.",
+      "features.f2Title": "Okuma Süresi & Doomscrolling Koruması",
+      "features.f2Desc": "Kelime sayısına göre 15 ile 25 saniye arasında akıllı sindirme süresi uygular. Üst bar boyunca ilerleyen 3px sayaç tamamlanana kadar yeni üretime ara verilir; refleksif kaydırma yerine gerçek okuma ve zihinsel doyum teşvik edilir.",
+      "features.f3Title": "12 Editoryal Açı & Deep Dive Katmanı",
+      "features.f3Desc": "Sıfır dolgu cümlesiyle 40–90 kelimelik doğrulanmış hikayeler üreten 12 dönüşümlü editoryal format. Merakınızı çeken bir anekdotun perde arkasını görmek istediğinizde tek dokunuşla 200 kelimelik Derinlemesine İnceleme (Deep Dive) penceresi açılır.",
+      "features.f4Title": "@kullanıcı_adı Topluluğu & Güvenli Tartışma",
+      "features.f4Desc": "Sign in with Apple, Google veya 3 adımlı @kullanıcı_adı kaydıyla sizi etkileyen yazıları topluluk akışında paylaşın. Kişi ve gönderi aramasıyla zevklerinize yakın okurları takip edin, 5'li ifade sistemi (🔥 🧠 ❤️ 👏 🤯) ve yorumlarla sohbete katılın.",
+      "features.f5Title": "Letterboxd İzleme Günlüğü Sentezi",
+      "features.f5Desc": "Film kategorisinde yer alan özel Letterboxd kartıyla herkese açık RSS günlüğünüzdeki son 50 filmi şifresiz bağlayın. Şef, izlediğiniz filmlerden rastgele birini seçip doğrulanmış kamera arkası prodüksiyon sırlarını önünüze getirsin.",
+      "features.f6Title": "Kağıt Paylaşım Kartı & 12'li Koleksiyonlar",
+      "features.f6Desc": "Beğendiğiniz hikayeleri #F5F0E8 kağıt dokusunda 1080×1350 yüksek çözünürlüklü görsel kart olarak dışa aktarın. Kaydettiğiniz gönderiler 12 ana kültür kategorisine göre otomatik sınıflandırılarak çevrimdışı okuma arşivinize eklenir.",
 
       "phil.tag": "Felsefemiz",
       "phil.title": "Şefe Güvenmek",
@@ -103,16 +125,20 @@ document.addEventListener('DOMContentLoaded', () => {
       "faq.tag": "Merak Edilenler",
       "faq.title": "Sıkça Sorulan Sorular",
       "faq.q1": "Omakase nasıl çalışır?",
-      "faq.a1": "Omakase, 12 ana kültür kategorisinden seçtiğiniz alt konuları veya kendi yazdığınız özel başlıkları Google Cloud Run ve Gemini 3.5 Flash modelleriyle gerçek zamanlı olarak doğrulanmış, derinlikli mikro-hikayelere dönüştüren yerel bir iOS uygulamasıdır.",
+      "faq.a1": "Omakase, 12 ana kültür kategorisinden seçtiğiniz hiper-spesifik alt konuları, kendi yazdığınız özel başlıkları veya Letterboxd günlüğünüzü Google Cloud Run ve Gemini 3.5 Flash modelleriyle gerçek zamanlı olarak doğrulanmış, derinlikli mikro-hikayelere dönüştüren yerel bir iOS uygulamasıdır.",
       "faq.q2": "Okuma süresi sayacı (Reading Cooldown) neden var?",
       "faq.a2": "Sosyal medya akışları metinleri okumadan saniyede bir kaydırma alışkanlığı yaratır. Omakase, metin uzunluğuna göre 15–25 saniye sindirme süresi uygulayarak içeriği gerçekten okuyup hazmetmenizi sağlar.",
       "faq.q3": "İçeriklerin doğruluğu nasıl korunuyor?",
-      "faq.a3": "Arka uç mimarimiz, katı doğruluk kuralları ve çift katmanlı moderasyon filtreleriyle kurgusal uydurmaları engeller; yüzeysel özetler yerine belgelenmiş tarihsel kayıtlara, bilimsel çalışmalara ve birincil kaynaklara odaklanır.",
-      "faq.q4": "Topluluk sekmesinde neler yapabilirim?",
-      "faq.a4": "Kişisel akışınızda beğendiğiniz bir şef yazısını tek dokunuşla kendi @kullanıcı_adı profiliniz üzerinden toplulukla paylaşabilir, diğer okurları arayıp takip edebilir, gönderilere ifade bırakabilir ve yorumlarda tartışabilirsiniz.",
+      "faq.a3": "Arka uç mimarimiz, katı doğruluk kuralları ve çok katmanlı moderasyon filtreleriyle kurgusal uydurmaları engeller; yüzeysel özetler yerine belgelenmiş tarihsel kayıtlara, bilimsel çalışmalara ve birincil kaynaklara odaklanır.",
+      "faq.q4": "Letterboxd entegrasyonu nasıl çalışır?",
+      "faq.a4": "Film kategorisindeki Letterboxd kartına veya Profil sekmesine sadece kullanıcı adınızı girmeniz yeterlidir; şifreniz asla istenmez. Uygulama herkese açık RSS günlüğünüzden son 50 filminizi okur ve her dokunuşta izlediğiniz bir filmin belgelenmiş kamera arkası prodüksiyon hikayesini üretir.",
+      "faq.q5": "Topluluk ve koleksiyon özelliklerinde neler var?",
+      "faq.a5": "Beğendiğiniz bir şef yazısını @kullanıcı_adı profilinizle topluluk akışında paylaşabilir, #F5F0E8 kağıt tasarımlı görsel kart olarak dışa aktarabilir veya 12 kategoriye göre otomatik düzenlenen çevrimdışı koleksiyonlarınıza kaydedebilirsiniz.",
+      "faq.q6": "Veri gizliliği ve hesap güvenliği nasıl sağlanıyor?",
+      "faq.a6": "Omakase reklam göstermez, uygulamalar arası takip (IDFA) yapmaz ve verilerinizi üçüncü taraflara satmaz. Sign in with Apple desteği sunar ve dilediğiniz an Profil sekmesinden hesabınızı ve tüm verilerinizi tek dokunuşla kalıcı olarak silmenize olanak tanır.",
 
       "cta.title": "Zihinsel Damak Tadınızı Besleyin",
-      "cta.desc": "Omakase iOS için yayında. Günlük merak ritüelinize başlamak için hemen indirin veya TestFlight erken erişim listesine katılın.",
+      "cta.desc": "Omakase iOS 17+ için hazır. Günlük merak ritüelinize başlamak için hemen indirin veya TestFlight erken erişim listesine katılın.",
       "cta.joinBtn": "TestFlight'a Katıl",
 
       "footer.privacy": "Gizlilik Politikası",
@@ -127,39 +153,54 @@ document.addEventListener('DOMContentLoaded', () => {
       "nav.philosophy": "Philosophy",
       "nav.faq": "FAQ",
       "nav.getApp": "Get App",
+      "nav.getAppFull": "Download the App",
 
       "hero.badge": "iOS 17+ • Personal Culture & Knowledge Feed",
       "hero.title": "Beyond algorithmic noise. A feed tuned to your mental palate.",
-      "hero.subtitle": "Your personal knowledge chef transforming 12 cultural categories, dynamic subtopics, and your own curiosities into verified, real-time micro-stories.",
+      "hero.subtitle": "Your personal knowledge chef transforming 12 cultural disciplines, hyper-specific subtopics, and your Letterboxd diary into verified, real-time micro-stories.",
       "hero.appStoreLabel": "App Store",
       "hero.downloadCta": "Download for iOS",
       "hero.tryDemo": "Try Live Tasting ↓",
-      "hero.meta1": "12 Cultural Categories",
-      "hero.meta2": "18s Satiation Cooldown",
-      "hero.meta3": "Curated Community Feed",
+      "hero.meta1": "2×6 Bento & 12 Disciplines",
+      "hero.meta2": "15–25s Satiation Cooldown",
+      "hero.meta3": "Letterboxd & @username Graph",
 
-      "device.tabFeed": "Feed",
-      "device.tabBento": "Categories",
+      "device.tabFeed": "My Feed",
+      "device.tabBento": "Bento Box",
       "device.tabCommunity": "Community",
+      "device.tabProfile": "Profile",
+      "device.actDive": "Dive",
       "device.feedDate": "Today • 09:41",
       "device.feedTitle": "Tadao Ando and the Sanctuary of Concrete Light",
       "device.feedBody": "At the Church of the Light in Osaka, Tadao Ando constructed the central cross not from gilded marble, but from cruciform slits cut into raw concrete. As the sun moves across the sky, the intersection of light glides across the dark interior. For Ando, architecture is the canvas that makes light tangible.",
-      "device.swipeForBento": "Swipe down to pick a new topic",
-      "device.catCount": "Categories",
+      "device.swipeForBento": "Scroll down for a new post",
+      "device.backToPost": "Tap to return to last post",
       "device.bentoHeading": "Categories",
       "device.bentoSub": "Select a category and tap a subtopic to craft a new post",
+      "device.subFilm": "Kubrick f/0.7 · Kuleshov",
+      "device.subMusic": "X-Ray Records · Köln Piano",
+      "device.subSci": "Oklo Reactor · Tardigrades",
+      "device.subFood": "Garum · 1814 Beer Flood",
+      "device.subHist": "1518 Dancing Plague · Voynich",
+      "device.subTech": "Apollo Rope RAM · Lava Lamps",
       "device.inputPlaceholder": "Type a custom topic or add taste…",
       "device.communitySearch": "Search people (@username) or posts…",
       "device.shared1Title": "Miles Davis and the Modal Silence of Kind of Blue",
       "device.shared1Body": "In the spring of 1959, Miles Davis handed Bill Evans and John Coltrane scraps of paper containing modal scales rather than traditional chord changes…",
-      "device.shared2Title": "Quantum Decoherence and the Observer",
+      "device.shared2Title": "Oklo: The 2-Billion-Year-Old Natural Nuclear Reactor",
+      "device.followers": "Followers",
+      "device.following": "Following",
+      "device.savedPosts": "Saved Posts",
+      "device.langRow": "Language",
+      "device.themeRow": "Appearance",
+      "device.themeVal": "Ink & Paper",
 
       "demo.tag": "Interactive Experience",
       "demo.title": "Live Chef Tasting",
-      "demo.desc": "Pick one of the 12 cultural categories, explore subtopics, and watch the chef craft an instant micro-story in your browser.",
-      "demo.bentoTitle": "Bento Taste Box",
-      "demo.bentoSub": "Tap one of the 12 core categories:",
-      "demo.subtopicsLabel": "Subtopics",
+      "demo.desc": "Pick one of the 12 cultural disciplines, tap a rabbit-hole subtopic, and watch the chef craft an instant micro-story in your browser.",
+      "demo.bentoTitle": "2×6 Bento Discovery Matrix",
+      "demo.bentoSub": "Tap one of the 12 core disciplines:",
+      "demo.subtopicsLabel": "Subtopics (Rabbit Holes)",
       "demo.spin": "Randomize",
       "demo.startStream": "Request New Tasting",
       "demo.cooldownReady": "Reading cooldown ready",
@@ -179,20 +220,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
       "action.reread": "Re-read",
       "action.share": "Share",
+      "action.export": "Export",
       "action.save": "Save",
       "action.deepdive": "Deep Dive",
 
+      "shareModal.heading": "Share Card Preview (1080 × 1350)",
+
       "features.tag": "System Architecture",
-      "features.title": "A Calm Experience Built for Thought",
-      "features.desc": "Four foundational pillars designed to counter attention-fragmenting feeds with deliberate discovery and mental stillness.",
-      "features.f1Title": "Full-Screen Bento Discovery Grid",
-      "features.f1Desc": "Explore 12 core categories across Film, Science, Philosophy, Art, History, and Technology. Tap any category to reveal dynamic subtopics, or type your own custom prompt to craft a dedicated story.",
+      "features.title": "Six Pillars Built for Deliberate Thought",
+      "features.desc": "A native iOS architecture engineered to counter both algorithmic doomscrolling and chatbot prompt paralysis.",
+      "features.f1Title": "2×6 Vertical Bento & Zero-Latency Discovery",
+      "features.f1Desc": "Explore 12 disciplines across Film, Music, Science, Food, History, Sports, Tech, Nature, Art, Philosophy, Travel, and Gaming. Each category opens 12 non-repeating rabbit-hole subtopics with background Gemini 3.1 Flash-Lite prefetching.",
       "features.f2Title": "Reading Cooldown & Satiation Defense",
-      "features.f2Desc": "Applies a 15 to 25 second smart digestion window scaled to text length. A subtle top progress bar pauses new generation until finished—rewarding comprehension over reflexive swiping.",
-      "features.f3Title": "Live Stream & Deep Dive Reader",
-      "features.f3Desc": "Words stream onto a distraction-free vertical canvas in real time. Whenever an anecdote sparks deeper curiosity, one tap opens a comprehensive follow-up exploration sheet.",
-      "features.f4Title": "Curated Community & Shared Memory",
-      "features.f4Desc": "Share standout insights to the community feed with your unique @username handle. Search for like-minded readers and posts, leave quick reactions, and join thoughtful discussions.",
+      "features.f2Desc": "Applies a 15 to 25 second smart digestion window scaled to text length. A subtle 3px top progress bar pauses new generation until finished—rewarding comprehension over reflexive swiping.",
+      "features.f3Title": "12 Editorial Angles & Deep Dive Sheet",
+      "features.f3Desc": "Twelve rotating editorial formats deliver verified 40–90 word sparks with zero filler. Whenever an anecdote ignites deeper curiosity, one tap opens a comprehensive 200-word Deep Dive bottom sheet.",
+      "features.f4Title": "@username Community & Safe Discourse",
+      "features.f4Desc": "Sign up via Sign in with Apple, Google, or our 3-step @username flow. Search for people and posts, react with five expressive pills (🔥 🧠 ❤️ 👏 🤯), discuss in comments, and rely on 4-layer UGC moderation.",
+      "features.f5Title": "Letterboxd Diary RSS Synthesis",
+      "features.f5Desc": "Connect your public Letterboxd RSS feed right inside the Film category with zero passwords. The chef pulls your 50 most recent films and crafts verified behind-the-scenes production stories.",
+      "features.f6Title": "Paper Share Card & 12-Category Collections",
+      "features.f6Desc": "Export favorite stories as crisp 1080×1350 #F5F0E8 paper cards ready for Instagram and TikTok. Saved posts are automatically organized into 12 subject collections for offline reading.",
 
       "phil.tag": "Our Philosophy",
       "phil.title": "Trust the Chef",
@@ -211,16 +259,20 @@ document.addEventListener('DOMContentLoaded', () => {
       "faq.tag": "Curiosities",
       "faq.title": "Frequently Asked Questions",
       "faq.q1": "How does Omakase work?",
-      "faq.a1": "Omakase is a native iOS app that transforms your chosen subtopics across 12 cultural categories—or any custom topic you type—into verified, real-time micro-stories powered by Google Cloud Run and Gemini 3.5 Flash.",
+      "faq.a1": "Omakase is a native iOS app that transforms your chosen hyper-specific subtopics across 12 cultural disciplines, custom topics, or your Letterboxd diary into verified, real-time micro-stories powered by Google Cloud Run and Gemini 3.5 Flash.",
       "faq.q2": "Why is there a reading cooldown timer?",
       "faq.a2": "Conventional social feeds condition users to swipe in fractions of a second without absorbing anything. Omakase enforces a 15–25 second digestion window so every story is genuinely read.",
       "faq.q3": "How is factual accuracy maintained?",
-      "faq.a3": "Our backend uses strict factual grounding rules and a dual-layer moderation pipeline to prevent fabrication, prioritizing documented historical records, peer-reviewed research, and primary sources.",
-      "faq.q4": "What can I do in the Community tab?",
-      "faq.a4": "You can share favorite stories from your personal feed under your @username profile, search for people and posts, react with quick emojis, and discuss insights in the comments.",
+      "faq.a3": "Our backend uses strict factual grounding rules and a multi-layer moderation pipeline to prevent fabrication, prioritizing documented historical records, peer-reviewed research, and primary sources.",
+      "faq.q4": "How does the Letterboxd integration work?",
+      "faq.a4": "Simply enter your Letterboxd handle in the Film Bento card or Profile tab—no password required. Omakase reads your public RSS diary of 50 recent films and generates verified behind-the-scenes production trivia from a randomly locked film.",
+      "faq.q5": "What can I do with Community & Collections?",
+      "faq.a5": "Share favorite stories to the Community timeline under your @username handle, export 1080×1350 #F5F0E8 paper cards, or bookmark posts into 12 automatically categorized offline collections.",
+      "faq.q6": "How are privacy and account security handled?",
+      "faq.a6": "Omakase displays zero ads, performs zero cross-app tracking (IDFA), and never sells your data. It supports Sign in with Apple and includes one-tap permanent Account Deletion directly in the Profile tab.",
 
       "cta.title": "Nourish Your Mental Palate",
-      "cta.desc": "Omakase is live on iOS. Download now or join the TestFlight early access list to begin your daily ritual of curiosity.",
+      "cta.desc": "Omakase is ready for iOS 17+. Download now or join the TestFlight early access list to begin your daily ritual of curiosity.",
       "cta.joinBtn": "Join TestFlight",
 
       "footer.privacy": "Privacy Policy",
@@ -231,54 +283,86 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ==========================================================================
-  // 2. 12-CATEGORY SIMULATOR DATABASE (TR & EN)
+  // 2. 12-CATEGORY SIMULATOR DATABASE (Match InterestCategory.swift Rabbit Holes)
   // ==========================================================================
   const stories = {
     film: {
       tr: {
-        subtopics: ["Christopher Nolan", "Yeni Dalga Sineması", "A24", "Stanley Kubrick"],
+        subtopics: ["70mm IMAX Şerit Fiziği", "Kubrick'in NASA f/0.7 Lensi", "Kuleşov Etkisi Deneyi", "🎬 Letterboxd Günlüğü"],
         title: "Oppenheimer ve IMAX 70mm'nin Görsel Ağırlığı",
         date: "Bugün • 20:17",
         body: "Christopher Nolan, Oppenheimer'ı çekerken 65mm IMAX siyah-beyaz filmi dünyada ilk kez Kodak'a özel olarak ürettirdi. Standart IMAX projektörleri bu 18 kilometrelik, 272 kiloluk devasa makarayı çevirirken platoda duyulan mekanik ses, sahnenin kendisinden bile daha hipnotize ediciydi. Nolan'a göre bu bir nostalji değil; izleyicinin göz bebeklerine kadar uzanan somut bir gerçeklik arayışıydı.",
         tags: ["Film", "ChristopherNolan", "Imax70Mm"],
         deepDiveTitle: "Derinlemesine İnceleme: Kodak 65mm Siyah-Beyaz Emülsiyonu",
-        deepDiveBody: "IMAX formatında daha önce hiç 65mm siyah-beyaz film şeridi üretilmemişti. Kodak mühendisleri Nolan ve görüntü yönetmeni Hoyte van Hoytema'nın talebiyle fotokimyasal gren yapısını sıfırdan tasarladı. Film şeridinin kalınlığı standart filmlere göre daha farklıydı; kameraların vakumlu mekanizmaları bu şeridi taşırken yeniden kalibre edildi. Ortaya çıkan görüntü, dijital sensörlerin ulaşamayacağı organik bir ışık derinliği sundu."
+        deepDiveBody: "IMAX formatında daha önce hiç 65mm siyah-beyaz film şeridi üretilmemişti. Kodak mühendisleri Nolan ve görüntü yönetmeni Hoyte van Hoytema'nın talebiyle fotokimyasal gren yapısını sıfırdan tasarladı. Film şeridinin kalınlığı standart filmlere göre daha farklıydı; kameraların vakumlu mekanizmaları bu şeridi taşırken yeniden kalibre edildi. Ortaya çıkan görüntü, dijital sensörlerin ulaşamayacağı organik bir ışık derinliği sundu.",
+        variants: {
+          1: {
+            title: "Stanley Kubrick ve NASA'nın Mum Işığı Lensi (f/0.7)",
+            body: "Stanley Kubrick, 1975 yapımı Barry Lyndon'da 18. yüzyıl saraylarını yapay set ışıkları olmadan, yalnızca gerçek balmumu mumlarıyla çekmek istedi. Bunun için NASA'nın Apollo görevlerinde Ay'ın karanlık yüzünü fotoğraflamak için Carl Zeiss'a ürettirdiği 50mm f/0.7 lensleri satın aldı. Alan derinliği o kadar inceydi ki oyuncular birkaç santim kıpırdasa netlik kayboluyordu.",
+            tags: ["Film", "StanleyKubrick", "CarlZeiss"],
+            deepDiveTitle: "Derinlemesine İnceleme: Zeiss Planar 50mm f/0.7 Modifikasyonu",
+            deepDiveBody: "Dünyada yalnızca 10 adet üretilen Zeiss 50mm f/0.7 lensleri aslında fotoğraf kameraları içindi. Kubrick, mühendis Ed DiGiulio ile çalışarak Mitchell BNC sinema kamerasının gövdesini freze makinesiyle oyup lensin arka elemanını film şeridine sadece 4 milimetre kalacak şekilde yerleştirdi."
+          },
+          3: {
+            title: "Letterboxd Sentezi: Chungking Express (1994) ve Gerilla Kamerası",
+            body: "Wong Kar-wai, Ashes of Time'ın kurgu stresinden kaçmak için Hong Kong sokaklarında senaryosuz ve ruhsatsız bir ara proje olarak Chungking Express'i sadece 23 günde çekti. Görüntü yönetmeni Christopher Doyle, kalabalık Chungking Mansions koridorlarında saniyede 8 kare (step-printing) tekniği kullanarak aşıkların yalnızlığını bulanık bir zaman akışının ortasında dondurdu.",
+            tags: ["Film", "Letterboxd", "WongKarWai"],
+            deepDiveTitle: "Derinlemesine İnceleme: Step-Printing ve 10.000 Kutu Ananas",
+            deepDiveBody: "Filmde deklanşör hızı düşürülüp kareler optik yazıcıda çoğaltılarak (step-printing) arka plandaki Hong Kong kalabalığı soyut bir boya darbesine dönüştürüldü. Bu teknik, karakterlerin içsel hızıyla şehrin mekanik hızı arasındaki kopukluğu sinema tarihinin en ikonik görsel imzalarından biri haline getirdi."
+          }
+        }
       },
       en: {
-        subtopics: ["Christopher Nolan", "French New Wave", "A24", "Stanley Kubrick"],
+        subtopics: ["70mm IMAX Film Grain", "Kubrick's NASA f/0.7 Lenses", "Kuleshov Effect Mechanics", "🎬 Letterboxd Diary"],
         title: "Oppenheimer and the Physical Gravity of IMAX 70mm",
         date: "Today • 8:17 PM",
         body: "Christopher Nolan commissioned Kodak to engineer 65mm IMAX black-and-white film for the very first time in cinema history. As the projector spooled the 11-mile, 600-pound platter, the mechanical whirr on set was as hypnotic as the imagery. For Nolan, this was not mere nostalgia; it was an uncompromising quest for tangible optical presence.",
         tags: ["Film", "ChristopherNolan", "Imax70Mm"],
         deepDiveTitle: "Deep Dive: Kodak's 65mm Monochrome Chemistry",
-        deepDiveBody: "Before Oppenheimer, 65mm black-and-white film emulsion simply did not exist for IMAX cameras. Kodak photo-chemists formulated a high-contrast silver halide grain capable of withstanding the vacuum-pressure feed of IMAX transport mechanisms, rendering micro-expressions with an analog density unattainable by digital sensors."
+        deepDiveBody: "Before Oppenheimer, 65mm black-and-white film emulsion simply did not exist for IMAX cameras. Kodak photo-chemists formulated a high-contrast silver halide grain capable of withstanding the vacuum-pressure feed of IMAX transport mechanisms, rendering micro-expressions with an analog density unattainable by digital sensors.",
+        variants: {
+          1: {
+            title: "Stanley Kubrick and NASA's f/0.7 Candlelight Lenses",
+            body: "To shoot 1975's Barry Lyndon entirely by authentic beeswax candlelight, Stanley Kubrick acquired three Carl Zeiss 50mm f/0.7 lenses originally commissioned by NASA to photograph the far side of the Moon. The depth of field was razor-thin—actors had to stay within millimeters of their marks or dissolve into blur.",
+            tags: ["Film", "StanleyKubrick", "CarlZeiss"],
+            deepDiveTitle: "Deep Dive: Milling the Mitchell BNC Camera Mount",
+            deepDiveBody: "Only ten Zeiss 50mm f/0.7 lenses were ever manufactured. Engineer Ed DiGiulio physically milled out the metal mount of Kubrick's Mitchell BNC cinema camera so the rear lens element sat just four millimeters from the spinning film plane."
+          },
+          3: {
+            title: "Letterboxd Diary: Chungking Express (1994) Step-Printing",
+            body: "During a two-month editing break on Ashes of Time, Wong Kar-wai shot Chungking Express guerrilla-style in 23 days without permits. Cinematographer Christopher Doyle dropped the shutter speed to 8 frames per second and duplicated frames in post, turning the neon rush of Hong Kong into painterly streaks around solitary lovers.",
+            tags: ["Film", "Letterboxd", "WongKarWai"],
+            deepDiveTitle: "Deep Dive: Step-Printing and Urban Solitude",
+            deepDiveBody: "By shooting at slow frame rates and step-printing every frame back to 24fps, Doyle and Wong separated the emotional tempo of their protagonists from the frantic mechanical velocity of 1994 Kowloon."
+          }
+        }
       }
     },
 
     science: {
       tr: {
-        subtopics: ["Kuantum Fiziği", "Nörobilim", "James Webb Teleskobu", "CRISPR"],
-        title: "Kuantum Eşevresizliği: Kedinin Gerçekten Yaşadığı An",
+        subtopics: ["Oklo Doğal Nükleer Reaktörü", "Tardigrad Camsı Kriptobiyozu", "97 Yıllık Zift Damlası", "Kuşlarda Kuantum Pusulası"],
+        title: "Oklo: İki Milyar Yıl Önce Çalışan Doğal Nükleer Reaktör",
         date: "Bugün • 14:32",
-        body: "Schrödinger'in kedisi paradoksunda asıl sır kutuyu açan insanda değil; kutunun içine sızan tek bir fotondadır. Kuantum eşevresizliği (decoherence), süperpozisyon durumunun çevreyle en ufak termodinamik temasta mikrosaniyeler içinde klasik gerçekliğe 'çöküşünü' açıklar. Yani evren, biz bakmasak dahi kendi kendini sürekli izlemektedir.",
-        tags: ["Bilim", "KuantumFiziği", "Termodinamik"],
-        deepDiveTitle: "Derinlemesine İnceleme: Çevre Kaynaklı Dalga Çökmesi",
-        deepDiveBody: "Wojciech Zurek'in 'kuantum darwinizmi' kuramına göre, bir kuantum sisteminin çevresindeki fotonlar ve hava molekülleri sistemin bilgisini kopyalar. Yalnızca çevreye en dayanıklı klasik durumlar hayatta kalır; böylece süperpozisyon mistik bir gözlemciye ihtiyaç duymadan termodinamik bilgi yayılımıyla çözülür."
+        body: "1972'de Fransız fizikçi Francis Perrin, Gabon'daki Oklo madeninden gelen uranyum cevherinde doğada her yerde sabit olan U-235 oranının beklenenden düşük olduğunu fark etti. İncelemeler şaşırtıcı bir gerçeği ortaya çıkardı: 2 milyar yıl önce yeraltı sularının nötron yavaşlatıcı görevi görmesiyle Oklo'da kendi kendine başlayan doğal bir nükleer fisyon reaktörü yüz binlerce yıl boyunca çalışmıştı.",
+        tags: ["Bilim", "NükleerFizik", "Jeoloji"],
+        deepDiveTitle: "Derinlemesine İnceleme: Yeraltı Suyu Geri Besleme Döngüsü",
+        deepDiveBody: "Oklo'daki doğal reaktörün patlamadan yüz binlerce yıl düzenli çalışabilmesinin sırrı, yeraltı suyunun doğal bir termostat gibi davranmasıydı. Fisyon hızlandığında su kaynayıp buharlaşıyor, nötronları yavaşlatacak su kalmayınca reaksiyon kendiliğinden duruyordu. Kayaçlar soğuyup su tekrar dolduğunda reaktör yeniden devreye giriyordu."
       },
       en: {
-        subtopics: ["Quantum Physics", "Neuroscience", "James Webb Telescope", "CRISPR"],
-        title: "Quantum Decoherence: When the Cat Actually Decides",
+        subtopics: ["Oklo Natural Nuclear Reactor", "Tardigrade Glass Vitrification", "97-Year Pitch Drop Funnel", "Avian Quantum Compass"],
+        title: "Oklo: The 2-Billion-Year-Old Natural Nuclear Reactor",
         date: "Today • 2:32 PM",
-        body: "In Schrödinger's paradox, the secret lies not in human consciousness opening the box, but in a stray environmental photon. Quantum decoherence explains how superpositions leak phase information into surrounding particles within femtoseconds, collapsing fuzzy probabilities into crisp classical facts.",
-        tags: ["Science", "QuantumPhysics", "Decoherence"],
-        deepDiveTitle: "Deep Dive: Quantum Darwinism and Pointer States",
-        deepDiveBody: "Pioneered by Wojciech Zurek, Quantum Darwinism suggests that the environment acts as a broadcast channel. Only the hardiest states resilient against ambient bombardment reproduce their signatures across the universe, creating objective reality without observer mysticism."
+        body: "In 1972, French physicists analyzing uranium ore from Oklo, Gabon noticed a missing fraction of fissile U-235—a ratio that should be uniform across the solar system. The explanation stunned nuclear science: two billion years ago, groundwater infiltrated rich uranium veins, acting as a neutron moderator and sustaining a natural nuclear fission reactor for hundreds of thousands of years.",
+        tags: ["Science", "NuclearPhysics", "Oklo"],
+        deepDiveTitle: "Deep Dive: Hydrothermal Self-Regulating Geysers",
+        deepDiveBody: "Oklo never suffered a runaway meltdown because groundwater acted as a negative feedback thermostat. Every three hours, fission heat boiled away the water, halting neutron moderation until the rock cooled and fresh water seeped back in."
       }
     },
 
     philosophy: {
       tr: {
-        subtopics: ["Stoacılık", "Varoluşçuluk", "Zihin Felsefesi", "Zen Budizmi"],
+        subtopics: ["Theseus'un Gemisi Paradoksu", "Mary'nin Siyah-Beyaz Odası", "Searle'ün Çince Odası", "Seneca ve Zaman Muhasebesi"],
         title: "Seneca'nın Zaman Muhasebesi ve Hayatın Kısalığı",
         date: "Bugün • 09:15",
         body: "Roma'nın en etkili düşünürlerinden Seneca, mülkünü birine kaptıranların çıkardığı yaygarayla günlerini başkalarına dağıtanların kayıtsızlığını kıyaslar. Hayat kısa değildir; biz onu fazlasıyla savurganca harcarız. Sahte meşguliyetler, insanın kendi zihniyle baş başa kalma korkusunun en zarif maskesidir.",
@@ -287,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deepDiveBody: "Seneca 'De Brevitate Vitae' (Hayatın Kısalığı Üzerine) risalesinde zamanı geri kazanılamaz tek varlık olarak tanımlar. Antik Roma'da 'otium' (bilinçli dinginlik), tembellik değil; geçmişin bilgeleriyle okuma ve tefekkür yoluyla kurulan zamansız dostluktur."
       },
       en: {
-        subtopics: ["Stoicism", "Existentialism", "Philosophy of Mind", "Zen Buddhism"],
+        subtopics: ["Ship of Theseus Paradox", "Mary's Black-and-White Room", "Searle's Chinese Room", "Seneca's Audit of Hours"],
         title: "Seneca's Audit of Lost Hours",
         date: "Today • 9:15 AM",
         body: "Seneca observed that while people guard their physical estates with fierce vigilance, they distribute their hours with effortless nonchalance. Life is not short; we merely squander it on performative obligations, mistaking perpetual busyness for purposeful existence.",
@@ -299,28 +383,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     music: {
       tr: {
-        subtopics: ["Caz", "Film Müzikleri", "Ambient", "Modüler Sentezleyiciler"],
-        title: "Miles Davis ve Kind of Blue'nun Modal Sessizliği",
+        subtopics: ["Sovyet Röntgen Plakları", "Bozuk Köln Konser Piyanosu", "Stradivarius Buzul Çağı Ağacı", "Amen Break: 6 Saniyelik Loop"],
+        title: "Sovyet Röntgen Plakları: Kemikler Üzerindeki Caz",
         date: "Bugün • 23:40",
-        body: "1959 ilkbaharında Miles Davis, stüdyoya giren Bill Evans ve John Coltrane'in eline geleneksel akor şemaları yerine sadece birkaç mod notasından ibaret kağıtlar verdi. Müzisyenler parçaları ilk kez kayıt anında çaldılar. Albümü ölümsüz kılan şey, çalınan notalardan çok aralarda nefes alan bilinçli sessizliklerdi.",
-        tags: ["Müzik", "MilesDavis", "KindOfBlue"],
-        deepDiveTitle: "Derinlemesine İnceleme: George Russell ve Modal Caz Devrimi",
-        deepDiveBody: "Kind of Blue, bebop akımının yoğun akor geçişlerinden radikal bir kopuştu. Miles, George Russell'ın Lydian Kromatik Konsepti'nden ilham alarak solistleri akor kafeslerinden kurtardı ve tek bir gam üzerinde melodik boşluklar bırakmaya davet etti."
+        body: "1950'lerde Sovyetler Birliği'nde Batı cazı ve rock'n'roll plakları yasaklanınca, Leningradlı yeraltı ses mühendisleri hastanelerin çöpe attığı kullanılmış röntgen filmlerini topladı. Kırık kemik ve kafatası görüntülerinin üzerine el yapımı torna makineleriyle Ella Fitzgerald ve Miles Davis kayıtları kazındı; 'Roentgenizdat' adı verilen bu plaklar müzik tarihinin en sıra dışı direniş nesnesi oldu.",
+        tags: ["Müzik", "Roentgenizdat", "CazTarihi"],
+        deepDiveTitle: "Derinlemesine İnceleme: Kemiklerdeki Müzik (Music on Ribs)",
+        deepDiveBody: "Hastaneler yangın tehlikesi nedeniyle röntgen filmlerini yılda bir kez imha etmek zorundaydı. Genç mühendisler bu filmleri makasla daire şeklinde kesip ortasını sigara ateşiyle delerek 78 devirli tek yüzlü plaklara dönüştürdü. Ses kalitesi cızırtılıydı ve sadece 5–10 dinlemeye dayanıyordu ama yasaklı melodileri elden ele dolaştırmaya yetti."
       },
       en: {
-        subtopics: ["Jazz", "Film Scores", "Ambient", "Modular Synthesizers"],
-        title: "Miles Davis and the Radical Silence of Kind of Blue",
+        subtopics: ["Soviet Bone X-Ray Records", "Jarrett's Broken Köln Piano", "Stradivarius Ice-Age Wood", "Amen Break 6-Second Loop"],
+        title: "Roentgenizdat: Bootleg Jazz Cut into Hospital X-Rays",
         date: "Today • 11:40 PM",
-        body: "In the spring of 1959, Miles Davis handed Bill Evans and John Coltrane scraps of paper containing modal scales rather than chord progressions. There were no rehearsals. What cemented Kind of Blue into legend was not the density of notes played, but the deliberate chasms of air between them.",
-        tags: ["Music", "MilesDavis", "ModalJazz"],
-        deepDiveTitle: "Deep Dive: Escape from the Tyranny of Bebop Changes",
-        deepDiveBody: "Influenced by George Russell's Lydian Chromatic Concept, Davis broke free from relentless chord changes. By lingering on a single Dorian mode for sixteen bars in 'So What', he invited soloists to craft spacious melodic poetry."
+        body: "When Western jazz was banned in the 1950s Soviet Union, underground Leningrad audio bootleggers raided hospital dumpsters for discarded medical X-ray plates. Using homemade lathes, they etched grooves of Miles Davis and Ella Fitzgerald directly across images of fractured ribs and skulls—creating 'Music on Bones.'",
+        tags: ["Music", "Roentgenizdat", "JazzHistory"],
+        deepDiveTitle: "Deep Dive: Cigarette Center-Holes and 78 RPM Lathes",
+        deepDiveBody: "Cut into circles with manicure scissors and punctured in the center with a glowing cigarette tip, these 78 RPM X-ray discs could only survive ten plays before the radiograph emulsion wore thin—yet they carried forbidden rhythms across the Iron Curtain."
       }
     },
 
     art: {
       tr: {
-        subtopics: ["Mimari", "Bauhaus", "Japon Ahşap Baskı", "Minimalizm"],
+        subtopics: ["Tadao Ando Işık Tapınağı", "Kintsugi Altın Kırık Onarımı", "Süleymaniye İs Odası Akustiği", "Patentli Yves Klein Mavisi"],
         title: "Tadao Ando ve Işığın Betondaki Tapınağı",
         date: "Bugün • 11:05",
         body: "Osaka'daki Işık Kilisesi'nde Tadao Ando, haçı altın ya da mermerle değil; çıplak beton duvara açtığı dikey ve yatay yarıklardan içeri sızan gün ışığıyla inşa etti. Güneş hareket ettikçe kilisenin içindeki ışık kesişimi yer değiştirir. Ando için mimarlık bir form değil, doğanın mekana bıraktığı gölgedir.",
@@ -329,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deepDiveBody: "Ando'nun pürüzsüz ipek betonu, ahşap kalıpların özenle verniklenmesiyle elde edilir. Betonun soğuk endüstriyel dokusu, yarıktan sızan ışığın sıcaklığıyla dengelenir. Bu yaklaşım, Japon estetiğindeki 'Ma' (anlamlı boşluk) kavramının modern mimarideki en saf karşılığıdır."
       },
       en: {
-        subtopics: ["Architecture", "Bauhaus", "Japanese Woodblock", "Minimalism"],
+        subtopics: ["Tadao Ando's Concrete Light", "Kintsugi Gold-Seam Repair", "Pantheon Unreinforced Dome", "Patented Yves Klein Blue"],
         title: "Tadao Ando and the Slits of Living Sunlight",
         date: "Today • 11:05 AM",
         body: "At the Church of the Light in Osaka, Tadao Ando constructed the central cross not from gilded timber, but from cruciform slits cut into raw concrete. As the sun traverses the sky, the light glides across the dark floor. For Ando, architecture is merely the vessel that makes light tangible.",
@@ -341,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     history: {
       tr: {
-        subtopics: ["Antik Roma", "İpek Yolu", "Rönesans", "Bilim Tarihi"],
+        subtopics: ["Antikythera Dişli Bilgisayarı", "1518 Strazburg Dans Vebası", "Kendini Onaran Roma Betonu", "Çözülemeyen Voynich Yazması"],
         title: "Antikythera Düzeneği: İki Bin Yıllık Analog Bilgisayar",
         date: "Bugün • 16:40",
         body: "1901'de Ege Denizi'ndeki bir Roma batığından çıkarılan paslı bronz kütle, X-ışını tomografisiyle incelendiğinde içinden 30'dan fazla hassas dişli çark çıktı. MÖ 2. yüzyılda yapılan Antikythera düzeneği, güneş ve ay tutulmalarını on yıllar öncesinden hesaplayabilen avuç içi boyutunda bir astronomik bilgisayardı.",
@@ -350,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deepDiveBody: "Düzeneğin en çarpıcı parçası, Ay'ın eliptik yörüngesindeki hız değişimini simüle eden 'pim ve yuvalı' epikiklik dişli sistemidir. Bu seviyedeki diferansiyel dişli teknolojisi, Antikythera'dan sonra ancak 14. yüzyıl Avrupa mekanik saatlerinde yeniden ortaya çıkabilmiştir."
       },
       en: {
-        subtopics: ["Ancient Rome", "Silk Road", "Renaissance", "History of Science"],
+        subtopics: ["Antikythera Gear Calculus", "1518 Dancing Plague", "Self-Healing Roman Concrete", "Uncracked Voynich Script"],
         title: "The Antikythera Mechanism: A Two-Millennia-Old Analog Computer",
         date: "Today • 4:40 PM",
         body: "Recovered from a Roman shipwreck in 1901, a corroded bronze lump revealed over 30 precision gearwheels under X-ray tomography. Built in the 2nd century BCE, the Antikythera mechanism was a shoebox-sized astronomical calculator capable of predicting eclipses decades in advance.",
@@ -362,28 +446,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tech: {
       tr: {
-        subtopics: ["Yapay Zekâ", "Çip Mimarisi", "Tasarım Sistemleri", "Açık Kaynak"],
-        title: "UNIX Felsefesi ve Tek Bir İşi Kusursuz Yapmak",
+        subtopics: ["Apollo 11 Dokuma İp Belleği", "Cloudflare Lav Lambası Şifresi", "Peçetede Yazılan UTF-8", "ASML Kalay Damlası Lazeri"],
+        title: "Apollo 11'i Ay'a İndiren Elle Dokunmuş İp Bellek (LOL Memory)",
         date: "Bugün • 17:10",
-        body: "1970'lerde Bell Laboratuvarları'nda Ken Thompson ve Dennis Ritchie, devasa ve karmaşık yazılımlar yerine birbirine borularla (pipe) bağlanabilen küçük, keskin araçlar tasarladı. Doug McIlroy'un özetlediği UNIX ilkesi bugün hâlâ modern yazılım mimarisinin kutup yıldızıdır: 'Her programı tek bir işi çok iyi yapacak şekilde yazın.'",
-        tags: ["Teknoloji", "Unix", "YazılımMimarisi"],
-        deepDiveTitle: "Derinlemesine İnceleme: Bell Labs ve Boru Hattı (Pipeline) Devrimi",
-        deepDiveBody: "1973'te sisteme eklenen '|' (pipe) operatörü, bir programın metin çıktısını diğerinin girdisine dönüştürerek modülerliğin önünü açtı. Karmaşık problemler monolitik kod bloklarıyla değil, sade metin akışlarıyla konuşan bağımsız araçların birleşimiyle çözüldü."
+        body: "1969'da Apollo 11 Ay yüzeyine inerken rehber bilgisayarın (AGC) yazılımı silikon çiplerde değil, tekstil işçisi kadınların iğnelerle ferit halkaların içinden geçirdiği bakır tellerde saklanıyordu. Tel halkanın içinden geçerse '1', etrafından dolanırsa '0' oluyordu. Kozmik radyasyondan etkilenmeyen bu fiziksel dokuma, insanlığı Ay'a hatasız indirdi.",
+        tags: ["Teknoloji", "Apollo11", "BilgisayarTarihi"],
+        deepDiveTitle: "Derinlemesine İnceleme: Margaret Hamilton ve Core Rope Mimarisi",
+        deepDiveBody: "MIT mühendisleri bu belleğe sevgiyle 'LOL (Little Old Lady) Memory' adını vermişti. Fabrika dokumacıları tarafından tek tek elle işlenen 72 kilobyte'lık bu salt okunur bellek, iniş anında radar aşırı yüklenmesine rağmen Margaret Hamilton'ın öncelik tabanlı görev zamanlayıcısı sayesinde çökmeden çalışmaya devam etti."
       },
       en: {
-        subtopics: ["AI & ML", "Chip Architecture", "Design Systems", "Open Source"],
-        title: "The UNIX Philosophy and Doing One Thing Well",
+        subtopics: ["Apollo 11 Woven Rope Memory", "Cloudflare Lava Lamp Entropy", "UTF-8 Diner Napkin Design", "ASML Tin-Droplet EUV Plasma"],
+        title: "Apollo 11's Hand-Woven Core Rope Memory",
         date: "Today • 5:10 PM",
-        body: "At Bell Labs in the 1970s, Ken Thompson and Dennis Ritchie rejected monolithic complexity in favor of small, sharp tools connected by text streams. Summarized by Doug McIlroy, the UNIX maxim remains the north star of software craft: 'Write programs that do one thing and do it well.'",
-        tags: ["Tech", "Unix", "SystemsDesign"],
-        deepDiveTitle: "Deep Dive: Doug McIlroy and the Birth of Composable Pipes",
-        deepDiveBody: "Introduced in 1973, the '|' pipe operator allowed the output of one small utility to become the input of another. This composability proved that simplicity at the interface layer unlocks exponential power across the system."
+        body: "When Apollo 11 descended onto the lunar surface in 1969, its guidance software was not stored on silicon chips, but physically woven by textile workers threading copper wires through magnetic ferrite rings. Passing through a ring encoded a '1'; bypassing it encoded a '0'—creating radiation-proof code sewn by hand.",
+        tags: ["Tech", "Apollo11", "ComputingHistory"],
+        deepDiveTitle: "Deep Dive: Margaret Hamilton and Fault-Tolerant Scheduling",
+        deepDiveBody: "Holding just 72 kilobytes of read-only memory, the Apollo Guidance Computer survived a critical radar overload seconds before touchdown because Margaret Hamilton's asynchronous executive shed low-priority tasks and kept thruster calculations alive."
       }
     },
 
     food: {
       tr: {
-        subtopics: ["Japon Mutfağı", "Fermentasyon", "Kahve Demleme", "Ekşi Maya"],
+        subtopics: ["Edomae Sushi & Kızıl Sirke", "1814 Londra Bira Tufanı", "Garum: Antik Balık Sosu", "1976 Paris Şarap Şoku"],
         title: "Edomae Sushi ve Kusursuz Pirincin (Shari) Dengesi",
         date: "Bugün • 19:05",
         body: "Tokyo'nun geleneksel omakase tezgahlarında bir şefin ustalığı balığın nadirliğiyle değil, 'shari' adı verilen sirkeli pirincin sıcaklığı ve dokusuyla ölçülür. Balık dilimi (neta) ile vücut sıcaklığındaki pirinç ağızda buluştuğunda, tanelerin arasında kalan mikroskobik hava boşlukları lezzetin dağılma hızını belirler.",
@@ -392,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deepDiveBody: "19. yüzyıl Edo (Tokyo) döneminde buzdolabı yokken şefler, yıllandırılmış sake tortusundan üretilen kızıl sirkeyi (akazu) pirince katarak hem koruyuculuk hem de derin bir umami dengesi elde ettiler. Çırakların balığa dokunmadan önce yıllarca sadece pirinç yıkaması bu yüzdendir."
       },
       en: {
-        subtopics: ["Japanese Cuisine", "Fermentation", "Coffee Brewing", "Sourdough"],
+        subtopics: ["Edomae Sushi & Red Vinegar", "1814 London Beer Flood", "Garum Roman Fish Sauce", "1976 Paris Blind Wine Shock"],
         title: "Edomae Sushi and the Quiet Mastery of Shari",
         date: "Today • 7:05 PM",
         body: "At traditional Tokyo omakase counters, a master is judged not by the rarity of the fish, but by the temperature and aeration of 'shari'—the seasoned rice. Pressed with just enough tension to hold pockets of air, body-temperature rice dissolves the moment it meets the palate.",
@@ -404,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     nature: {
       tr: {
-        subtopics: ["Derin Okyanus", "Mantar Bilimi", "Biyolüminesans", "Orman Ekolojisi"],
+        subtopics: ["Ormanların Mantar İnterneti", "Ağaçlarda Taç Utangaçlığı", "4700 Derece Karides Yumruğu", "120 Yılda Açan Bambular"],
         title: "Ormanın Yeraltı Ağı: Mikorizal İletişim",
         date: "Bugün • 13:20",
         body: "Bir ormanda yürürken gördüğünüz ağaçlar birbirinden bağımsız sütunlar değildir; toprak altında kilometrelerce uzanan mikorizal mantar iplikçikleriyle (hif) birbirine bağlıdır. Yaşlı 'anne ağaçlar', gölgede kalan genç fidelerin köklerine bu yeraltı ağından karbon, azot ve savunma sinyalleri gönderir.",
@@ -413,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deepDiveBody: "Orman ekologu Suzanne Simard, radyoaktif karbon izotopları kullanarak köknar ve huş ağaçlarının mevsimlere göre birbirine besin aktardığını kanıtladı. Yazın yapraklı huş ağacı gölgedeki köknara karbon gönderirken, kışın yaprak dökmeyen köknar borcunu geri öder."
       },
       en: {
-        subtopics: ["Deep Ocean", "Mycology", "Bioluminescence", "Forest Ecology"],
+        subtopics: ["Mycorrhizal Wood Wide Web", "Crown Shyness Canopy Gaps", "Pistol Shrimp 4,700°C Snap", "120-Year Bamboo Flowering"],
         title: "The Subterranean Pulse: Mycorrhizal Forest Networks",
         date: "Today • 1:20 PM",
         body: "Trees in an old-growth forest are not solitary columns; beneath the soil, microscopic fungal threads weave roots into a vast cooperative lattice. Through this mycorrhizal network, towering mother trees shuttle carbon, nitrogen, and chemical warning signals to shaded seedlings.",
@@ -425,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     travel: {
       tr: {
-        subtopics: ["Kyoto Tapınakları", "Tren Yolculukları", "İskandinav Fiyortları", "Patagonya"],
+        subtopics: ["Kyoto 120 Yosun Tapınağı", "Derinkuyu 18 Katlı Yeraltı", "Svalbard Tohum Kemeri", "Kowloon Duvarlı Şehri"],
         title: "Kyoto'da Saiho-ji: 120 Yosun Türünün Sessizliği",
         date: "Bugün • 10:15",
         body: "Kyoto'nun batısındaki Saiho-ji (Yosun Tapınağı) bahçesine girmeden önce ziyaretçiler sessizce fırça kaligrafisiyle sutralar kopyalar. Dışarı adım attığınızda sizi çiçekler değil, zemini zümrüt bir halı gibi kaplayan 120 farklı yosun türü karşılar. Yağmur sonrası yosunların emdiği ses, bahçeyi mutlak bir akustik sığınağa dönüştürür.",
@@ -434,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deepDiveBody: "1339'da Zen ustası Muso Soseki tarafından yeniden düzenlenen bahçe, başlangıçta beyaz kumlarla kaplıydı. Yüzyıllar içinde Kyoto'nun nemli iklimi ve seller bahçeyi yosunlarla örttü; Japon estetiği bu doğa müdahalesini temizlemek yerine 'wabi-sabi' (zamanın bıraktığı kusurlu güzellik) olarak kutsadı."
       },
       en: {
-        subtopics: ["Kyoto Temples", "Train Journeys", "Nordic Fjords", "Patagonia"],
+        subtopics: ["Kyoto's 120-Moss Sanctuary", "Derinkuyu 18-Level Subterranean", "Svalbard Seed Vault", "Kowloon Walled City Density"],
         title: "Saiho-ji in Kyoto: The Acoustic Sanctuary of 120 Mosses",
         date: "Today • 10:15 AM",
         body: "Before stepping into the garden of Saiho-ji in western Kyoto, visitors sit in silence to trace calligraphy sutras by brush. Outside awaits not a floral display, but a velvet carpet of 120 distinct moss species that absorbs ambient sound into a hushed emerald stillness.",
@@ -446,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sports: {
       tr: {
-        subtopics: ["Futbol Taktikleri", "Formula 1", "Satranç", "Basketbol Analizi"],
+        subtopics: ["Johan Cruyff Mekan Geometrisi", "Brabham Fanlı F1 Aracı", "Fosbury Sırtüstü Atlama", "Barkley Kitap Sayfası Maratonu"],
         title: "Johan Cruyff ve Futbolda 'Mekan' Kavramının İcadı",
         date: "Bugün • 21:00",
         body: "Johan Cruyff için futbol topla oynanan fiziksel bir koşu yarışı değil, zamana ve mekana hükmetme geometrisiydi. 'Top sende değilken ne yaptığın, sahanın büyüklüğünü belirler' derdi. Hücum ederken sahayı olabildiğince genişletmek, top kaybedildiğinde ise saniyeler içinde daraltmak modern futbolun temel aksiyomu oldu.",
@@ -455,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deepDiveBody: "Rinus Michels ve Cruyff'un Ajax ile geliştirdiği Total Futbol, sabit mevki kavramını yıktı. Bir bek ileri çıktığında bir orta saha oyuncusu onun bıraktığı boşluğu dolduruyor; böylece takım şeklini kaybetmeden saha üzerindeki üçgenleri sürekli yeniden kuruyordu."
       },
       en: {
-        subtopics: ["Football Tactics", "Formula 1", "Chess", "Basketball Analytics"],
+        subtopics: ["Johan Cruyff Pitch Geometry", "Brabham BT46B Fan Car", "Fosbury Flop High-Jump", "Barkley Book-Page Checkpoints"],
         title: "Johan Cruyff and the Geometry of Pitch Space",
         date: "Today • 9:00 PM",
         body: "For Johan Cruyff, football was not a test of athletic sprinting, but a spatial puzzle of time and angles. 'When you have the ball, make the pitch as large as possible; when you lose it, make it as small as possible.' That single axiom reshaped modern tactical thought.",
@@ -467,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     gaming: {
       tr: {
-        subtopics: ["Oyun Tasarımı", "Indie Oyunlar", "Hidetaka Miyazaki", "Bölüm Tasarımı"],
+        subtopics: ["Shadow of the Colossus Eksiltme", "Quake 0x5f3759df Karekök Kodu", "Outer Wilds 22 Dakika Döngüsü", "Silent Hill Sis Hilesi"],
         title: "Shadow of the Colossus ve Eksiltmeyle Kurulan Dünya",
         date: "Bugün • 22:15",
         body: "Fumito Ueda, Shadow of the Colossus'u tasarlarken 'eksiltme yoluyla tasarım' (design by subtraction) adını verdiği bir yöntem uyguladı. Geleneksel oyunlardaki zindanları, küçük düşmanları ve kalabalık kasabaları tamamen sildi. Geriye sadece rüzgarlı uçsuz bucaksız bir yasak toprak, atınız ve 16 devasa varlıkla yüzleşmenin melankolisi kaldı.",
@@ -476,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deepDiveBody: "Ueda'ya göre bir oyunun duygusal ağırlığı ekrana eklenen sistemlerle değil, ana temayla ilgisi olmayan her şeyin çıkarılmasıyla artar. Boş arazide dakikalarca sadece rüzgar ve nal sesi dinleyerek yolculuk etmek, karşılaşma anının dramatik etkisini katbekat büyütür."
       },
       en: {
-        subtopics: ["Game Design", "Indie Games", "Hidetaka Miyazaki", "Level Design"],
+        subtopics: ["Shadow of the Colossus Subtraction", "Quake III 0x5f3759df Math", "Outer Wilds 22-Minute Loop", "Silent Hill Distance Fog"],
         title: "Shadow of the Colossus and Design by Subtraction",
         date: "Today • 10:15 PM",
         body: "Director Fumito Ueda built Shadow of the Colossus around a discipline he called 'design by subtraction.' He stripped away dungeons, minor enemies, and towns—leaving only wind-swept forbidden plains, your horse, and the solemn weight of sixteen towering encounters.",
@@ -503,8 +587,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const langToggleBtn = document.getElementById('lang-toggle-btn');
   const currentLangText = document.getElementById('current-lang-text');
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
-  const sunIcon = themeToggleBtn.querySelector('.sun-icon');
-  const moonIcon = themeToggleBtn.querySelector('.moon-icon');
+  const sunIcon = themeToggleBtn ? themeToggleBtn.querySelector('.sun-icon') : null;
+  const moonIcon = themeToggleBtn ? themeToggleBtn.querySelector('.moon-icon') : null;
   const themeMeta = document.getElementById('theme-color-meta');
 
   // Mobile drawer
@@ -527,14 +611,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const cooldownBar = document.getElementById('cooldown-bar');
   const btnReread = document.getElementById('btn-reread');
   const btnShareDemo = document.getElementById('btn-share-demo');
+  const btnExportCard = document.getElementById('btn-export-card');
   const btnBookmarkDemo = document.getElementById('btn-bookmark-demo');
   const btnOpenDeepDive = document.getElementById('btn-open-deep-dive');
 
-  // Modal elements
+  // Hero device interactive buttons
+  const heroBtnDive = document.getElementById('hero-btn-dive');
+  const heroBtnExport = document.getElementById('hero-btn-export');
+
+  // Deep Dive Modal elements
   const deepDiveModal = document.getElementById('deep-dive-modal');
   const modalTitle = document.getElementById('modal-title');
   const modalBody = document.getElementById('modal-body');
   const btnCloseModal = document.getElementById('btn-close-modal');
+
+  // Share Card Modal elements (#F5F0E8 Paper Card)
+  const shareCardModal = document.getElementById('share-card-modal');
+  const btnCloseShareModal = document.getElementById('btn-close-share-modal');
+  const paperCardTitle = document.getElementById('paper-card-title');
+  const paperCardText = document.getElementById('paper-card-text');
+  const paperCardTags = document.getElementById('paper-card-tags');
+  const paperCardDate = document.getElementById('paper-card-date');
 
   // ==========================================================================
   // 4. THEME CONTROLLER
@@ -544,24 +641,29 @@ document.addEventListener('DOMContentLoaded', () => {
     htmlEl.setAttribute('data-theme', theme);
     localStorage.setItem('omakase_theme', theme);
 
-    if (theme === 'dark') {
-      sunIcon.style.display = 'block';
-      moonIcon.style.display = 'none';
-      themeMeta.setAttribute('content', '#000000');
-    } else {
-      sunIcon.style.display = 'none';
-      moonIcon.style.display = 'block';
-      themeMeta.setAttribute('content', '#FAFAFA');
+    if (sunIcon && moonIcon) {
+      if (theme === 'dark') {
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+      } else {
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+      }
+    }
+    if (themeMeta) {
+      themeMeta.setAttribute('content', theme === 'dark' ? '#000000' : '#FAFAFA');
     }
   }
 
-  themeToggleBtn.addEventListener('click', () => {
-    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    applyTheme(nextTheme);
-  });
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    });
+  }
 
   // ==========================================================================
-  // 5. HERO IPHONE SCREEN SWITCHER (FEED / BENTO / COMMUNITY)
+  // 5. HERO IPHONE SCREEN SWITCHER (FEED / BENTO / COMMUNITY / PROFILE)
   // ==========================================================================
   function switchHeroDeviceScreen(screenKey) {
     document.querySelectorAll('.device-tab-pill').forEach(pill => {
@@ -570,8 +672,12 @@ document.addEventListener('DOMContentLoaded', () => {
       pill.setAttribute('aria-selected', active ? 'true' : 'false');
     });
 
+    // In the real iOS app (MainTabView.swift), Bento is hosted inside "My Feed" (tab 1)
     document.querySelectorAll('.ios-tab-item').forEach(tab => {
-      tab.classList.toggle('active', tab.getAttribute('data-switch-screen') === screenKey);
+      const tabGroup = tab.getAttribute('data-tab-group');
+      const isFeedOrBento = (screenKey === 'feed' || screenKey === 'bento') && tabGroup === 'feed-bento';
+      const isDirectMatch = tab.getAttribute('data-switch-screen') === screenKey && tabGroup !== 'feed-bento';
+      tab.classList.toggle('active', isFeedOrBento || isDirectMatch);
     });
 
     document.querySelectorAll('.ios-view').forEach(view => {
@@ -591,6 +697,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Hero device "Dive" button opens Deep Dive for Tadao Ando
+  if (heroBtnDive) {
+    heroBtnDive.addEventListener('click', () => {
+      const artStory = stories.art[currentLang] || stories.art.tr;
+      modalTitle.textContent = artStory.deepDiveTitle;
+      modalBody.textContent = artStory.deepDiveBody;
+      deepDiveModal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    });
+  }
+
+  // Hero device "Export" button opens Share Card for Tadao Ando
+  if (heroBtnExport) {
+    heroBtnExport.addEventListener('click', () => {
+      const artStory = stories.art[currentLang] || stories.art.tr;
+      openShareCardModalWithData(artStory);
+    });
+  }
+
   // ==========================================================================
   // 6. LANGUAGE CONTROLLER
   // ==========================================================================
@@ -598,7 +723,9 @@ document.addEventListener('DOMContentLoaded', () => {
     currentLang = lang;
     htmlEl.setAttribute('lang', lang);
     localStorage.setItem('omakase_lang', lang);
-    currentLangText.textContent = lang.toUpperCase();
+    if (currentLangText) {
+      currentLangText.textContent = lang.toUpperCase();
+    }
 
     const elements = document.querySelectorAll('[data-i18n]');
     elements.forEach(el => {
@@ -617,27 +744,55 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSimulatorPost(currentTopic, false);
   }
 
-  langToggleBtn.addEventListener('click', () => {
-    const nextLang = currentLang === 'tr' ? 'en' : 'tr';
-    applyLanguage(nextLang);
-  });
+  if (langToggleBtn) {
+    langToggleBtn.addEventListener('click', () => {
+      const nextLang = currentLang === 'tr' ? 'en' : 'tr';
+      applyLanguage(nextLang);
+    });
+  }
 
   // ==========================================================================
   // 7. SIMULATOR LOGIC & TYPEWRITER SSE STREAM
   // ==========================================================================
   function getActiveStoryData() {
     const story = stories[currentTopic] || stories.film;
-    return story[currentLang] || story.tr;
+    const base = story[currentLang] || story.tr;
+    if (base.variants && base.variants[activeSubtopicIndex]) {
+      const v = base.variants[activeSubtopicIndex];
+      return {
+        ...base,
+        title: v.title || base.title,
+        body: v.body || base.body,
+        tags: v.tags || base.tags,
+        deepDiveTitle: v.deepDiveTitle || base.deepDiveTitle,
+        deepDiveBody: v.deepDiveBody || base.deepDiveBody
+      };
+    }
+    if (activeSubtopicIndex > 0 && base.subtopics && base.subtopics[activeSubtopicIndex]) {
+      const chosenSub = base.subtopics[activeSubtopicIndex];
+      const cleanTag = chosenSub.replace(/[^a-zA-Z0-9ğüşöçıİĞÜŞÖÇ]/g, '');
+      const updatedTags = [base.tags[0], cleanTag || base.tags[1], base.tags[2]].filter(Boolean);
+      return {
+        ...base,
+        tags: updatedTags
+      };
+    }
+    return base;
   }
 
   function renderSubtopicsPills() {
     if (!subtopicsList) return;
-    const data = getActiveStoryData();
+    const story = stories[currentTopic] || stories.film;
+    const base = story[currentLang] || story.tr;
     subtopicsList.innerHTML = '';
 
-    (data.subtopics || []).forEach((sub, idx) => {
+    (base.subtopics || []).forEach((sub, idx) => {
       const btn = document.createElement('button');
-      btn.className = 'subtopic-pill' + (idx === activeSubtopicIndex ? ' active' : '');
+      btn.type = 'button';
+      const isLetterboxd = sub.toLowerCase().includes('letterboxd');
+      btn.className = 'subtopic-pill'
+        + (idx === activeSubtopicIndex ? ' active' : '')
+        + (isLetterboxd ? ' letterboxd-pill' : '');
       btn.textContent = sub;
       btn.addEventListener('click', () => {
         if (isStreaming) return;
@@ -650,6 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderSimulatorPost(topicKey, animate = false) {
+    if (!simPostTitle || !simPostBody) return;
     const data = getActiveStoryData();
 
     simPostTitle.textContent = data.title;
@@ -708,14 +864,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         startReadingCooldown(18);
       }
-    }, 22);
+    }, 20);
   }
 
   function startReadingCooldown(seconds) {
     let remaining = seconds;
     cooldownBar.style.transition = 'none';
     cooldownBar.style.width = '100%';
-    // Force reflow so smooth countdown animation runs from 100% to 0%
     void cooldownBar.offsetWidth;
     cooldownBar.style.transition = `width ${seconds}s linear`;
     cooldownBar.style.width = '0%';
@@ -744,83 +899,102 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
   }
 
-  // Bento Topic Chips Click Handling
-  tastesGrid.addEventListener('click', (e) => {
-    const btn = e.target.closest('.taste-chip-btn');
-    if (!btn || isStreaming) return;
+  if (tastesGrid) {
+    tastesGrid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.taste-chip-btn');
+      if (!btn || isStreaming) return;
 
-    document.querySelectorAll('.taste-chip-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+      document.querySelectorAll('.taste-chip-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
 
-    currentTopic = btn.getAttribute('data-topic');
-    activeSubtopicIndex = 0;
-    renderSubtopicsPills();
-    renderSimulatorPost(currentTopic, true);
-  });
-
-  // Spin (Random Category) Button
-  btnSpin.addEventListener('click', () => {
-    if (isStreaming) return;
-    const topics = Object.keys(stories);
-    const otherTopics = topics.filter(t => t !== currentTopic);
-    const randomTopic = otherTopics[Math.floor(Math.random() * otherTopics.length)];
-
-    currentTopic = randomTopic;
-    activeSubtopicIndex = 0;
-
-    document.querySelectorAll('.taste-chip-btn').forEach(b => {
-      b.classList.toggle('active', b.getAttribute('data-topic') === randomTopic);
+      currentTopic = btn.getAttribute('data-topic');
+      activeSubtopicIndex = 0;
+      renderSubtopicsPills();
+      renderSimulatorPost(currentTopic, true);
     });
+  }
 
-    renderSubtopicsPills();
-    renderSimulatorPost(currentTopic, true);
-  });
+  if (btnSpin) {
+    btnSpin.addEventListener('click', () => {
+      if (isStreaming) return;
+      const topics = Object.keys(stories);
+      const otherTopics = topics.filter(t => t !== currentTopic);
+      const randomTopic = otherTopics[Math.floor(Math.random() * otherTopics.length)];
 
-  btnStreamStart.addEventListener('click', () => {
-    if (isStreaming) return;
-    renderSimulatorPost(currentTopic, true);
-  });
+      currentTopic = randomTopic;
+      activeSubtopicIndex = 0;
 
-  btnReread.addEventListener('click', () => {
-    if (isStreaming) return;
-    renderSimulatorPost(currentTopic, true);
-  });
+      document.querySelectorAll('.taste-chip-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-topic') === randomTopic);
+      });
+
+      renderSubtopicsPills();
+      renderSimulatorPost(currentTopic, true);
+    });
+  }
+
+  if (btnStreamStart) {
+    btnStreamStart.addEventListener('click', () => {
+      if (isStreaming) return;
+      const story = stories[currentTopic] || stories.film;
+      const base = story[currentLang] || story.tr;
+      if (base.subtopics && base.subtopics.length > 1) {
+        activeSubtopicIndex = (activeSubtopicIndex + 1) % base.subtopics.length;
+        renderSubtopicsPills();
+      }
+      renderSimulatorPost(currentTopic, true);
+    });
+  }
+
+  if (btnReread) {
+    btnReread.addEventListener('click', () => {
+      if (isStreaming) return;
+      renderSimulatorPost(currentTopic, true);
+    });
+  }
 
   // Bookmark Button Simulation
   let isBookmarked = false;
-  btnBookmarkDemo.addEventListener('click', () => {
-    isBookmarked = !isBookmarked;
-    const svg = btnBookmarkDemo.querySelector('svg');
-    if (isBookmarked) {
-      svg.setAttribute('fill', 'currentColor');
-      btnBookmarkDemo.style.color = 'var(--ink-primary)';
-    } else {
-      svg.setAttribute('fill', 'none');
-      btnBookmarkDemo.style.color = 'var(--ink-secondary)';
-    }
-  });
+  if (btnBookmarkDemo) {
+    btnBookmarkDemo.addEventListener('click', () => {
+      isBookmarked = !isBookmarked;
+      const svg = btnBookmarkDemo.querySelector('svg');
+      const span = btnBookmarkDemo.querySelector('span');
+      if (isBookmarked) {
+        svg.setAttribute('fill', 'currentColor');
+        btnBookmarkDemo.style.color = 'var(--ink-primary)';
+        if (span) span.textContent = currentLang === 'tr' ? 'Kaydedildi' : 'Saved';
+      } else {
+        svg.setAttribute('fill', 'none');
+        btnBookmarkDemo.style.color = 'var(--ink-secondary)';
+        if (span) span.textContent = translations[currentLang]['action.save'];
+      }
+    });
+  }
 
   // Share Button Simulation
-  btnShareDemo.addEventListener('click', async () => {
-    const title = simPostTitle.textContent;
-    const text = `"${title}" — Omakase`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Omakase', text: text, url: window.location.href });
-      } catch (err) {}
-    } else {
-      navigator.clipboard.writeText(`${text} ${window.location.href}`);
-      const span = btnShareDemo.querySelector('span');
-      const prevText = span.textContent;
-      span.textContent = currentLang === 'tr' ? 'Kopyalandı' : 'Copied';
-      setTimeout(() => {
-        span.textContent = prevText;
-      }, 1400);
-    }
-  });
+  if (btnShareDemo) {
+    btnShareDemo.addEventListener('click', async () => {
+      const title = simPostTitle.textContent;
+      const text = `"${title}" — Omakase`;
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: 'Omakase', text: text, url: window.location.href });
+        } catch (err) {}
+      } else {
+        navigator.clipboard.writeText(`${text} ${window.location.href}`);
+        const span = btnShareDemo.querySelector('span');
+        const prevText = span.textContent;
+        span.textContent = currentLang === 'tr' ? 'Kopyalandı' : 'Copied';
+        setTimeout(() => {
+          span.textContent = prevText;
+        }, 1400);
+      }
+    });
+  }
 
   // ==========================================================================
-  // 8. DEEP DIVE MODAL SHEET
+  // 8. DEEP DIVE MODAL & SHARE CARD (#F5F0E8) MODAL
   // ==========================================================================
   function openDeepDiveModal() {
     const data = getActiveStoryData();
@@ -831,22 +1005,62 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function closeDeepDiveModal() {
+    if (!deepDiveModal) return;
     deepDiveModal.classList.remove('open');
     document.body.style.overflow = '';
   }
 
-  btnOpenDeepDive.addEventListener('click', openDeepDiveModal);
-  btnCloseModal.addEventListener('click', closeDeepDiveModal);
+  function openShareCardModalWithData(data) {
+    if (!shareCardModal) return;
+    paperCardTitle.textContent = data.title;
+    paperCardText.textContent = data.body;
+    paperCardTags.innerHTML = '';
+    (data.tags || []).forEach(tag => {
+      const pill = document.createElement('span');
+      pill.className = 'paper-tag-pill';
+      pill.textContent = tag.replace(/^#/, '');
+      paperCardTags.appendChild(pill);
+    });
+    paperCardDate.textContent = currentLang === 'tr' ? '15 Kas 2026' : 'Nov 15, 2026';
+    shareCardModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
 
-  deepDiveModal.addEventListener('click', (e) => {
-    if (e.target === deepDiveModal) {
-      closeDeepDiveModal();
-    }
-  });
+  function closeShareCardModal() {
+    if (!shareCardModal) return;
+    shareCardModal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  if (btnOpenDeepDive) btnOpenDeepDive.addEventListener('click', openDeepDiveModal);
+  if (btnCloseModal) btnCloseModal.addEventListener('click', closeDeepDiveModal);
+  if (btnExportCard) {
+    btnExportCard.addEventListener('click', () => {
+      openShareCardModalWithData(getActiveStoryData());
+    });
+  }
+  if (btnCloseShareModal) btnCloseShareModal.addEventListener('click', closeShareCardModal);
+
+  if (deepDiveModal) {
+    deepDiveModal.addEventListener('click', (e) => {
+      if (e.target === deepDiveModal) closeDeepDiveModal();
+    });
+  }
+
+  if (shareCardModal) {
+    shareCardModal.addEventListener('click', (e) => {
+      if (e.target === shareCardModal) closeShareCardModal();
+    });
+  }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && deepDiveModal.classList.contains('open')) {
-      closeDeepDiveModal();
+    if (e.key === 'Escape') {
+      if (deepDiveModal && deepDiveModal.classList.contains('open')) closeDeepDiveModal();
+      if (shareCardModal && shareCardModal.classList.contains('open')) closeShareCardModal();
+      if (mobileDrawer && mobileDrawer.classList.contains('open')) {
+        mobileDrawer.classList.remove('open');
+        if (mobileToggleBtn) mobileToggleBtn.setAttribute('aria-expanded', 'false');
+      }
     }
   });
 
@@ -856,6 +1070,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const faqItems = document.querySelectorAll('.faq-item');
   faqItems.forEach(item => {
     const questionBtn = item.querySelector('.faq-question');
+    if (!questionBtn) return;
     questionBtn.addEventListener('click', () => {
       const isOpen = item.classList.contains('active');
       faqItems.forEach(other => other.classList.remove('active'));
@@ -873,45 +1088,58 @@ document.addEventListener('DOMContentLoaded', () => {
   const waitlistSubmitBtn = document.getElementById('waitlist-submit-btn');
   const waitlistFeedback = document.getElementById('waitlist-feedback');
 
-  waitlistForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = waitlistEmail.value.trim();
-    if (!email || !email.includes('@')) return;
+  if (waitlistForm) {
+    waitlistForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = waitlistEmail.value.trim();
+      if (!email || !email.includes('@')) return;
 
-    waitlistSubmitBtn.disabled = true;
-    waitlistSubmitBtn.textContent = currentLang === 'tr' ? 'Kaydedildi ✓' : 'Joined ✓';
+      waitlistSubmitBtn.disabled = true;
+      waitlistSubmitBtn.textContent = currentLang === 'tr' ? 'Kaydedildi ✓' : 'Joined ✓';
 
-    try {
-      const list = JSON.parse(localStorage.getItem('omakase_waitlist') || '[]');
-      list.push({ email, date: new Date().toISOString() });
-      localStorage.setItem('omakase_waitlist', JSON.stringify(list));
-    } catch (err) {}
+      try {
+        const list = JSON.parse(localStorage.getItem('omakase_waitlist') || '[]');
+        list.push({ email, date: new Date().toISOString() });
+        localStorage.setItem('omakase_waitlist', JSON.stringify(list));
+      } catch (err) {}
 
-    if (waitlistFeedback) {
-      waitlistFeedback.textContent = currentLang === 'tr'
-        ? `${email} TestFlight davet listesine eklendi.`
-        : `${email} has been added to the TestFlight invite list.`;
-    }
+      if (waitlistFeedback) {
+        waitlistFeedback.textContent = currentLang === 'tr'
+          ? `${email} TestFlight davet listesine eklendi.`
+          : `${email} has been added to the TestFlight invite list.`;
+      }
 
-    setTimeout(() => {
-      waitlistEmail.value = '';
-      waitlistSubmitBtn.disabled = false;
-      waitlistSubmitBtn.textContent = translations[currentLang]['cta.joinBtn'];
-    }, 1800);
-  });
+      setTimeout(() => {
+        waitlistEmail.value = '';
+        waitlistSubmitBtn.disabled = false;
+        waitlistSubmitBtn.textContent = translations[currentLang]['cta.joinBtn'];
+      }, 1800);
+    });
+  }
 
   // ==========================================================================
   // 11. MOBILE DRAWER NAVIGATION
   // ==========================================================================
-  mobileToggleBtn.addEventListener('click', () => {
-    mobileDrawer.classList.toggle('open');
-  });
-
-  document.querySelectorAll('.mobile-link').forEach(link => {
-    link.addEventListener('click', () => {
-      mobileDrawer.classList.remove('open');
+  if (mobileToggleBtn && mobileDrawer) {
+    mobileToggleBtn.addEventListener('click', () => {
+      const isOpen = mobileDrawer.classList.toggle('open');
+      mobileToggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     });
-  });
+
+    document.querySelectorAll('.mobile-link').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileDrawer.classList.remove('open');
+        mobileToggleBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768 && mobileDrawer.classList.contains('open')) {
+        mobileDrawer.classList.remove('open');
+        mobileToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
 
   // ==========================================================================
   // 12. INITIALIZATION

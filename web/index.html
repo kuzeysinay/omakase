@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <title>Omakase — Kişisel Kültür & Bilgi Akışı</title>
   
-  <meta name="description" content="Algoritmaların gürültüsünden uzak, merak ettiğiniz konuları ve ilgi alanlarınızı gerçek zamanlı, doğrulanmış mikro-hikayelere dönüştüren kişisel iOS kültür akışı.">
-  <meta name="keywords" content="omakase, kültür akışı, mikro hikayeler, ai feed, ios uygulaması, bento keşif, doomscrolling karşıtı, derin okuma">
+  <meta name="description" content="Algoritmaların gürültüsünden uzak; 12 kültür kategorisini, hiper-spesifik alt konuları ve Letterboxd günlüğünüzü gerçek zamanlı, doğrulanmış mikro-hikayelere dönüştüren kişisel iOS kültür akışı.">
+  <meta name="keywords" content="omakase, kültür akışı, mikro hikayeler, ai feed, ios uygulaması, bento keşif, letterboxd, doomscrolling karşıtı, derin okuma">
   <meta name="author" content="Omakase">
 
   <!-- Open Graph / Social Cards -->
@@ -75,11 +75,11 @@
           </svg>
         </button>
 
-        <!-- CTA Button -->
-        <a href="#download" class="btn-primary" data-i18n="nav.getApp">İndir</a>
+        <!-- CTA Button (Hidden on narrow mobile, available in drawer) -->
+        <a href="#download" class="btn-primary nav-cta-desktop" data-i18n="nav.getApp">İndir</a>
 
         <!-- Mobile Menu Toggle -->
-        <button class="mobile-toggle" id="mobile-toggle-btn" aria-label="Menüyü Aç">
+        <button class="mobile-toggle" id="mobile-toggle-btn" aria-label="Menüyü Aç" aria-expanded="false">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="7" x2="21" y2="7"></line>
             <line x1="3" y1="17" x2="21" y2="17"></line>
@@ -94,7 +94,7 @@
       <a href="#features" class="mobile-link" data-i18n="nav.features">Mimari</a>
       <a href="#philosophy" class="mobile-link" data-i18n="nav.philosophy">Felsefe</a>
       <a href="#faq" class="mobile-link" data-i18n="nav.faq">SSS</a>
-      <a href="#download" class="btn-primary" style="margin-top:8px; text-align:center;" data-i18n="nav.getApp">Uygulamayı İndir</a>
+      <a href="#download" class="btn-primary mobile-link mobile-cta-btn" data-i18n="nav.getAppFull">Uygulamayı İndir</a>
     </div>
   </header>
 
@@ -115,14 +115,14 @@
           </h1>
 
           <p class="hero-subtitle" data-i18n="hero.subtitle">
-            12 kültür kategorisini, dinamik alt konuları ve kendi merakınızı gerçek zamanlı, doğrulanmış mikro-hikayelere dönüştüren kişisel bilgi şefiniz.
+            12 kültür disiplinini, hiper-spesifik alt konuları ve Letterboxd izleme günlüğünüzü gerçek zamanlı, doğrulanmış mikro-hikayelere dönüştüren kişisel bilgi şefiniz.
           </p>
 
           <div class="hero-cta-group">
             <a href="#download" class="btn-appstore">
               <img src="assets/apple-logo.png" alt="Apple" class="apple-logo-img" width="20" height="20">
               <span>
-                <small style="display:block; font-size:0.66rem; font-weight:500; opacity:0.75;" data-i18n="hero.appStoreLabel">App Store</small>
+                <small class="btn-appstore-sub" data-i18n="hero.appStoreLabel">App Store</small>
                 <strong data-i18n="hero.downloadCta">iOS için İndir</strong>
               </span>
             </a>
@@ -135,15 +135,15 @@
           <div class="hero-meta">
             <div class="hero-meta-item">
               <span class="meta-dot"></span>
-              <span data-i18n="hero.meta1">12 Kültür Kategorisi</span>
+              <span data-i18n="hero.meta1">2×6 Bento & 12 Disiplin</span>
             </div>
             <div class="hero-meta-item">
               <span class="meta-dot"></span>
-              <span data-i18n="hero.meta2">18 sn Sindirme Koruması</span>
+              <span data-i18n="hero.meta2">15–25 sn Sindirme Koruması</span>
             </div>
             <div class="hero-meta-item">
               <span class="meta-dot"></span>
-              <span data-i18n="hero.meta3">Seçkin Topluluk Akışı</span>
+              <span data-i18n="hero.meta3">Letterboxd & @kullanıcı_adı Ağı</span>
             </div>
           </div>
         </div>
@@ -151,11 +151,12 @@
         <!-- Hero Live iOS Device Showcase -->
         <div class="hero-device-wrapper">
           <div class="device-stage">
-            <!-- Screen Mode Switcher Pills above Device -->
+            <!-- Screen Mode Switcher Pills above Device (4 Screens) -->
             <div class="device-screen-tabs" role="tablist" aria-label="Uygulama Ekranları">
-              <button class="device-tab-pill active" data-screen="feed" role="tab" aria-selected="true" data-i18n="device.tabFeed">Akış</button>
-              <button class="device-tab-pill" data-screen="bento" role="tab" aria-selected="false" data-i18n="device.tabBento">Kategoriler</button>
+              <button class="device-tab-pill active" data-screen="feed" role="tab" aria-selected="true" data-i18n="device.tabFeed">Akışım</button>
+              <button class="device-tab-pill" data-screen="bento" role="tab" aria-selected="false" data-i18n="device.tabBento">Bento Keşif</button>
               <button class="device-tab-pill" data-screen="community" role="tab" aria-selected="false" data-i18n="device.tabCommunity">Topluluk</button>
+              <button class="device-tab-pill" data-screen="profile" role="tab" aria-selected="false" data-i18n="device.tabProfile">Profil</button>
             </div>
 
             <!-- iPhone Frame with Live Native UI Replica -->
@@ -171,109 +172,130 @@
                   </div>
                 </div>
 
-                <!-- SCREEN 1: FEED VIEW (ReelsPostCard + Top Cooldown Bar) -->
+                <!-- SCREEN 1: FEED VIEW (FeedView.swift -> ReelsPostCard + Top 3px Cooldown Bar) -->
                 <div class="ios-view active" id="ios-view-feed">
                   <div class="ios-navbar">
                     <div class="ios-nav-brand">
                       <img src="assets/logo.svg" alt="" width="18" height="18" class="ios-logo-img">
                       <span>omakase</span>
                     </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                    <span class="ios-hourglass-pill">⧗ 14s</span>
                   </div>
                   <!-- 3px Reading Cooldown Progress Bar -->
                   <div class="ios-cooldown-line"><div class="ios-cooldown-fill"></div></div>
 
                   <div class="ios-feed-card">
-                    <div class="ios-post-top">
-                      <span class="ios-post-date" data-i18n="device.feedDate">Bugün • 09:41</span>
-                      <span class="ios-hourglass-pill">⧗ 14s</span>
+                    <div class="ios-post-header-block">
+                      <div class="ios-post-title-row">
+                        <h4 class="ios-post-title" data-i18n="device.feedTitle">Tadao Ando ve Işığın Betondaki Tapınağı</h4>
+                        <span class="ios-more-circle" aria-hidden="true">•••</span>
+                      </div>
+                      <div class="ios-post-date-row">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        <span class="ios-post-date" data-i18n="device.feedDate">Bugün • 09:41</span>
+                      </div>
                     </div>
-                    <h4 class="ios-post-title" data-i18n="device.feedTitle">Tadao Ando ve Işığın Betondaki Tapınağı</h4>
+
                     <p class="ios-post-body" data-i18n="device.feedBody">
                       Osaka'daki Işık Kilisesi'nde Tadao Ando, haçı altın ya da mermerle değil; çıplak beton duvara açtığı yarıklardan içeri sızan gün ışığıyla inşa etti. Güneş hareket ettikçe kilisenin içindeki ışık kesişimi yer değiştirir. Ando için mimarlık bir form değil, doğanın mekana bıraktığı gölgedir.
                     </p>
+
                     <div class="ios-tag-row">
                       <span class="ios-tag">#Sanat</span>
                       <span class="ios-tag">#TadaoAndo</span>
                       <span class="ios-tag">#Mimari</span>
                     </div>
 
-                    <div class="ios-card-actions">
-                      <div class="ios-action-left">
-                        <span class="ios-act-item">↻ <span data-i18n="action.reread">Yeniden</span></span>
-                        <span class="ios-act-item">↗ <span data-i18n="action.share">Paylaş</span></span>
-                      </div>
-                      <span class="ios-deepdive-pill" data-i18n="action.deepdive">Derinlemesine İncele</span>
+                    <!-- Native 4-Icon Action Bar (Dive, Share, Export, Save) -->
+                    <div class="ios-reels-actionbar">
+                      <button type="button" class="ios-reel-btn" id="hero-btn-dive" title="Derinlemesine İncele">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M2 16s3-6 10-6 10 6 10 6-3 6-10 6-10-6-10-6Z"/><circle cx="12" cy="16" r="2"/><path d="M12 10V4m0 0L9 7m3-3 3 3"/></svg>
+                        <span data-i18n="device.actDive">İncele</span>
+                      </button>
+                      <button type="button" class="ios-reel-btn" data-switch-screen="community" title="Toplulukta Paylaş">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        <span data-i18n="action.share">Paylaş</span>
+                      </button>
+                      <button type="button" class="ios-reel-btn" id="hero-btn-export" title="Paylaşım Kartı">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                        <span data-i18n="action.export">Dışa Aktar</span>
+                      </button>
+                      <span class="ios-reel-spacer"></span>
+                      <button type="button" class="ios-reel-btn" data-switch-screen="profile" title="Kaydet">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                        <span data-i18n="action.save">Kaydet</span>
+                      </button>
                     </div>
 
-                    <button class="ios-swipe-hint" data-switch-screen="bento">
-                      <span>↓</span>
-                      <span data-i18n="device.swipeForBento">Yeni konu seçmek için kaydır</span>
+                    <button type="button" class="ios-swipe-hint" data-switch-screen="bento">
+                      <span>⌄</span>
+                      <span data-i18n="device.swipeForBento">Yeni post için aşağı kaydır</span>
                     </button>
                   </div>
                 </div>
 
-                <!-- SCREEN 2: FULL-SCREEN BENTO TASTE BOX (12 Categories) -->
+                <!-- SCREEN 2: FULL-SCREEN 2x6 BENTO TASTE BOX (BentoTasteBox.swift) -->
                 <div class="ios-view" id="ios-view-bento">
-                  <div class="ios-navbar">
-                    <div class="ios-nav-brand">
-                      <img src="assets/logo.svg" alt="" width="18" height="18" class="ios-logo-img">
-                      <span>omakase</span>
-                    </div>
-                    <span class="ios-hourglass-pill">12 <span data-i18n="device.catCount">Kategori</span></span>
-                  </div>
+                  <button type="button" class="ios-back-post-banner" data-switch-screen="feed">
+                    <span>↑</span>
+                    <span data-i18n="device.backToPost">Son gönderiye dönmek için dokun</span>
+                  </button>
+
                   <div class="ios-bento-header">
-                    <h4 data-i18n="device.bentoHeading">Kategoriler</h4>
-                    <p data-i18n="device.bentoSub">Bir kategori seç ve alt konuya dokunarak yeni post üret</p>
+                    <div>
+                      <h4 data-i18n="device.bentoHeading">Kategoriler</h4>
+                      <p data-i18n="device.bentoSub">Bir kategori seç ve alt konuya dokunarak yeni post üret</p>
+                    </div>
+                    <span class="ios-hourglass-pill">2×6</span>
                   </div>
 
                   <div class="ios-bento-grid">
                     <div class="ios-bento-tile">
                       <div class="ios-tile-top"><span class="ios-tile-icon">🎬</span><span class="ios-tile-chev">›</span></div>
                       <div class="ios-tile-name" data-i18n="cat.film">Film</div>
-                      <div class="ios-tile-sub">Nolan · Yeni Dalga</div>
-                    </div>
-                    <div class="ios-bento-tile">
-                      <div class="ios-tile-top"><span class="ios-tile-icon">🔬</span><span class="ios-tile-chev">›</span></div>
-                      <div class="ios-tile-name" data-i18n="cat.science">Bilim</div>
-                      <div class="ios-tile-sub">Kuantum · Nörobilim</div>
-                    </div>
-                    <div class="ios-bento-tile">
-                      <div class="ios-tile-top"><span class="ios-tile-icon">🧠</span><span class="ios-tile-chev">›</span></div>
-                      <div class="ios-tile-name" data-i18n="cat.philosophy">Felsefe</div>
-                      <div class="ios-tile-sub">Stoacılık · Etik</div>
-                    </div>
-                    <div class="ios-bento-tile">
-                      <div class="ios-tile-top"><span class="ios-tile-icon">🎨</span><span class="ios-tile-chev">›</span></div>
-                      <div class="ios-tile-name" data-i18n="cat.art">Sanat</div>
-                      <div class="ios-tile-sub">Bauhaus · Mimari</div>
-                    </div>
-                    <div class="ios-bento-tile">
-                      <div class="ios-tile-top"><span class="ios-tile-icon">📜</span><span class="ios-tile-chev">›</span></div>
-                      <div class="ios-tile-name" data-i18n="cat.history">Tarih</div>
-                      <div class="ios-tile-sub">Antik Roma · İpek Yolu</div>
+                      <div class="ios-tile-sub" data-i18n="device.subFilm">Kubrick f/0.7 · Kuleşov</div>
                     </div>
                     <div class="ios-bento-tile">
                       <div class="ios-tile-top"><span class="ios-tile-icon">🎵</span><span class="ios-tile-chev">›</span></div>
                       <div class="ios-tile-name" data-i18n="cat.music">Müzik</div>
-                      <div class="ios-tile-sub">Caz · Ambient</div>
+                      <div class="ios-tile-sub" data-i18n="device.subMusic">Röntgen Plak · Köln Piyano</div>
+                    </div>
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">🔬</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.science">Bilim</div>
+                      <div class="ios-tile-sub" data-i18n="device.subSci">Oklo Reaktörü · Tardigrad</div>
+                    </div>
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">🍳</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.food">Yemek</div>
+                      <div class="ios-tile-sub" data-i18n="device.subFood">Garum · 1814 Bira Tufanı</div>
+                    </div>
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">📜</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.history">Tarih</div>
+                      <div class="ios-tile-sub" data-i18n="device.subHist">1518 Dans Vebası · Voynich</div>
+                    </div>
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">💻</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.tech">Teknoloji</div>
+                      <div class="ios-tile-sub" data-i18n="device.subTech">Apollo İp RAM · Lav Lambası</div>
                     </div>
                   </div>
 
                   <div class="ios-bento-bottom">
                     <div class="ios-active-chips">
+                      <span class="ios-chip-letterboxd">● Letterboxd</span>
                       <span class="ios-chip-active">Mimari ×</span>
-                      <span class="ios-chip-active">Kuantum Fiziği ×</span>
                       <span class="ios-chip-inactive">Stoacılık</span>
                     </div>
                     <div class="ios-custom-input">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                       <span data-i18n="device.inputPlaceholder">Kendi konunu yaz veya ilgi ekle…</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- SCREEN 3: COMMUNITY TIMELINE VIEW -->
+                <!-- SCREEN 3: COMMUNITY TIMELINE VIEW (TimelineView.swift) -->
                 <div class="ios-view" id="ios-view-community">
                   <div class="ios-navbar">
                     <span class="ios-nav-title" data-i18n="device.tabCommunity">Topluluk</span>
@@ -282,23 +304,27 @@
 
                   <div class="ios-community-wrap">
                     <div class="ios-search-bar">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                       <span data-i18n="device.communitySearch">Kişi (@kullanıcı) veya gönderi ara…</span>
                     </div>
 
                     <div class="ios-shared-card">
                       <div class="ios-author-row">
                         <div class="ios-avatar">D</div>
-                        <div>
+                        <div class="ios-author-meta">
                           <div class="ios-author-name">Defne Kaya <span class="ios-handle">@defne</span></div>
                           <div class="ios-author-time">18 dk</div>
                         </div>
+                        <span class="ios-more-dots">•••</span>
                       </div>
                       <div class="ios-shared-title" data-i18n="device.shared1Title">Miles Davis ve Kind of Blue'nun Modal Sessizliği</div>
                       <p class="ios-shared-body" data-i18n="device.shared1Body">1959 ilkbaharında Miles Davis, stüdyoya giren Bill Evans ve John Coltrane'e geleneksel akor şemaları yerine sadece birkaç mod notasından ibaret kağıtlar verdi…</p>
                       <div class="ios-reactions-row">
+                        <span class="ios-react-pill active">🔥 14</span>
                         <span class="ios-react-pill active">🧠 12</span>
                         <span class="ios-react-pill">❤️ 8</span>
+                        <span class="ios-react-pill">👏 5</span>
+                        <span class="ios-react-pill">🤯 4</span>
                         <span class="ios-react-pill">💬 3</span>
                       </div>
                     </div>
@@ -306,34 +332,91 @@
                     <div class="ios-shared-card">
                       <div class="ios-author-row">
                         <div class="ios-avatar">K</div>
-                        <div>
+                        <div class="ios-author-meta">
                           <div class="ios-author-name">Kuzey Sınay <span class="ios-handle">@kuzey</span></div>
                           <div class="ios-author-time">1 sa</div>
                         </div>
+                        <span class="ios-more-dots">•••</span>
                       </div>
-                      <div class="ios-shared-title" data-i18n="device.shared2Title">Kuantum Eşevresizliği ve Gözlemci</div>
+                      <div class="ios-shared-title" data-i18n="device.shared2Title">Oklo: 2 Milyar Yıllık Doğal Nükleer Reaktör</div>
                       <div class="ios-reactions-row">
-                        <span class="ios-react-pill">🔥 19</span>
-                        <span class="ios-react-pill">👏 7</span>
+                        <span class="ios-react-pill active">🤯 19</span>
+                        <span class="ios-react-pill">🧠 11</span>
                         <span class="ios-react-pill">💬 5</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <!-- iOS Bottom Tab Bar -->
+                <!-- SCREEN 4: PROFILE TAB VIEW (ProfileTabView.swift / MyProfileSheet) -->
+                <div class="ios-view" id="ios-view-profile">
+                  <div class="ios-navbar">
+                    <span class="ios-nav-title" data-i18n="device.tabProfile">Profil</span>
+                    <span class="ios-hourglass-pill">@kuzey</span>
+                  </div>
+
+                  <div class="ios-profile-wrap">
+                    <div class="ios-profile-hero">
+                      <div class="ios-profile-avatar">K</div>
+                      <div class="ios-profile-name">Kuzey Sınay</div>
+                      <div class="ios-profile-handle">@kuzey</div>
+                      <div class="ios-profile-stats">
+                        <div class="ios-stat-box">
+                          <strong>148</strong>
+                          <span data-i18n="device.followers">Takipçi</span>
+                        </div>
+                        <div class="ios-stat-divider"></div>
+                        <div class="ios-stat-box">
+                          <strong>92</strong>
+                          <span data-i18n="device.following">Takip</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="ios-settings-group">
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left">🔖 <span data-i18n="device.savedPosts">Kaydedilmiş Gönderiler</span></span>
+                        <span class="ios-row-right">24 ›</span>
+                      </div>
+                    </div>
+
+                    <div class="ios-settings-group">
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left">🎬 <span>Letterboxd</span></span>
+                        <span class="ios-row-right ios-lb-connected">@kuzeysinay ›</span>
+                      </div>
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left">🌐 <span data-i18n="device.langRow">Dil / Language</span></span>
+                        <span class="ios-row-right">TR · EN</span>
+                      </div>
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left">🌗 <span data-i18n="device.themeRow">Görünüm</span></span>
+                        <span class="ios-row-right" data-i18n="device.themeVal">Mürekkep & Kağıt</span>
+                      </div>
+                    </div>
+
+                    <div class="ios-settings-group">
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left"> <span>Sign in with Apple</span></span>
+                        <span class="ios-row-right">✓</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- iOS Bottom Tab Bar (Exact 3 Tabs from MainTabView.swift) -->
                 <div class="ios-tabbar">
-                  <button class="ios-tab-item active" data-switch-screen="feed">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-                    <span data-i18n="device.tabFeed">Akış</span>
+                  <button type="button" class="ios-tab-item active" data-switch-screen="feed" data-tab-group="feed-bento">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                    <span data-i18n="device.tabFeed">Akışım</span>
                   </button>
-                  <button class="ios-tab-item" data-switch-screen="bento">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-                    <span data-i18n="device.tabBento">Keşif</span>
-                  </button>
-                  <button class="ios-tab-item" data-switch-screen="community">
+                  <button type="button" class="ios-tab-item" data-switch-screen="community" data-tab-group="community">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     <span data-i18n="device.tabCommunity">Topluluk</span>
+                  </button>
+                  <button type="button" class="ios-tab-item" data-switch-screen="profile" data-tab-group="profile">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+                    <span data-i18n="device.tabProfile">Profil</span>
                   </button>
                 </div>
               </div>
@@ -355,7 +438,7 @@
           </div>
           <h2 class="section-title" data-i18n="demo.title">Canlı Şef Tadımı</h2>
           <p class="section-desc" data-i18n="demo.desc">
-            12 kültür kategorisinden birini seçin, alt konuları yenileyin ve şefin sizin için anlık mikro-hikaye hazırlamasını deneyimleyin.
+            12 kültür disiplininden birini seçin, ezber bozan alt konulara dokunun ve şefin sizin için gerçek zamanlı mikro-hikaye hazırlamasını deneyimleyin.
           </p>
         </div>
 
@@ -364,74 +447,74 @@
           <div class="sim-controls">
             <div class="sim-control-header">
               <div class="sim-header-row">
-                <h4 data-i18n="demo.bentoTitle">Bento Keşif Izgarası</h4>
-                <button class="btn-inline-roll" id="btn-spin-tastes" title="Rastgele Kategori">
+                <h4 data-i18n="demo.bentoTitle">2×6 Bento Keşif Matrisi</h4>
+                <button type="button" class="btn-inline-roll" id="btn-spin-tastes" title="Rastgele Kategori">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                     <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                   </svg>
                   <span data-i18n="demo.spin">Rastgele</span>
                 </button>
               </div>
-              <p data-i18n="demo.bentoSub">12 ana kategoriden birine dokunun:</p>
+              <p data-i18n="demo.bentoSub">12 ana kültür disiplininden birine dokunun:</p>
             </div>
 
             <!-- 12 Categories Grid (matching InterestCategory.presets) -->
             <div class="tastes-grid" id="tastes-grid">
-              <button class="taste-chip-btn active" data-topic="film">
+              <button type="button" class="taste-chip-btn active" data-topic="film">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.film">Film</span>
+                <span class="chip-text" data-i18n="cat.film">Film</span>
               </button>
-              <button class="taste-chip-btn" data-topic="science">
+              <button type="button" class="taste-chip-btn" data-topic="music">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.science">Bilim</span>
+                <span class="chip-text" data-i18n="cat.music">Müzik</span>
               </button>
-              <button class="taste-chip-btn" data-topic="philosophy">
+              <button type="button" class="taste-chip-btn" data-topic="science">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.philosophy">Felsefe</span>
+                <span class="chip-text" data-i18n="cat.science">Bilim</span>
               </button>
-              <button class="taste-chip-btn" data-topic="music">
+              <button type="button" class="taste-chip-btn" data-topic="food">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.music">Müzik</span>
+                <span class="chip-text" data-i18n="cat.food">Yemek</span>
               </button>
-              <button class="taste-chip-btn" data-topic="art">
+              <button type="button" class="taste-chip-btn" data-topic="history">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.art">Sanat</span>
+                <span class="chip-text" data-i18n="cat.history">Tarih</span>
               </button>
-              <button class="taste-chip-btn" data-topic="history">
+              <button type="button" class="taste-chip-btn" data-topic="sports">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.history">Tarih</span>
+                <span class="chip-text" data-i18n="cat.sports">Spor</span>
               </button>
-              <button class="taste-chip-btn" data-topic="tech">
+              <button type="button" class="taste-chip-btn" data-topic="tech">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.tech">Teknoloji</span>
+                <span class="chip-text" data-i18n="cat.tech">Teknoloji</span>
               </button>
-              <button class="taste-chip-btn" data-topic="food">
+              <button type="button" class="taste-chip-btn" data-topic="nature">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.food">Yemek</span>
+                <span class="chip-text" data-i18n="cat.nature">Doğa</span>
               </button>
-              <button class="taste-chip-btn" data-topic="nature">
+              <button type="button" class="taste-chip-btn" data-topic="art">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.nature">Doğa</span>
+                <span class="chip-text" data-i18n="cat.art">Sanat</span>
               </button>
-              <button class="taste-chip-btn" data-topic="travel">
+              <button type="button" class="taste-chip-btn" data-topic="philosophy">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.travel">Seyahat</span>
+                <span class="chip-text" data-i18n="cat.philosophy">Felsefe</span>
               </button>
-              <button class="taste-chip-btn" data-topic="sports">
+              <button type="button" class="taste-chip-btn" data-topic="travel">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.sports">Spor</span>
+                <span class="chip-text" data-i18n="cat.travel">Seyahat</span>
               </button>
-              <button class="taste-chip-btn" data-topic="gaming">
+              <button type="button" class="taste-chip-btn" data-topic="gaming">
                 <span class="chip-dot"></span>
-                <span data-i18n="cat.gaming">Oyun</span>
+                <span class="chip-text" data-i18n="cat.gaming">Oyun</span>
               </button>
             </div>
 
             <!-- Dynamic Subtopic Pills for Selected Category -->
             <div class="subtopics-box">
               <div class="subtopics-header">
-                <span class="subtopics-label" data-i18n="demo.subtopicsLabel">Seçili Alt Konular</span>
-                <span class="subtopics-ai-tag">Gemini Flash-Lite</span>
+                <span class="subtopics-label" data-i18n="demo.subtopicsLabel">Alt Konular (Tavşan Delikleri)</span>
+                <span class="subtopics-ai-tag">Gemini 3.1 Flash-Lite</span>
               </div>
               <div class="subtopics-pills" id="sim-subtopics-list">
                 <!-- Populated dynamically by app.js -->
@@ -439,7 +522,7 @@
             </div>
 
             <div class="sim-actions">
-              <button class="btn-generate" id="btn-stream-start">
+              <button type="button" class="btn-generate" id="btn-stream-start">
                 <span class="live-dot"></span>
                 <span data-i18n="demo.startStream">Şeften Yeni Tadım İste</span>
               </button>
@@ -456,10 +539,10 @@
             <div class="post-card-container">
               <!-- Post Header -->
               <div class="post-card-header">
-                <div>
+                <div class="post-header-main">
                   <div class="post-meta">
                     <span id="sim-post-date">Bugün • 20:17</span>
-                    <span>·</span>
+                    <span class="post-meta-sep">·</span>
                     <span id="cooldown-text" data-i18n="demo.cooldownReady">Sindirme koruması hazır</span>
                   </div>
                   <h3 class="post-title" id="sim-post-title">Oppenheimer ve IMAX 70mm'nin Görsel Ağırlığı</h3>
@@ -481,27 +564,36 @@
                 <span class="tag-badge">#Imax70Mm</span>
               </div>
 
-              <!-- Post Action Bar -->
+              <!-- Post Action Bar (Matching FeedView.swift: Re-read, Share, Export ShareCard, Save + Deep Dive) -->
               <div class="post-actions">
                 <div class="action-btn-group">
-                  <button class="action-icon-btn" id="btn-reread" title="Yeniden Oku">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <button type="button" class="action-icon-btn" id="btn-reread" title="Yeniden Oku">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M1 4v6h6M23 20v-6h-6"/>
                       <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
                     </svg>
                     <span data-i18n="action.reread">Yeniden</span>
                   </button>
 
-                  <button class="action-icon-btn" id="btn-share-demo" title="Toplulukta Paylaş">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <button type="button" class="action-icon-btn" id="btn-share-demo" title="Bağlantıyı Paylaş">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="22" y1="2" x2="11" y2="13"></line>
                       <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                     </svg>
                     <span data-i18n="action.share">Paylaş</span>
                   </button>
 
-                  <button class="action-icon-btn" id="btn-bookmark-demo" title="Kaydet">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <button type="button" class="action-icon-btn" id="btn-export-card" title="Kağıt Paylaşım Kartı (1080×1350)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                      <polyline points="16 6 12 2 8 6"/>
+                      <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                    <span data-i18n="action.export">Dışa Aktar</span>
+                  </button>
+
+                  <button type="button" class="action-icon-btn" id="btn-bookmark-demo" title="Koleksiyona Kaydet">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                     </svg>
                     <span data-i18n="action.save">Kaydet</span>
@@ -509,7 +601,7 @@
                 </div>
 
                 <!-- Deep Dive Button -->
-                <button class="deep-dive-btn" id="btn-open-deep-dive">
+                <button type="button" class="deep-dive-btn" id="btn-open-deep-dive">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="10"></circle>
                     <line x1="12" y1="8" x2="12" y2="16"></line>
@@ -525,20 +617,20 @@
     </section>
 
     <!-- ==========================================================================
-         FEATURES SECTION (CLEAN 2x2 ARCHITECTURAL BENTO GRID)
+         FEATURES SECTION (6-CARD ARCHITECTURAL BENTO GRID)
          ========================================================================== -->
     <section class="section" id="features">
       <div class="container">
         <div class="section-header">
           <div class="section-tag" data-i18n="features.tag">Sistem Mimarisi</div>
-          <h2 class="section-title" data-i18n="features.title">Düşünceyi Besleyen Sade Bir Deneyim</h2>
+          <h2 class="section-title" data-i18n="features.title">Düşünceyi Besleyen Altı Yapı Taşı</h2>
           <p class="section-desc" data-i18n="features.desc">
-            Dikkati parçalayan sonsuz kaydırma döngülerine karşı, bilinçli keşfi ve zihinsel dinginliği önceleyen dört temel yapı taşı.
+            Dikkati parçalayan sonsuz kaydırma döngülerine ve sohbet botlarının "ne soracağım?" boşluğuna karşı bilinçli keşfi önceleyen yerel iOS mimarisi.
           </p>
         </div>
 
         <div class="features-grid">
-          <!-- Feature 1: 12-Category Bento & Custom Topic -->
+          <!-- Feature 1: 2x6 Bento & SubTopicDiscoveryStore -->
           <div class="feature-card">
             <div class="feature-icon-box">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -548,9 +640,9 @@
                 <rect x="3" y="14" width="7" height="7" rx="2"></rect>
               </svg>
             </div>
-            <h3 class="feature-title" data-i18n="features.f1Title">Tam Ekran Bento Keşif Izgarası</h3>
+            <h3 class="feature-title" data-i18n="features.f1Title">2×6 Dikey Bento & Sıfır Gecikmeli Keşif</h3>
             <p class="feature-desc" data-i18n="features.f1Desc">
-              Film, Bilim, Felsefe, Sanat, Tarih ve Teknoloji dahil 12 ana kültür kategorisi. Bir kategoriye dokunduğunuzda dinamik alt konular açılır; dilerseniz kendi merak ettiğiniz özel bir başlığı yazıp anında şef yazısı üretebilirsiniz.
+              Film, Müzik, Bilim, Yemek, Tarih, Spor, Teknoloji, Doğa, Sanat, Felsefe, Seyahat ve Oyun dahil 12 kültür disiplini. Her kategoride oturumlar arası tekrar etmeyen 12'lik alt konu ızgarası, arka planda Gemini 3.1 Flash-Lite ön-belleklemesi ve özel konu girişi.
             </p>
           </div>
 
@@ -561,13 +653,13 @@
                 <path d="M5 22h14M5 2h14M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"></path>
               </svg>
             </div>
-            <h3 class="feature-title" data-i18n="features.f2Title">Okuma Süresi & Doyum Koruması</h3>
+            <h3 class="feature-title" data-i18n="features.f2Title">Okuma Süresi & Doomscrolling Koruması</h3>
             <p class="feature-desc" data-i18n="features.f2Desc">
-              Metin uzunluğuna göre 15 ile 25 saniye arasında akıllı sindirme süresi uygular. Üst bar boyunca ilerleyen ince sayaç tamamlanana kadar yeni üretime ara verilir; refleksif kaydırma yerine gerçek okuma teşvik edilir.
+              Kelime sayısına göre 15 ile 25 saniye arasında akıllı sindirme süresi uygular. Üst bar boyunca ilerleyen 3px sayaç tamamlanana kadar yeni üretime ara verilir; refleksif kaydırma yerine gerçek okuma ve zihinsel doyum teşvik edilir.
             </p>
           </div>
 
-          <!-- Feature 3: Live Stream & Deep Dive -->
+          <!-- Feature 3: 12 Editorial Formats & Deep Dive Sheet -->
           <div class="feature-card">
             <div class="feature-icon-box">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -575,13 +667,13 @@
                 <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
               </svg>
             </div>
-            <h3 class="feature-title" data-i18n="features.f3Title">Canlı Akış & Derinlemesine İnceleme</h3>
+            <h3 class="feature-title" data-i18n="features.f3Title">12 Editoryal Açı & Deep Dive Katmanı</h3>
             <p class="feature-desc" data-i18n="features.f3Desc">
-              Tam ekran dikey sayfalama yapısında kelimeler gerçek zamanlı olarak ekrana akar. İlginizi çeken bir anekdotun perde arkasını merak ettiğinizde tek dokunuşla kapsamlı inceleme katmanını açabilirsiniz.
+              Sıfır dolgu cümlesiyle 40–90 kelimelik doğrulanmış hikayeler üreten 12 dönüşümlü editoryal format. Merakınızı çeken bir anekdotun perde arkasını görmek istediğinizde tek dokunuşla 200 kelimelik Derinlemesine İnceleme (Deep Dive) penceresi açılır.
             </p>
           </div>
 
-          <!-- Feature 4: Community Timeline & @username -->
+          <!-- Feature 4: Community Timeline, Search & Moderation -->
           <div class="feature-card">
             <div class="feature-icon-box">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -591,9 +683,38 @@
                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
               </svg>
             </div>
-            <h3 class="feature-title" data-i18n="features.f4Title">Seçkin Topluluk & Ortak Hafıza</h3>
+            <h3 class="feature-title" data-i18n="features.f4Title">@kullanıcı_adı Topluluğu & Güvenli Tartışma</h3>
             <p class="feature-desc" data-i18n="features.f4Desc">
-              Kendinize özel @kullanıcı_adı kimliğinizle sizi etkileyen hikayeleri topluluk akışında paylaşın. Kişi ve gönderi aramasıyla zevklerinize yakın okurları takip edin, tepkiler ve yorumlarla sohbete katılın.
+              Sign in with Apple, Google veya 3 adımlı @kullanıcı_adı kaydıyla sizi etkileyen yazıları topluluk akışında paylaşın. Kişi ve gönderi aramasıyla zevklerinize yakın okurları takip edin, 5'li ifade sistemi (🔥 🧠 ❤️ 👏 🤯) ve yorumlarla sohbete katılın.
+            </p>
+          </div>
+
+          <!-- Feature 5: Letterboxd RSS Diary Synthesis -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="2" y="2" width="20" height="20" rx="3"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="features.f5Title">Letterboxd İzleme Günlüğü Sentezi</h3>
+            <p class="feature-desc" data-i18n="features.f5Desc">
+              Film kategorisinde yer alan özel Letterboxd kartıyla herkese açık RSS günlüğünüzdeki son 50 filmi şifresiz bağlayın. Şef, izlediğiniz filmlerden rastgele birini seçip doğrulanmış kamera arkası prodüksiyon sırlarını önünüze getirsin.
+            </p>
+          </div>
+
+          <!-- Feature 6: ShareCardView & Offline Categorized Bookmarks -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="features.f6Title">Kağıt Paylaşım Kartı & 12'li Koleksiyonlar</h3>
+            <p class="feature-desc" data-i18n="features.f6Desc">
+              Beğendiğiniz hikayeleri #F5F0E8 kağıt dokusunda 1080×1350 yüksek çözünürlüklü görsel kart olarak dışa aktarın. Kaydettiğiniz gönderiler 12 ana kültür kategorisine göre otomatik sınıflandırılarak çevrimdışı okuma arşivinize eklenir.
             </p>
           </div>
         </div>
@@ -606,7 +727,7 @@
     <section class="section" id="philosophy">
       <div class="container">
         <div class="philosophy-card">
-          <div class="section-header" style="margin-bottom: 24px;">
+          <div class="section-header phil-header">
             <div class="section-tag" data-i18n="phil.tag">Felsefemiz</div>
             <h2 class="section-title" data-i18n="phil.title">Şefe Güvenmek</h2>
             <p class="section-desc" data-i18n="phil.desc">
@@ -623,19 +744,19 @@
               </div>
               <ul class="comparison-list">
                 <li class="comparison-item">
-                  <span>—</span>
+                  <span class="comp-symbol">—</span>
                   <span data-i18n="phil.bad1">Sonsuz ve doyumsuz kaydırma döngüsü (doomscrolling)</span>
                 </li>
                 <li class="comparison-item">
-                  <span>—</span>
+                  <span class="comp-symbol">—</span>
                   <span data-i18n="phil.bad2">Öfke ve anlık tıklama odaklı yüzeysel başlıklar</span>
                 </li>
                 <li class="comparison-item">
-                  <span>—</span>
+                  <span class="comp-symbol">—</span>
                   <span data-i18n="phil.bad3">Reklamlar, sponsorlu gürültü ve görsel karmaşa</span>
                 </li>
                 <li class="comparison-item">
-                  <span>—</span>
+                  <span class="comp-symbol">—</span>
                   <span data-i18n="phil.bad4">Uygulamadan çıkınca hissedilen zihinsel yorgunluk</span>
                 </li>
               </ul>
@@ -649,19 +770,19 @@
               </div>
               <ul class="comparison-list">
                 <li class="comparison-item">
-                  <span>+</span>
+                  <span class="comp-symbol">+</span>
                   <span data-i18n="phil.good1">Metni sindirten 15–25 saniyelik akıllı okuma temposu</span>
                 </li>
                 <li class="comparison-item">
-                  <span>+</span>
+                  <span class="comp-symbol">+</span>
                   <span data-i18n="phil.good2">12 kültür alanında doğrulanmış, zamansız mikro-hikayeler</span>
                 </li>
                 <li class="comparison-item">
-                  <span>+</span>
+                  <span class="comp-symbol">+</span>
                   <span data-i18n="phil.good3">Sıfır reklam, mürekkep ve kağıt sadeliğinde monokrom arayüz</span>
                 </li>
                 <li class="comparison-item">
-                  <span>+</span>
+                  <span class="comp-symbol">+</span>
                   <span data-i18n="phil.good4">Okuma sonrası kalıcı merak ve zihinsel berraklık</span>
                 </li>
               </ul>
@@ -684,7 +805,7 @@
         <div class="faq-list">
           <!-- Item 1 -->
           <div class="faq-item">
-            <button class="faq-question">
+            <button type="button" class="faq-question">
               <span data-i18n="faq.q1">Omakase nasıl çalışır?</span>
               <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -692,13 +813,13 @@
               </svg>
             </button>
             <div class="faq-answer" data-i18n="faq.a1">
-              Omakase, 12 ana kültür kategorisinden seçtiğiniz alt konuları veya kendi yazdığınız özel başlıkları Google Cloud Run ve Gemini 3.5 Flash modelleriyle gerçek zamanlı olarak doğrulanmış, derinlikli mikro-hikayelere dönüştüren yerel bir iOS uygulamasıdır.
+              Omakase, 12 ana kültür kategorisinden seçtiğiniz hiper-spesifik alt konuları, kendi yazdığınız özel başlıkları veya Letterboxd günlüğünüzü Google Cloud Run ve Gemini 3.5 Flash modelleriyle gerçek zamanlı olarak doğrulanmış, derinlikli mikro-hikayelere dönüştüren yerel bir iOS uygulamasıdır.
             </div>
           </div>
 
           <!-- Item 2 -->
           <div class="faq-item">
-            <button class="faq-question">
+            <button type="button" class="faq-question">
               <span data-i18n="faq.q2">Okuma süresi sayacı (Reading Cooldown) neden var?</span>
               <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -712,7 +833,7 @@
 
           <!-- Item 3 -->
           <div class="faq-item">
-            <button class="faq-question">
+            <button type="button" class="faq-question">
               <span data-i18n="faq.q3">İçeriklerin doğruluğu nasıl korunuyor?</span>
               <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -720,21 +841,49 @@
               </svg>
             </button>
             <div class="faq-answer" data-i18n="faq.a3">
-              Arka uç mimarimiz, katı doğruluk kuralları ve çift katmanlı moderasyon filtreleriyle kurgusal uydurmaları engeller; yüzeysel özetler yerine belgelenmiş tarihsel kayıtlara, bilimsel çalışmalara ve birincil kaynaklara odaklanır.
+              Arka uç mimarimiz, katı doğruluk kuralları ve çok katmanlı moderasyon filtreleriyle kurgusal uydurmaları engeller; yüzeysel özetler yerine belgelenmiş tarihsel kayıtlara, bilimsel çalışmalara ve birincil kaynaklara odaklanır.
             </div>
           </div>
 
           <!-- Item 4 -->
           <div class="faq-item">
-            <button class="faq-question">
-              <span data-i18n="faq.q4">Topluluk sekmesinde neler yapabilirim?</span>
+            <button type="button" class="faq-question">
+              <span data-i18n="faq.q4">Letterboxd entegrasyonu nasıl çalışır?</span>
               <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
             </button>
             <div class="faq-answer" data-i18n="faq.a4">
-              Kişisel akışınızda beğendiğiniz bir şef yazısını tek dokunuşla kendi @kullanıcı_adı profiliniz üzerinden toplulukla paylaşabilir, diğer okurları arayıp takip edebilir, gönderilere ifade bırakabilir ve yorumlarda tartışabilirsiniz.
+              Film kategorisindeki Letterboxd kartına veya Profil sekmesine sadece kullanıcı adınızı girmeniz yeterlidir; şifreniz asla istenmez. Uygulama herkese açık RSS günlüğünüzden son 50 filminizi okur ve her dokunuşta izlediğiniz bir filmin belgelenmiş kamera arkası prodüksiyon hikayesini üretir.
+            </div>
+          </div>
+
+          <!-- Item 5 -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span data-i18n="faq.q5">Topluluk ve koleksiyon özelliklerinde neler var?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a5">
+              Beğendiğiniz bir şef yazısını @kullanıcı_adı profilinizle topluluk akışında paylaşabilir, #F5F0E8 kağıt tasarımlı görsel kart olarak dışa aktarabilir veya 12 kategoriye göre otomatik düzenlenen çevrimdışı koleksiyonlarınıza kaydedebilirsiniz.
+            </div>
+          </div>
+
+          <!-- Item 6 -->
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span data-i18n="faq.q6">Veri gizliliği ve hesap güvenliği nasıl sağlanıyor?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a6">
+              Omakase reklam göstermez, uygulamalar arası takip (IDFA) yapmaz ve verilerinizi üçüncü taraflara satmaz. Sign in with Apple desteği sunar ve dilediğiniz an Profil sekmesinden hesabınızı ve tüm verilerinizi tek dokunuşla kalıcı olarak silmenize olanak tanır.
             </div>
           </div>
         </div>
@@ -749,7 +898,7 @@
         <div class="cta-banner">
           <h2 class="section-title" data-i18n="cta.title">Zihinsel Damak Tadınızı Besleyin</h2>
           <p class="section-desc" data-i18n="cta.desc">
-            Omakase iOS için yayında. Günlük merak ritüelinize başlamak için hemen indirin veya TestFlight erken erişim listesine katılın.
+            Omakase iOS 17+ için hazır. Günlük merak ritüelinize başlamak için hemen indirin veya TestFlight erken erişim listesine katılın.
           </p>
 
           <div class="cta-actions">
@@ -788,22 +937,23 @@
 
       <div class="footer-bottom">
         <p data-i18n="footer.copy">© 2026 Omakase. Mürekkep ve kağıt sadeliğiyle iOS için tasarlandı.</p>
-        <p>iOS 17+ • SwiftUI</p>
+        <p>iOS 17+ • SwiftUI • Gemini 3.5 Flash</p>
       </div>
     </div>
   </footer>
 
   <!-- ==========================================================================
-       MODAL / SHEET (DEEP DIVE READER)
+       MODAL 1: DEEP DIVE READER SHEET (DeepDiveSheetView Replica)
        ========================================================================== -->
-  <div class="modal-backdrop" id="deep-dive-modal">
+  <div class="modal-backdrop" id="deep-dive-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal-sheet">
       <div class="modal-drag-handle"></div>
       <div class="modal-header">
         <div class="modal-header-title">
+          <span class="modal-fish-icon">🐟</span>
           <span id="modal-title">Derinlemesine İnceleme: Kodak 65mm B&W</span>
         </div>
-        <button class="modal-close-btn" id="btn-close-modal" aria-label="Kapat">
+        <button type="button" class="modal-close-btn" id="btn-close-modal" aria-label="Kapat">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -811,6 +961,40 @@
         </button>
       </div>
       <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 2: SHARE CARD PREVIEW (ShareCardView #F5F0E8 1080x1350 Replica)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="share-card-modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-heading">
+    <div class="modal-sheet share-modal-sheet">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span id="share-modal-heading" data-i18n="shareModal.heading">Paylaşım Kartı Önizlemesi (1080 × 1350)</span>
+        </div>
+        <button type="button" class="modal-close-btn" id="btn-close-share-modal" aria-label="Kapat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body share-modal-body">
+        <!-- #F5F0E8 Paper Card matching ShareCardView.swift -->
+        <div class="paper-share-card">
+          <div class="paper-card-brand">OMAKASE</div>
+          <div class="paper-card-content">
+            <h4 class="paper-card-title" id="paper-card-title">Oppenheimer ve IMAX 70mm'nin Görsel Ağırlığı</h4>
+            <p class="paper-card-text" id="paper-card-text"></p>
+          </div>
+          <div class="paper-card-footer">
+            <div class="paper-card-tags" id="paper-card-tags"></div>
+            <div class="paper-card-date" id="paper-card-date">15 Kasım 2026</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
