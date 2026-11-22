@@ -397,7 +397,7 @@ struct BookmarkDetailView: View {
                                 .font(.title3)
                                 .foregroundStyle(OmakaseTheme.ink)
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive")
+                                Text(l10n.lang == .turkish ? "Derin İnceleme" : "Deep Dive")
                                     .font(.subheadline.bold())
                                     .foregroundStyle(OmakaseTheme.ink)
                                 Text(deepDivePreview(deepDive))
@@ -501,7 +501,7 @@ struct BookmarkDetailView: View {
         .sheet(isPresented: $showDeepDiveSheet) {
             DeepDiveReaderSheet(
                 text: Post.sanitizeTemplateLabels(from: entry.deepDiveText ?? ""),
-                title: l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive"
+                title: l10n.lang == .turkish ? "Derin İnceleme" : "Deep Dive"
             )
             .environment(\.appLanguage, appLanguage)
         }

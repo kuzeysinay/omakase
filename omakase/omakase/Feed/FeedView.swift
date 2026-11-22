@@ -661,7 +661,7 @@ private struct ReelsPostCard: View {
                 HStack(spacing: 6) {
                     Image(systemName: "fish.fill")
                         .foregroundStyle(.primary)
-                    Text(l10n.lang == .turkish ? "Derinlemesine inceleme yazılıyor…" : "Writing deep dive…")
+                    Text(l10n.lang == .turkish ? "Derin inceleme yazılıyor…" : "Writing deep dive…")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     ProgressView().controlSize(.mini)
@@ -980,7 +980,7 @@ private struct ReelsPostCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .navigationTitle(l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive")
+            .navigationTitle(l10n.lang == .turkish ? "Derin İnceleme" : "Deep Dive")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

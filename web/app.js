@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
       "action.share": "Paylaş",
       "action.export": "Dışa Aktar",
       "action.save": "Kaydet",
-      "action.deepdive": "Derinlemesine İncele",
+      "action.deepdive": "Derin İncele",
 
       "shareModal.heading": "Paylaşım Kartı Önizlemesi (1080 × 1350)",
 
@@ -295,21 +295,21 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 20:17",
         body: "Christopher Nolan, Oppenheimer'ı çekerken 65mm IMAX siyah-beyaz filmi dünyada ilk kez Kodak'a özel olarak ürettirdi. Standart IMAX projektörleri bu 18 kilometrelik, 272 kiloluk devasa makarayı çevirirken platoda duyulan mekanik ses, sahnenin kendisinden bile daha hipnotize ediciydi. Nolan'a göre bu bir nostalji değil; izleyicinin göz bebeklerine kadar uzanan somut bir gerçeklik arayışıydı.",
         tags: ["Film", "ChristopherNolan", "Imax70Mm"],
-        deepDiveTitle: "Derinlemesine İnceleme: Kodak 65mm Siyah-Beyaz Emülsiyonu",
+        deepDiveTitle: "Derin İnceleme: Kodak 65mm Siyah-Beyaz Emülsiyonu",
         deepDiveBody: "IMAX formatında daha önce hiç 65mm siyah-beyaz film şeridi üretilmemişti. Kodak mühendisleri Nolan ve görüntü yönetmeni Hoyte van Hoytema'nın talebiyle fotokimyasal gren yapısını sıfırdan tasarladı. Film şeridinin kalınlığı standart filmlere göre daha farklıydı; kameraların vakumlu mekanizmaları bu şeridi taşırken yeniden kalibre edildi. Ortaya çıkan görüntü, dijital sensörlerin ulaşamayacağı organik bir ışık derinliği sundu.",
         variants: {
           1: {
             title: "Stanley Kubrick ve NASA'nın Mum Işığı Lensi (f/0.7)",
             body: "Stanley Kubrick, 1975 yapımı Barry Lyndon'da 18. yüzyıl saraylarını yapay set ışıkları olmadan, yalnızca gerçek balmumu mumlarıyla çekmek istedi. Bunun için NASA'nın Apollo görevlerinde Ay'ın karanlık yüzünü fotoğraflamak için Carl Zeiss'a ürettirdiği 50mm f/0.7 lensleri satın aldı. Alan derinliği o kadar inceydi ki oyuncular birkaç santim kıpırdasa netlik kayboluyordu.",
             tags: ["Film", "StanleyKubrick", "CarlZeiss"],
-            deepDiveTitle: "Derinlemesine İnceleme: Zeiss Planar 50mm f/0.7 Modifikasyonu",
+            deepDiveTitle: "Derin İnceleme: Zeiss Planar 50mm f/0.7 Modifikasyonu",
             deepDiveBody: "Dünyada yalnızca 10 adet üretilen Zeiss 50mm f/0.7 lensleri aslında fotoğraf kameraları içindi. Kubrick, mühendis Ed DiGiulio ile çalışarak Mitchell BNC sinema kamerasının gövdesini freze makinesiyle oyup lensin arka elemanını film şeridine sadece 4 milimetre kalacak şekilde yerleştirdi."
           },
           3: {
             title: "Letterboxd Sentezi: Chungking Express (1994) ve Gerilla Kamerası",
             body: "Wong Kar-wai, Ashes of Time'ın kurgu stresinden kaçmak için Hong Kong sokaklarında senaryosuz ve ruhsatsız bir ara proje olarak Chungking Express'i sadece 23 günde çekti. Görüntü yönetmeni Christopher Doyle, kalabalık Chungking Mansions koridorlarında saniyede 8 kare (step-printing) tekniği kullanarak aşıkların yalnızlığını bulanık bir zaman akışının ortasında dondurdu.",
             tags: ["Film", "Letterboxd", "WongKarWai"],
-            deepDiveTitle: "Derinlemesine İnceleme: Step-Printing ve 10.000 Kutu Ananas",
+            deepDiveTitle: "Derin İnceleme: Step-Printing ve 10.000 Kutu Ananas",
             deepDiveBody: "Filmde deklanşör hızı düşürülüp kareler optik yazıcıda çoğaltılarak (step-printing) arka plandaki Hong Kong kalabalığı soyut bir boya darbesine dönüştürüldü. Bu teknik, karakterlerin içsel hızıyla şehrin mekanik hızı arasındaki kopukluğu sinema tarihinin en ikonik görsel imzalarından biri haline getirdi."
           }
         }
@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 14:32",
         body: "1972'de Fransız fizikçi Francis Perrin, Gabon'daki Oklo madeninden gelen uranyum cevherinde doğada her yerde sabit olan U-235 oranının beklenenden düşük olduğunu fark etti. İncelemeler şaşırtıcı bir gerçeği ortaya çıkardı: 2 milyar yıl önce yeraltı sularının nötron yavaşlatıcı görevi görmesiyle Oklo'da kendi kendine başlayan doğal bir nükleer fisyon reaktörü yüz binlerce yıl boyunca çalışmıştı.",
         tags: ["Bilim", "NükleerFizik", "Jeoloji"],
-        deepDiveTitle: "Derinlemesine İnceleme: Yeraltı Suyu Geri Besleme Döngüsü",
+        deepDiveTitle: "Derin İnceleme: Yeraltı Suyu Geri Besleme Döngüsü",
         deepDiveBody: "Oklo'daki doğal reaktörün patlamadan yüz binlerce yıl düzenli çalışabilmesinin sırrı, yeraltı suyunun doğal bir termostat gibi davranmasıydı. Fisyon hızlandığında su kaynayıp buharlaşıyor, nötronları yavaşlatacak su kalmayınca reaksiyon kendiliğinden duruyordu. Kayaçlar soğuyup su tekrar dolduğunda reaktör yeniden devreye giriyordu."
       },
       en: {
@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 09:15",
         body: "Roma'nın en etkili düşünürlerinden Seneca, mülkünü birine kaptıranların çıkardığı yaygarayla günlerini başkalarına dağıtanların kayıtsızlığını kıyaslar. Hayat kısa değildir; biz onu fazlasıyla savurganca harcarız. Sahte meşguliyetler, insanın kendi zihniyle baş başa kalma korkusunun en zarif maskesidir.",
         tags: ["Felsefe", "Stoacılık", "Seneca"],
-        deepDiveTitle: "Derinlemesine İnceleme: De Brevitate Vitae ve Otium Kavramı",
+        deepDiveTitle: "Derin İnceleme: De Brevitate Vitae ve Otium Kavramı",
         deepDiveBody: "Seneca 'De Brevitate Vitae' (Hayatın Kısalığı Üzerine) risalesinde zamanı geri kazanılamaz tek varlık olarak tanımlar. Antik Roma'da 'otium' (bilinçli dinginlik), tembellik değil; geçmişin bilgeleriyle okuma ve tefekkür yoluyla kurulan zamansız dostluktur."
       },
       en: {
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 23:40",
         body: "1950'lerde Sovyetler Birliği'nde Batı cazı ve rock'n'roll plakları yasaklanınca, Leningradlı yeraltı ses mühendisleri hastanelerin çöpe attığı kullanılmış röntgen filmlerini topladı. Kırık kemik ve kafatası görüntülerinin üzerine el yapımı torna makineleriyle Ella Fitzgerald ve Miles Davis kayıtları kazındı; 'Roentgenizdat' adı verilen bu plaklar müzik tarihinin en sıra dışı direniş nesnesi oldu.",
         tags: ["Müzik", "Roentgenizdat", "CazTarihi"],
-        deepDiveTitle: "Derinlemesine İnceleme: Kemiklerdeki Müzik (Music on Ribs)",
+        deepDiveTitle: "Derin İnceleme: Kemiklerdeki Müzik (Music on Ribs)",
         deepDiveBody: "Hastaneler yangın tehlikesi nedeniyle röntgen filmlerini yılda bir kez imha etmek zorundaydı. Genç mühendisler bu filmleri makasla daire şeklinde kesip ortasını sigara ateşiyle delerek 78 devirli tek yüzlü plaklara dönüştürdü. Ses kalitesi cızırtılıydı ve sadece 5–10 dinlemeye dayanıyordu ama yasaklı melodileri elden ele dolaştırmaya yetti."
       },
       en: {
@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 11:05",
         body: "Osaka'daki Işık Kilisesi'nde Tadao Ando, haçı altın ya da mermerle değil; çıplak beton duvara açtığı dikey ve yatay yarıklardan içeri sızan gün ışığıyla inşa etti. Güneş hareket ettikçe kilisenin içindeki ışık kesişimi yer değiştirir. Ando için mimarlık bir form değil, doğanın mekana bıraktığı gölgedir.",
         tags: ["Sanat", "TadaoAndo", "Mimari"],
-        deepDiveTitle: "Derinlemesine İnceleme: Japon 'Ma' (Boşluk) Estetiği",
+        deepDiveTitle: "Derin İnceleme: Japon 'Ma' (Boşluk) Estetiği",
         deepDiveBody: "Ando'nun pürüzsüz ipek betonu, ahşap kalıpların özenle verniklenmesiyle elde edilir. Betonun soğuk endüstriyel dokusu, yarıktan sızan ışığın sıcaklığıyla dengelenir. Bu yaklaşım, Japon estetiğindeki 'Ma' (anlamlı boşluk) kavramının modern mimarideki en saf karşılığıdır."
       },
       en: {
@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 16:40",
         body: "1901'de Ege Denizi'ndeki bir Roma batığından çıkarılan paslı bronz kütle, X-ışını tomografisiyle incelendiğinde içinden 30'dan fazla hassas dişli çark çıktı. MÖ 2. yüzyılda yapılan Antikythera düzeneği, güneş ve ay tutulmalarını on yıllar öncesinden hesaplayabilen avuç içi boyutunda bir astronomik bilgisayardı.",
         tags: ["Tarih", "AntikYunan", "Arkeoloji"],
-        deepDiveTitle: "Derinlemesine İnceleme: Kayıp Helenistik Mühendislik",
+        deepDiveTitle: "Derin İnceleme: Kayıp Helenistik Mühendislik",
         deepDiveBody: "Düzeneğin en çarpıcı parçası, Ay'ın eliptik yörüngesindeki hız değişimini simüle eden 'pim ve yuvalı' epikiklik dişli sistemidir. Bu seviyedeki diferansiyel dişli teknolojisi, Antikythera'dan sonra ancak 14. yüzyıl Avrupa mekanik saatlerinde yeniden ortaya çıkabilmiştir."
       },
       en: {
@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 17:10",
         body: "1969'da Apollo 11 Ay yüzeyine inerken rehber bilgisayarın (AGC) yazılımı silikon çiplerde değil, tekstil işçisi kadınların iğnelerle ferit halkaların içinden geçirdiği bakır tellerde saklanıyordu. Tel halkanın içinden geçerse '1', etrafından dolanırsa '0' oluyordu. Kozmik radyasyondan etkilenmeyen bu fiziksel dokuma, insanlığı Ay'a hatasız indirdi.",
         tags: ["Teknoloji", "Apollo11", "BilgisayarTarihi"],
-        deepDiveTitle: "Derinlemesine İnceleme: Margaret Hamilton ve Core Rope Mimarisi",
+        deepDiveTitle: "Derin İnceleme: Margaret Hamilton ve Core Rope Mimarisi",
         deepDiveBody: "MIT mühendisleri bu belleğe sevgiyle 'LOL (Little Old Lady) Memory' adını vermişti. Fabrika dokumacıları tarafından tek tek elle işlenen 72 kilobyte'lık bu salt okunur bellek, iniş anında radar aşırı yüklenmesine rağmen Margaret Hamilton'ın öncelik tabanlı görev zamanlayıcısı sayesinde çökmeden çalışmaya devam etti."
       },
       en: {
@@ -474,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 19:05",
         body: "Tokyo'nun geleneksel omakase tezgahlarında bir şefin ustalığı balığın nadirliğiyle değil, 'shari' adı verilen sirkeli pirincin sıcaklığı ve dokusuyla ölçülür. Balık dilimi (neta) ile vücut sıcaklığındaki pirinç ağızda buluştuğunda, tanelerin arasında kalan mikroskobik hava boşlukları lezzetin dağılma hızını belirler.",
         tags: ["Yemek", "JaponMutfağı", "Gastronomi"],
-        deepDiveTitle: "Derinlemesine İnceleme: Kızıl Sirke (Akazu) ve Edomae Geleneği",
+        deepDiveTitle: "Derin İnceleme: Kızıl Sirke (Akazu) ve Edomae Geleneği",
         deepDiveBody: "19. yüzyıl Edo (Tokyo) döneminde buzdolabı yokken şefler, yıllandırılmış sake tortusundan üretilen kızıl sirkeyi (akazu) pirince katarak hem koruyuculuk hem de derin bir umami dengesi elde ettiler. Çırakların balığa dokunmadan önce yıllarca sadece pirinç yıkaması bu yüzdendir."
       },
       en: {
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 13:20",
         body: "Bir ormanda yürürken gördüğünüz ağaçlar birbirinden bağımsız sütunlar değildir; toprak altında kilometrelerce uzanan mikorizal mantar iplikçikleriyle (hif) birbirine bağlıdır. Yaşlı 'anne ağaçlar', gölgede kalan genç fidelerin köklerine bu yeraltı ağından karbon, azot ve savunma sinyalleri gönderir.",
         tags: ["Doğa", "Ekoloji", "Mikoriza"],
-        deepDiveTitle: "Derinlemesine İnceleme: Suzanne Simard ve Karbon Paylaşımı",
+        deepDiveTitle: "Derin İnceleme: Suzanne Simard ve Karbon Paylaşımı",
         deepDiveBody: "Orman ekologu Suzanne Simard, radyoaktif karbon izotopları kullanarak köknar ve huş ağaçlarının mevsimlere göre birbirine besin aktardığını kanıtladı. Yazın yapraklı huş ağacı gölgedeki köknara karbon gönderirken, kışın yaprak dökmeyen köknar borcunu geri öder."
       },
       en: {
@@ -516,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 10:15",
         body: "Kyoto'nun batısındaki Saiho-ji (Yosun Tapınağı) bahçesine girmeden önce ziyaretçiler sessizce fırça kaligrafisiyle sutralar kopyalar. Dışarı adım attığınızda sizi çiçekler değil, zemini zümrüt bir halı gibi kaplayan 120 farklı yosun türü karşılar. Yağmur sonrası yosunların emdiği ses, bahçeyi mutlak bir akustik sığınağa dönüştürür.",
         tags: ["Seyahat", "Kyoto", "JaponBahçesi"],
-        deepDiveTitle: "Derinlemesine İnceleme: Muso Soseki ve Wabi-Sabi Peyzajı",
+        deepDiveTitle: "Derin İnceleme: Muso Soseki ve Wabi-Sabi Peyzajı",
         deepDiveBody: "1339'da Zen ustası Muso Soseki tarafından yeniden düzenlenen bahçe, başlangıçta beyaz kumlarla kaplıydı. Yüzyıllar içinde Kyoto'nun nemli iklimi ve seller bahçeyi yosunlarla örttü; Japon estetiği bu doğa müdahalesini temizlemek yerine 'wabi-sabi' (zamanın bıraktığı kusurlu güzellik) olarak kutsadı."
       },
       en: {
@@ -537,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 21:00",
         body: "Johan Cruyff için futbol topla oynanan fiziksel bir koşu yarışı değil, zamana ve mekana hükmetme geometrisiydi. 'Top sende değilken ne yaptığın, sahanın büyüklüğünü belirler' derdi. Hücum ederken sahayı olabildiğince genişletmek, top kaybedildiğinde ise saniyeler içinde daraltmak modern futbolun temel aksiyomu oldu.",
         tags: ["Spor", "FutbolTaktikleri", "JohanCruyff"],
-        deepDiveTitle: "Derinlemesine İnceleme: Total Futbol ve Pozisyonel Oyun",
+        deepDiveTitle: "Derin İnceleme: Total Futbol ve Pozisyonel Oyun",
         deepDiveBody: "Rinus Michels ve Cruyff'un Ajax ile geliştirdiği Total Futbol, sabit mevki kavramını yıktı. Bir bek ileri çıktığında bir orta saha oyuncusu onun bıraktığı boşluğu dolduruyor; böylece takım şeklini kaybetmeden saha üzerindeki üçgenleri sürekli yeniden kuruyordu."
       },
       en: {
@@ -558,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
         date: "Bugün • 22:15",
         body: "Fumito Ueda, Shadow of the Colossus'u tasarlarken 'eksiltme yoluyla tasarım' (design by subtraction) adını verdiği bir yöntem uyguladı. Geleneksel oyunlardaki zindanları, küçük düşmanları ve kalabalık kasabaları tamamen sildi. Geriye sadece rüzgarlı uçsuz bucaksız bir yasak toprak, atınız ve 16 devasa varlıkla yüzleşmenin melankolisi kaldı.",
         tags: ["Oyun", "OyunTasarımı", "FumitoUeda"],
-        deepDiveTitle: "Derinlemesine İnceleme: Eksiltme Yoluyla Tasarım (Design by Subtraction)",
+        deepDiveTitle: "Derin İnceleme: Eksiltme Yoluyla Tasarım (Design by Subtraction)",
         deepDiveBody: "Ueda'ya göre bir oyunun duygusal ağırlığı ekrana eklenen sistemlerle değil, ana temayla ilgisi olmayan her şeyin çıkarılmasıyla artar. Boş arazide dakikalarca sadece rüzgar ve nal sesi dinleyerek yolculuk etmek, karşılaşma anının dramatik etkisini katbekat büyütür."
       },
       en: {

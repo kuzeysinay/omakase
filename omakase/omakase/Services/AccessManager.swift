@@ -362,7 +362,7 @@ final class AccessManager {
                 return
             }
             if let decoded = try? JSONDecoder().decode(AccessSnapshot.self, from: data) {
-                snapshot = decoded
+                snapshot = normalizeSnapshot(decoded)
             }
         } catch {
             let mapped = OmakaseError.from(error)
@@ -392,7 +392,7 @@ final class AccessManager {
                 guard let http = response as? HTTPURLResponse else { continue }
                 if (200..<300).contains(http.statusCode),
                    let decoded = try? JSONDecoder().decode(AccessSnapshot.self, from: data) {
-                    snapshot = decoded
+                    snapshot = normalizeSnapshot(decoded)
                     return true
                 }
             } catch {
@@ -431,7 +431,7 @@ final class AccessManager {
                 let access: AccessSnapshot
             }
             if let decoded = try? JSONDecoder().decode(RewardResponse.self, from: data) {
-                snapshot = decoded.access
+                snapshot = normalizeSnapshot(decoded.access)
                 return decoded.granted
             }
         } catch {
@@ -448,7 +448,18 @@ final class AccessManager {
             let data = try? JSONSerialization.data(withJSONObject: dict),
             let decoded = try? JSONDecoder().decode(AccessSnapshot.self, from: data)
         else { return }
-        snapshot = decoded
+        snapshot = normalizeSnapshot(decoded)
+    }
+
+    /// Ensures free-tier daily cap aligns with the current 3-plate limit even while older
+    /// server instances or cached responses report 5.
+    private func normalizeSnapshot(_ raw: AccessSnapshot) -> AccessSnapshot {
+        guard !raw.isPro && !rcEntitlementActive else { return raw }
+        var normalized = raw
+        let cappedLimit = min(max(1, raw.platesLimit), 3)
+        normalized.platesLimit = cappedLimit
+        normalized.platesRemaining = max(0, cappedLimit - raw.platesUsed)
+        return normalized
     }
 
     func applyQuotaExceeded(kind: QuotaKind, resetsAt: Date?) {

@@ -295,7 +295,7 @@ struct TimelinePostCard: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 8)
-                .accessibilityLabel(l10n.lang == .turkish ? "Derinlemesine incelemeyi oku" : "Read deep dive")
+                .accessibilityLabel(l10n.lang == .turkish ? "Derin incelemeyi oku" : "Read deep dive")
             }
 
             // Like button (Instagram-style)
@@ -368,7 +368,7 @@ struct TimelinePostCard: View {
     private var deepDiveSheet: some View {
         DeepDiveReaderSheet(
             text: post.deepDiveText ?? "",
-            title: l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive"
+            title: l10n.lang == .turkish ? "Derin İnceleme" : "Deep Dive"
         )
         .environment(\.appLanguage, appLanguage)
     }

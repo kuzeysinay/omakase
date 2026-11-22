@@ -57,7 +57,7 @@ struct L10n {
     var deepDiveA11y: String {
         switch lang {
         case .english: "Deep dive"
-        case .turkish: "Derinlemesine incele"
+        case .turkish: "Derin incele"
         }
     }
 
@@ -1764,7 +1764,7 @@ struct L10n {
     var proFeatureUnlimitedDeepDive: String {
         switch lang {
         case .english: "Unlimited Deep Dives with verified primary sources"
-        case .turkish: "Birincil kaynakçalı sınırsız Derinlemesine İnceleme"
+        case .turkish: "Birincil kaynakçalı sınırsız Derin İnceleme"
         }
     }
 
@@ -1934,7 +1934,7 @@ struct L10n {
     var proShareForDeepDiveCTA: String {
         switch lang {
         case .english: "Tip: Share any plate today to unlock +1 bonus Deep Dive for free."
-        case .turkish: "İpucu: Bugün bir tabak paylaşarak ücretsiz +1 ekstra Derinlemesine İnceleme kazanabilirsin."
+        case .turkish: "İpucu: Bugün bir tabak paylaşarak ücretsiz +1 ekstra Derin İnceleme kazanabilirsin."
         }
     }
 
@@ -1990,7 +1990,7 @@ struct L10n {
     var toastShareBonusGranted: String {
         switch lang {
         case .english: "+1 bonus Deep Dive unlocked for today!"
-        case .turkish: "Bugün için +1 ekstra Derinlemesine İnceleme açıldı!"
+        case .turkish: "Bugün için +1 ekstra Derin İnceleme açıldı!"
         }
     }
 
