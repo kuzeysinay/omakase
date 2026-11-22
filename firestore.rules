@@ -28,6 +28,25 @@ rules_version = '2';
 //   - blockedAt: timestamp (optional)
 //   - displayName: string (optional, <= 100 chars)
 //
+// Subcollection: users/{userId}/devices/{deviceId}
+//   Document ID: <= 128 chars; owner-only.
+//   - fcmToken: string (required, 1..512 chars)
+//   - platform: string (required, must be 'ios')
+//   - language: string (optional, 'en' or 'tr')
+//   - timezone: string (optional, <= 64 chars)
+//   - updatedAt: timestamp (optional)
+//
+// Subcollection: users/{userId}/notification_prefs/{prefId}
+//   Document ID: 'settings'; owner-only.
+//   - dailyReminderEnabled: bool (required)
+//   - reminderHour: int (required, 0..23)
+//   - reminderMinute: int (required, 0..59)
+//   - commentPushEnabled: bool (required)
+//   - dailyDigestEnabled: bool (required)
+//   - timezone: string (required, 1..64 chars)
+//   - language: string (required, 'en' or 'tr')
+//   - updatedAt: timestamp (optional)
+//
 // Collection: shared_posts/{postId}
 //   - authorId: string (required, matches creator UID, immutable)
 //   - authorName: string (required, <= 100 chars)
@@ -66,6 +85,34 @@ rules_version = '2';
 //   - reason: string (optional, <= 1000 chars)
 //   - createdAt: timestamp (optional)
 //
+// Collection: entitlements/{userId}
+//   Server-managed only (written exclusively by Cloud Run Firebase Admin SDK).
+//   - isPro: bool
+//   - status: string
+//   - productId: string/null
+//   - expiresAt: timestamp/string/null
+//   - willRenew: bool
+//   - source: string
+//   - updatedAt: timestamp/string
+//
+// Collection: usage/{docId}
+//   Document ID: {uid}_{yyyymmdd}
+//   Server-managed only (written exclusively by Cloud Run Firebase Admin SDK).
+//   - uid: string
+//   - dayKey: string
+//   - platesUsed: int
+//   - deepDivesUsed: int
+//   - suggestionsUsed: int
+//   - bonusDeepDives: int
+//   - shareBonusClaimed: bool
+//   - updatedAt: string
+//
+// Collection: notification_queue/{docId}
+//   Server-managed only (written and read exclusively by Cloud Run / Cloud Scheduler via Firebase Admin SDK; all client access denied).
+//
+// Collection: notification_cooldowns/{docId}
+//   Server-managed only (written and read exclusively by Cloud Run via Firebase Admin SDK; all client access denied).
+//
 // ===============================================================
 
 service cloud.firestore {
@@ -93,57 +140,194 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUserProfile(data, userId) {
-      return (!('id' in data) || data.id == userId) &&
+      return data.keys().hasOnly([
+          'id',
+          'displayName',
+          'username',
+          'email',
+          'photoURL',
+          'interests',
+          'createdAt',
+          'searchableName',
+          'searchableUsername'
+        ]) &&
+        !data.keys().hasAny([
+          'isPro',
+          'is_pro',
+          'entitlement',
+          'entitlements',
+          'tier',
+          'plan',
+          'subscriptionStatus',
+          'quota',
+          'usage'
+        ]) &&
+        (!('id' in data) || data.id == userId) &&
         (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
         (!('username' in data) || data.username == null || (data.username is string && data.username.size() <= 40)) &&
         (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 254)) &&
         (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 2048)) &&
         (!('interests' in data) || (data.interests is list && data.interests.size() <= 100)) &&
+        (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('searchableName' in data) || (data.searchableName is string && data.searchableName.size() <= 100)) &&
         (!('searchableUsername' in data) || data.searchableUsername == null || (data.searchableUsername is string && data.searchableUsername.size() <= 40));
     }
 
     function isValidFollowDoc(data) {
-      return (!('targetDisplayName' in data) || data.targetDisplayName == null || (data.targetDisplayName is string && data.targetDisplayName.size() <= 100)) &&
+      return data.keys().hasOnly([
+          'followedAt',
+          'targetDisplayName',
+          'followerDisplayName'
+        ]) &&
+        (!('followedAt' in data) || data.followedAt is timestamp) &&
+        (!('targetDisplayName' in data) || data.targetDisplayName == null || (data.targetDisplayName is string && data.targetDisplayName.size() <= 100)) &&
         (!('followerDisplayName' in data) || data.followerDisplayName == null || (data.followerDisplayName is string && data.followerDisplayName.size() <= 100));
     }
 
     function isValidBlockedUserDoc(data) {
-      return (!('blockedUid' in data) || data.blockedUid == null || (data.blockedUid is string && data.blockedUid.size() <= 128)) &&
+      return data.keys().hasOnly([
+          'blockedUid',
+          'blockedAt',
+          'displayName'
+        ]) &&
+        (!('blockedUid' in data) || data.blockedUid == null || (data.blockedUid is string && data.blockedUid.size() <= 128)) &&
+        (!('blockedAt' in data) || data.blockedAt is timestamp) &&
         (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100));
     }
 
     function isValidSharedPost(data) {
-      return data.authorId is string && data.authorId.size() > 0 && data.authorId.size() <= 128 &&
+      return data.keys().hasOnly([
+          'authorId',
+          'authorName',
+          'authorUsername',
+          'authorPhotoURL',
+          'title',
+          'text',
+          'tags',
+          'originalCreatedAt',
+          'sharedAt',
+          'deepDiveText',
+          'reactionCounts',
+          'totalReactions',
+          'commentCount',
+          'reportedBy'
+        ]) &&
+        data.authorId is string && data.authorId.size() > 0 && data.authorId.size() <= 128 &&
         data.title is string && data.title.size() <= 500 &&
         data.text is string && data.text.size() <= 20000 &&
         (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 100)) &&
         (!('authorUsername' in data) || data.authorUsername == null || (data.authorUsername is string && data.authorUsername.size() <= 40)) &&
         (!('authorPhotoURL' in data) || data.authorPhotoURL == null || (data.authorPhotoURL is string && data.authorPhotoURL.size() <= 2048)) &&
         (!('tags' in data) || (data.tags is list && data.tags.size() <= 30)) &&
+        (!('originalCreatedAt' in data) || data.originalCreatedAt is timestamp) &&
+        (!('sharedAt' in data) || data.sharedAt is timestamp) &&
         (!('deepDiveText' in data) || data.deepDiveText == null || (data.deepDiveText is string && data.deepDiveText.size() <= 50000)) &&
+        (!('reactionCounts' in data) || data.reactionCounts == null || (data.reactionCounts is map && data.reactionCounts.size() <= 10)) &&
+        (!('totalReactions' in data) || data.totalReactions == null || (data.totalReactions is int && data.totalReactions >= 0)) &&
+        (!('commentCount' in data) || data.commentCount == null || (data.commentCount is int && data.commentCount >= 0)) &&
         (!('reportedBy' in data) || data.reportedBy == null || (data.reportedBy is list && data.reportedBy.size() <= 1000));
     }
 
     function isValidReaction(data) {
-      return data.emoji is string && data.emoji.size() > 0 && data.emoji.size() <= 32;
+      return data.keys().hasOnly(['emoji', 'reactedAt']) &&
+        data.emoji is string && data.emoji.size() > 0 && data.emoji.size() <= 32 &&
+        (!('reactedAt' in data) || data.reactedAt is timestamp);
     }
 
     function isValidComment(data) {
-      return data.authorId is string && data.authorId.size() > 0 && data.authorId.size() <= 128 &&
+      return data.keys().hasOnly([
+          'authorId',
+          'authorName',
+          'authorPhotoURL',
+          'text',
+          'createdAt',
+          'reportedBy'
+        ]) &&
+        data.authorId is string && data.authorId.size() > 0 && data.authorId.size() <= 128 &&
         data.text is string && data.text.size() > 0 && data.text.size() <= 280 &&
         (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 100)) &&
         (!('authorPhotoURL' in data) || data.authorPhotoURL == null || (data.authorPhotoURL is string && data.authorPhotoURL.size() <= 2048)) &&
+        (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('reportedBy' in data) || data.reportedBy == null || (data.reportedBy is list && data.reportedBy.size() <= 1000));
     }
 
     function isValidModerationReport(data) {
-      return data.reporterUid is string &&
+      return data.keys().hasOnly([
+          'reporterUid',
+          'targetType',
+          'targetId',
+          'postId',
+          'commentId',
+          'reportedAuthorUid',
+          'reason',
+          'createdAt'
+        ]) &&
+        data.reporterUid is string &&
         data.reporterUid == request.auth.uid &&
         data.reporterUid.size() <= 128 &&
         (!('reason' in data) || data.reason == null || (data.reason is string && data.reason.size() <= 1000)) &&
         (!('targetType' in data) || data.targetType == null || (data.targetType is string && data.targetType.size() <= 64)) &&
-        (!('targetId' in data) || data.targetId == null || (data.targetId is string && data.targetId.size() <= 256));
+        (!('targetId' in data) || data.targetId == null || (data.targetId is string && data.targetId.size() <= 256)) &&
+        (!('postId' in data) || data.postId == null || (data.postId is string && data.postId.size() <= 256)) &&
+        (!('commentId' in data) || data.commentId == null || (data.commentId is string && data.commentId.size() <= 256)) &&
+        (!('reportedAuthorUid' in data) || data.reportedAuthorUid == null || (data.reportedAuthorUid is string && data.reportedAuthorUid.size() <= 128)) &&
+        (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    function isValidDeviceDoc(data) {
+      return data.keys().hasOnly([
+          'fcmToken',
+          'platform',
+          'language',
+          'timezone',
+          'updatedAt'
+        ]) &&
+        data.keys().hasAll(['fcmToken', 'platform']) &&
+        data.fcmToken is string &&
+        data.fcmToken.size() > 0 &&
+        data.fcmToken.size() <= 512 &&
+        data.platform is string &&
+        data.platform == 'ios' &&
+        (!('language' in data) || (data.language is string && data.language in ['en', 'tr'])) &&
+        (!('timezone' in data) || (data.timezone is string && data.timezone.size() <= 64)) &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidNotificationPrefs(data) {
+      return data.keys().hasOnly([
+          'dailyReminderEnabled',
+          'reminderHour',
+          'reminderMinute',
+          'commentPushEnabled',
+          'dailyDigestEnabled',
+          'timezone',
+          'language',
+          'updatedAt'
+        ]) &&
+        data.keys().hasAll([
+          'dailyReminderEnabled',
+          'reminderHour',
+          'reminderMinute',
+          'commentPushEnabled',
+          'dailyDigestEnabled',
+          'timezone',
+          'language'
+        ]) &&
+        data.dailyReminderEnabled is bool &&
+        data.reminderHour is int &&
+        data.reminderHour >= 0 &&
+        data.reminderHour <= 23 &&
+        data.reminderMinute is int &&
+        data.reminderMinute >= 0 &&
+        data.reminderMinute <= 59 &&
+        data.commentPushEnabled is bool &&
+        data.dailyDigestEnabled is bool &&
+        data.timezone is string &&
+        data.timezone.size() > 0 &&
+        data.timezone.size() <= 64 &&
+        data.language is string &&
+        data.language in ['en', 'tr'] &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
     // ===============================================================
@@ -152,15 +336,41 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data, userId);
+      allow create: if isOwner(userId) &&
+        !request.resource.data.keys().hasAny([
+          'isPro',
+          'is_pro',
+          'entitlement',
+          'entitlements',
+          'tier',
+          'plan',
+          'subscriptionStatus',
+          'quota',
+          'usage'
+        ]) &&
+        isValidUserProfile(request.resource.data, userId);
       allow update: if isOwner(userId) &&
+        !request.resource.data.keys().hasAny([
+          'isPro',
+          'is_pro',
+          'entitlement',
+          'entitlements',
+          'tier',
+          'plan',
+          'subscriptionStatus',
+          'quota',
+          'usage'
+        ]) &&
         isValidUserProfile(request.resource.data, userId) &&
-        (!('id' in request.resource.data) || !('id' in resource.data) || request.resource.data.id == resource.data.id);
+        (!('id' in resource.data) || ('id' in request.resource.data && request.resource.data.id == resource.data.id)) &&
+        (!('createdAt' in resource.data) || ('createdAt' in request.resource.data && request.resource.data.createdAt == resource.data.createdAt));
       allow delete: if isOwner(userId);
 
       match /following/{targetUid} {
         allow read: if isAuthenticated();
         allow create, update: if isOwner(userId) &&
+          userId != targetUid &&
+          !exists(/databases/$(database)/documents/users/$(targetUid)/blocked_users/$(request.auth.uid)) &&
           isValidFollowDoc(request.resource.data);
         allow delete: if isAuthenticated() &&
           (request.auth.uid == userId || request.auth.uid == targetUid);
@@ -170,6 +380,7 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow create, update: if isAuthenticated() &&
           request.auth.uid == followerUid &&
+          userId != followerUid &&
           !exists(/databases/$(database)/documents/users/$(userId)/blocked_users/$(request.auth.uid)) &&
           isValidFollowDoc(request.resource.data);
         allow delete: if isAuthenticated() &&
@@ -179,6 +390,20 @@ service cloud.firestore {
       match /blocked_users/{blockedUid} {
         allow read, delete: if isOwner(userId);
         allow create, update: if isOwner(userId) && isValidBlockedUserDoc(request.resource.data);
+      }
+
+      match /devices/{deviceId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+          deviceId.size() <= 128 &&
+          isValidDeviceDoc(request.resource.data);
+      }
+
+      match /notification_prefs/{prefId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+          prefId == 'settings' &&
+          isValidNotificationPrefs(request.resource.data);
       }
     }
 
@@ -200,7 +425,8 @@ service cloud.firestore {
         isValidSharedPost(request.resource.data) &&
         (
           (resource.data.authorId == request.auth.uid &&
-           request.resource.data.authorId == resource.data.authorId) ||
+           request.resource.data.authorId == resource.data.authorId &&
+           (!('reportedBy' in resource.data) || request.resource.data.get('reportedBy', []) == resource.data.reportedBy)) ||
           (request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['reactionCounts', 'totalReactions', 'commentCount', 'reportedBy']) &&
            request.resource.data.authorId == resource.data.authorId &&
@@ -243,7 +469,8 @@ service cloud.firestore {
           isValidComment(request.resource.data) &&
           (
             (resource.data.authorId == request.auth.uid &&
-             request.resource.data.authorId == resource.data.authorId) ||
+             request.resource.data.authorId == resource.data.authorId &&
+             (!('reportedBy' in resource.data) || request.resource.data.get('reportedBy', []) == resource.data.reportedBy)) ||
             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportedBy']) &&
              request.resource.data.authorId == resource.data.authorId &&
              request.resource.data.text == resource.data.text &&
@@ -263,6 +490,36 @@ service cloud.firestore {
         request.resource.data.reporterUid == request.auth.uid &&
         isValidModerationReport(request.resource.data);
       allow read, update, delete: if false;
+    }
+
+    // ===============================================================
+    // 4. Server-Managed Entitlements & Daily Usage Quotas
+    // ===============================================================
+
+    // Written exclusively by the Cloud Run backend using Firebase Admin SDK.
+    match /entitlements/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update, delete: if false;
+    }
+
+    // Document ID format: {uid}_{yyyymmdd}; written exclusively by Firebase Admin SDK.
+    match /usage/{docId} {
+      allow read: if isAuthenticated() && docId.matches('^' + request.auth.uid + '_[0-9]{8}$');
+      allow create, update, delete: if false;
+    }
+
+    // ===============================================================
+    // 5. Server-Only Notification Infrastructure
+    // ===============================================================
+
+    // Written and read exclusively by Cloud Run / Cloud Scheduler via Firebase Admin SDK.
+    match /notification_queue/{docId} {
+      allow read, write: if false;
+    }
+
+    // Written and read exclusively by Cloud Run via Firebase Admin SDK.
+    match /notification_cooldowns/{docId} {
+      allow read, write: if false;
     }
 
     // ===============================================================

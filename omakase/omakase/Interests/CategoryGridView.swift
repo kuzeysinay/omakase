@@ -41,6 +41,9 @@ struct CategoryGridView: View {
                 }
             }
         }
+        .task(id: appLanguage) {
+            SubTopicDiscoveryStore.shared.prewarmAllCategories(language: appLanguage, userInterests: interests)
+        }
     }
 
     // MARK: - Actions
@@ -64,38 +67,43 @@ struct CategoryGridView: View {
             return
         }
 
-        // Show fallbacks immediately
-        categorySubInterests[category.id] = category.fallbackInterests(for: appLanguage)
+        // 1. Instant 0ms Fast Path: serve pre-warmed live AI batch if ready
+        if let prewarmed = SubTopicDiscoveryStore.shared.consumePrefetchedBatch(for: category.id, language: appLanguage), !prewarmed.isEmpty {
+            categorySubInterests[category.id] = prewarmed
+            SubTopicDiscoveryStore.shared.replenishInBackground(
+                for: category,
+                language: appLanguage,
+                additionalExcludes: interests + prewarmed
+            )
+            return
+        }
 
-        // Cancel any existing task for this category
+        // 2. Otherwise await in-flight live AI pre-warm, falling back to local 432 ONLY if offline
         expansionTasks[category.id]?.cancel()
-
         loadingCategories.insert(category.id)
 
         expansionTasks[category.id] = Task {
-            do {
-                let results = try await CategoryExpansionService.expand(
-                    category: category.localizedName(for: appLanguage),
-                    existingInterests: interests,
-                    language: appLanguage
-                )
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    if !results.isEmpty {
-                        let filtered = results.filter { suggestion in
-                            ContentModerationService.isAppropriate(suggestion)
-                        }
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            categorySubInterests[category.id] = filtered
-                            loadingCategories.remove(category.id)
-                        }
-                    } else {
-                        loadingCategories.remove(category.id)
-                    }
+            let liveBatch = await SubTopicDiscoveryStore.shared.consumeOrAwaitLiveBatch(
+                for: category,
+                language: appLanguage,
+                additionalExcludes: interests
+            )
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                let resolved: [String]
+                if let liveBatch, !liveBatch.isEmpty {
+                    resolved = liveBatch
+                } else {
+                    resolved = SubTopicDiscoveryStore.shared.drawUnseenCuratedBatch(
+                        for: category,
+                        language: appLanguage,
+                        additionalExcludes: interests,
+                        count: 12
+                    )
                 }
-            } catch {
-                await MainActor.run {
-                    _ = loadingCategories.remove(category.id)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    categorySubInterests[category.id] = resolved
+                    loadingCategories.remove(category.id)
                 }
             }
         }
@@ -259,7 +267,8 @@ private struct SubInterestChip: View {
                 }
                 Text(title)
                     .font(.caption)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
@@ -445,35 +454,48 @@ struct CategoryStripView: View {
                 return
             }
             selectedCategory = category
-            // Show fallbacks immediately
-            subInterests = category.fallbackInterests(for: appLanguage)
         }
 
-        // Fetch AI-powered expansion
         expansionTask?.cancel()
+
+        if let prewarmed = SubTopicDiscoveryStore.shared.consumePrefetchedBatch(for: category.id, language: appLanguage), !prewarmed.isEmpty {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                subInterests = prewarmed
+                isLoading = false
+            }
+            SubTopicDiscoveryStore.shared.replenishInBackground(
+                for: category,
+                language: appLanguage,
+                additionalExcludes: existingInterests + prewarmed
+            )
+            return
+        }
+
         isLoading = true
 
         expansionTask = Task {
-            do {
-                let results = try await CategoryExpansionService.expand(
-                    category: category.localizedName(for: appLanguage),
-                    existingInterests: existingInterests,
-                    language: appLanguage
-                )
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    if !results.isEmpty {
-                        let filtered = results.filter { ContentModerationService.isAppropriate($0) }
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            subInterests = filtered
-                            isLoading = false
-                        }
-                    } else {
-                        isLoading = false
-                    }
+            let liveBatch = await SubTopicDiscoveryStore.shared.consumeOrAwaitLiveBatch(
+                for: category,
+                language: appLanguage,
+                additionalExcludes: existingInterests
+            )
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                let resolved: [String]
+                if let liveBatch, !liveBatch.isEmpty {
+                    resolved = liveBatch
+                } else {
+                    resolved = SubTopicDiscoveryStore.shared.drawUnseenCuratedBatch(
+                        for: category,
+                        language: appLanguage,
+                        additionalExcludes: existingInterests,
+                        count: 12
+                    )
                 }
-            } catch {
-                await MainActor.run { isLoading = false }
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    subInterests = resolved
+                    isLoading = false
+                }
             }
         }
     }

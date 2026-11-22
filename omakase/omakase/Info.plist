@@ -15,6 +15,8 @@
 	</array>
 	<key>OMAKASE_API_URL</key>
 	<string>https://omakase-backend-20235796246.us-central1.run.app</string>
+	<key>REVENUECAT_API_KEY</key>
+	<string>appl_aSOmvGTaNozWPEEZCqafxBSggeh</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

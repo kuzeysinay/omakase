@@ -18,12 +18,17 @@ struct BentoTasteBox: View {
     @Binding var isLetterboxdActive: Bool
     var onResetInterests: (() -> Void)? = nil
     var isGenerating: Bool = false
+    var isOffline: Bool = false
     var isCooldownActive: Bool = false
+
+    private var isGenerationDisabled: Bool {
+        isGenerating || isCooldownActive || isOffline
+    }
     var cooldownRemaining: Int = 0
     var cooldownTotal: Int = 0
     var hasExistingPosts: Bool = false
     var onScrollToLastPost: (() -> Void)? = nil
-    var onSelectDedicatedTopic: ((String) -> Void)? = nil
+    var onSelectDedicatedTopic: ((String, String?) -> Void)? = nil
     var onPromptLetterboxdUsername: (() -> Void)? = nil
     var onSelectLetterboxdPost: (() -> Void)? = nil
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
@@ -44,6 +49,8 @@ struct BentoTasteBox: View {
     @State private var synthesisTaskId: UUID = UUID()
     @State private var currentSubInterests: [String] = []
     @State private var cachedSubInterestsByCategory: [String: [String]] = [:]
+    @State private var prefetchedSubInterestsByCategory: [String: [String]] = [:]
+    @State private var prefetchingCategoryIds: Set<String> = []
     @State private var revealedTilesCount: Int = 0
     @State private var justAddedInterest: String? = nil
 
@@ -103,8 +110,14 @@ struct BentoTasteBox: View {
                 isManualFieldFocused = false
             }
         }
-        .onChange(of: appLanguage) { _, _ in
+        .onChange(of: appLanguage) { _, newLang in
             cachedSubInterestsByCategory.removeAll()
+            prefetchedSubInterestsByCategory.removeAll()
+            prefetchingCategoryIds.removeAll()
+            SubTopicDiscoveryStore.shared.prewarmAllCategories(language: newLang, userInterests: allInterests)
+        }
+        .task(id: appLanguage) {
+            SubTopicDiscoveryStore.shared.prewarmAllCategories(language: appLanguage, userInterests: allInterests)
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.82), value: mode)
     }
@@ -376,10 +389,10 @@ struct BentoTasteBox: View {
             if isFilmCategory {
                 LetterboxdBentoTile(
                     username: storedLetterboxdUsername,
-                    isDisabled: isGenerating || isCooldownActive,
+                    isDisabled: isGenerationDisabled,
                     l10n: l10n,
                     onTap: {
-                        guard !isGenerating && !isCooldownActive else { return }
+                        guard !isGenerationDisabled else { return }
                         let clean = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
                         if clean.isEmpty {
                             onPromptLetterboxdUsername?()
@@ -404,7 +417,7 @@ struct BentoTasteBox: View {
                 SubInterestBentoTile(
                     title: topic,
                     isRevealed: tileIndex < revealedTilesCount,
-                    isDisabled: isGenerating || isCooldownActive,
+                    isDisabled: isGenerationDisabled,
                     isRefreshing: isRefreshingSubInterests,
                     onTap: {
                         selectDedicatedTopic(topic)
@@ -580,7 +593,7 @@ struct BentoTasteBox: View {
             .submitLabel(.go)
             .onSubmit {
                 if !trimmed.isEmpty {
-                    if !isGenerating && !isCooldownActive {
+                    if !isGenerationDisabled {
                         submitCustomTopicForPost()
                     } else {
                         commitManualInput()
@@ -613,8 +626,8 @@ struct BentoTasteBox: View {
                     .foregroundStyle(OmakaseTheme.chipActiveText)
                 }
                 .buttonStyle(.plain)
-                .disabled(isGenerating || isCooldownActive)
-                .opacity((isGenerating || isCooldownActive) ? 0.45 : 1.0)
+                .disabled(isGenerationDisabled)
+                .opacity(isGenerationDisabled ? 0.45 : 1.0)
             }
         }
         .padding(.horizontal, 12)
@@ -648,97 +661,178 @@ struct BentoTasteBox: View {
 
         if refresh {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            isSynthesizing = true
-            withAnimation(.easeInOut(duration: 0.22)) {
-                isRefreshingSubInterests = true
-            }
+        }
 
-            let startTime = CACurrentMediaTime()
-            let excludeList = Array(Set(currentSubInterests + allInterests))
-
-            Task {
-                var freshTopics: [String] = []
-
-                do {
-                    let aiResults = try await CategoryExpansionService.expand(
-                        category: category.localizedName(for: appLanguage),
-                        existingInterests: excludeList,
-                        language: appLanguage
-                    )
-                    guard synthesisTaskId == taskId else { return }
-
-                    let appropriate = aiResults.filter { ContentModerationService.isAppropriate($0) }
-                    if appropriate.count >= 6 {
-                        freshTopics = Array(appropriate.prefix(12))
-                    }
-                } catch {
-                    // Fall back to local pool
+        // 1. Instant 0ms Fast Path: serve pre-warmed or prefetched live AI batch from memory or disk
+        if let readyMemoryBatch = prefetchedSubInterestsByCategory.removeValue(forKey: category.id), !readyMemoryBatch.isEmpty {
+            SubTopicDiscoveryStore.shared.recordSeen(readyMemoryBatch, for: category.id, language: appLanguage)
+            cachedSubInterestsByCategory[category.id] = readyMemoryBatch
+            if refresh {
+                withAnimation(.easeInOut(duration: 0.14)) {
+                    currentSubInterests = readyMemoryBatch
+                    revealedTilesCount = 0
+                    isRefreshingSubInterests = false
                 }
-
-                guard synthesisTaskId == taskId else { return }
-
-                // Ensure we have 12 topics for the 2x6 grid, topping up from fallback pool if needed
-                if freshTopics.count < 12 {
-                    var pool = category.fallbackInterests(for: appLanguage).filter {
-                        !currentSubInterests.contains($0) && !freshTopics.contains($0)
-                    }
-                    pool.shuffle()
-                    freshTopics.append(contentsOf: pool.prefix(12 - freshTopics.count))
-                    if freshTopics.count < 12 {
-                        let fallbackAll = category.fallbackInterests(for: appLanguage).filter { !freshTopics.contains($0) }.shuffled()
-                        freshTopics.append(contentsOf: fallbackAll.prefix(12 - freshTopics.count))
-                    }
-                }
-
-                // Guarantee a perceptible, comfortable transition window (min 450ms)
-                let elapsed = CACurrentMediaTime() - startTime
-                if elapsed < 0.45 {
-                    try? await Task.sleep(nanoseconds: UInt64((0.45 - elapsed) * 1_000_000_000))
-                }
-                guard synthesisTaskId == taskId else { return }
-
-                await MainActor.run {
-                    cachedSubInterestsByCategory[category.id] = freshTopics
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        currentSubInterests = freshTopics
-                        revealedTilesCount = 0
-                        isRefreshingSubInterests = false
-                    }
-                    animateStaggeredTiles(total: freshTopics.count)
-                    isSynthesizing = false
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                }
-            }
-        } else {
-            // Do not auto-refresh on category open; keep existing subtopics as-is
-            let existingTopics: [String]
-            if let cached = cachedSubInterestsByCategory[category.id], !cached.isEmpty {
-                existingTopics = cached
+                animateStaggeredTiles(total: readyMemoryBatch.count)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } else {
-                let initial12 = Array(category.fallbackInterests(for: appLanguage).prefix(12))
-                cachedSubInterestsByCategory[category.id] = initial12
-                existingTopics = initial12
+                currentSubInterests = readyMemoryBatch
+                revealedTilesCount = readyMemoryBatch.count
+                isRefreshingSubInterests = false
             }
-            currentSubInterests = existingTopics
-            revealedTilesCount = existingTopics.count
             isSynthesizing = false
-            isRefreshingSubInterests = false
+            SubTopicDiscoveryStore.shared.replenishInBackground(
+                for: category,
+                language: appLanguage,
+                additionalExcludes: allInterests + readyMemoryBatch
+            )
+            return
+        }
+
+        if let readyDiskBatch = SubTopicDiscoveryStore.shared.consumePrefetchedBatch(for: category.id, language: appLanguage), !readyDiskBatch.isEmpty {
+            cachedSubInterestsByCategory[category.id] = readyDiskBatch
+            if refresh {
+                withAnimation(.easeInOut(duration: 0.14)) {
+                    currentSubInterests = readyDiskBatch
+                    revealedTilesCount = 0
+                    isRefreshingSubInterests = false
+                }
+                animateStaggeredTiles(total: readyDiskBatch.count)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } else {
+                currentSubInterests = readyDiskBatch
+                revealedTilesCount = readyDiskBatch.count
+                isRefreshingSubInterests = false
+            }
+            isSynthesizing = false
+            SubTopicDiscoveryStore.shared.replenishInBackground(
+                for: category,
+                language: appLanguage,
+                additionalExcludes: allInterests + readyDiskBatch
+            )
+            return
+        }
+
+        // 2. In-flight Live AI Path (if tapped in the first ~0.8s of launch before silent pre-warm completes):
+        // Coalesces with the already-running launch pre-warm task, falling back to local 432 ONLY if offline/error.
+        isSynthesizing = true
+        withAnimation(.easeInOut(duration: 0.15)) {
+            isRefreshingSubInterests = true
+        }
+
+        let excludeList = Array(Set(currentSubInterests + allInterests))
+
+        Task {
+            let liveBatch = await SubTopicDiscoveryStore.shared.consumeOrAwaitLiveBatch(
+                for: category,
+                language: appLanguage,
+                additionalExcludes: excludeList
+            )
+            guard synthesisTaskId == taskId else { return }
+
+            let resolvedTopics: [String]
+            if let liveBatch, !liveBatch.isEmpty {
+                resolvedTopics = liveBatch
+            } else {
+                // Offline-only backup: use local 432 curated pool only when network/API is unreachable
+                resolvedTopics = SubTopicDiscoveryStore.shared.drawUnseenCuratedBatch(
+                    for: category,
+                    language: appLanguage,
+                    additionalExcludes: excludeList,
+                    count: 12
+                )
+            }
+
+            await MainActor.run {
+                cachedSubInterestsByCategory[category.id] = resolvedTopics
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    currentSubInterests = resolvedTopics
+                    revealedTilesCount = 0
+                    isRefreshingSubInterests = false
+                }
+                animateStaggeredTiles(total: resolvedTopics.count)
+                isSynthesizing = false
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+        }
+    }
+
+    private func buildSubInterestBatch(
+        for category: InterestCategory,
+        excluding excludeList: [String]
+    ) async -> [String] {
+        var freshTopics: [String] = []
+        do {
+            let aiResults = try await CategoryExpansionService.expand(
+                category: category.localizedName(for: appLanguage),
+                existingInterests: excludeList,
+                language: appLanguage
+            )
+            let lowerExcludes = Set(excludeList.map { $0.lowercased() })
+            let appropriate = aiResults.filter {
+                ContentModerationService.isAppropriate($0) && !lowerExcludes.contains($0.lowercased())
+            }
+            if appropriate.count >= 6 {
+                freshTopics = Array(appropriate.prefix(12))
+            }
+        } catch {
+            // Fall back to local unseen pool
+        }
+
+        if freshTopics.count < 12 {
+            let needed = 12 - freshTopics.count
+            let unseenFill = SubTopicDiscoveryStore.shared.drawUnseenCuratedBatch(
+                for: category,
+                language: appLanguage,
+                additionalExcludes: excludeList + freshTopics,
+                count: needed
+            )
+            freshTopics.append(contentsOf: unseenFill)
+        }
+        return freshTopics
+    }
+
+    private func prefetchNextSubInterests(for category: InterestCategory, currentShown: [String]) {
+        guard prefetchedSubInterestsByCategory[category.id] == nil,
+              !prefetchingCategoryIds.contains(category.id) else { return }
+        prefetchingCategoryIds.insert(category.id)
+        let seenHistory = SubTopicDiscoveryStore.shared.seenTopics(for: category.id, language: appLanguage)
+        let excludeList = Array(Set(currentShown + allInterests + seenHistory))
+        let catId = category.id
+        let lang = appLanguage
+
+        Task {
+            let batch = await buildSubInterestBatch(for: category, excluding: excludeList)
+            await MainActor.run {
+                prefetchingCategoryIds.remove(catId)
+                if !batch.isEmpty {
+                    prefetchedSubInterestsByCategory[catId] = batch
+                    SubTopicDiscoveryStore.shared.storePrefetchedBatch(batch, for: catId, language: lang)
+                }
+            }
         }
     }
 
     private func selectDedicatedTopic(_ topic: String) {
-        guard !isGenerating && !isCooldownActive else { return }
+        guard !isGenerationDisabled else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        let currentCatId: String?
+        if case .subInterests(let category) = mode {
+            currentCatId = category.id
+        } else {
+            currentCatId = InterestCategory.resolveMainCategory(tags: [topic], title: topic).id
+        }
         isManualFieldFocused = false
         resetGridScrollState()
         mode = .rootCategories
-        onSelectDedicatedTopic?(topic)
+        onSelectDedicatedTopic?(topic, currentCatId)
     }
 
     private func animateStaggeredTiles(total: Int) {
+        guard total > 0 else { return }
         for i in 1...total {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.04) {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.015) {
+                withAnimation(.spring(response: 0.22, dampingFraction: 0.8)) {
                     revealedTilesCount = max(revealedTilesCount, i)
                 }
             }
@@ -799,7 +893,7 @@ struct BentoTasteBox: View {
         collectInterest(trimmed)
         manualText = ""
         isManualFieldFocused = false
-        if !isGenerating && !isCooldownActive {
+        if !isGenerationDisabled {
             selectDedicatedTopic(trimmed)
         }
     }
@@ -816,7 +910,7 @@ private struct RootBentoTile: View {
     @State private var isPressed: Bool = false
 
     private var samplePreview: String {
-        Array(category.fallbackInterests(for: language).prefix(2)).joined(separator: " · ")
+        SubTopicDiscoveryStore.shared.rootPreview(for: category, language: language)
     }
 
     var body: some View {
@@ -856,7 +950,7 @@ private struct RootBentoTile: View {
 
                 Spacer(minLength: 4)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(category.localizedName(for: language))
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(isDisabled ? Color.secondary : Color.primary)
@@ -865,12 +959,14 @@ private struct RootBentoTile: View {
                     Text(samplePreview)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(.horizontal, 13)
             .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 96, maxHeight: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 100, maxHeight: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
@@ -917,44 +1013,41 @@ private struct SubInterestBentoTile: View {
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .center) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(OmakaseTheme.wash)
-                            .frame(width: 32, height: 32)
-
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 13.5, weight: .semibold))
-                            .foregroundStyle(isDisabled ? Color.secondary.opacity(0.6) : OmakaseTheme.ink)
-                    }
-                    .scaleEffect(isPressed ? 1.12 : 1.0)
-                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(isDisabled ? Color.secondary.opacity(0.5) : OmakaseTheme.ink.opacity(0.85))
+                        .scaleEffect(isPressed ? 1.12 : 1.0)
+                        .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
 
                     Spacer()
 
                     ZStack {
                         Circle()
                             .fill(Color.primary.opacity(0.05))
-                            .frame(width: 26, height: 26)
+                            .frame(width: 22, height: 22)
 
                         Image(systemName: "arrow.up.right")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(isDisabled ? Color.secondary.opacity(0.3) : Color.secondary)
                     }
                     .offset(x: isPressed ? 1.5 : 0, y: isPressed ? -1.5 : 0)
                     .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
                 }
 
-                Spacer(minLength: 4)
+                Spacer(minLength: 0)
 
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .lineLimit(2)
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .lineSpacing(1.5)
+                    .lineLimit(4)
+                    .minimumScaleFactor(0.80)
+                    .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.leading)
                     .foregroundStyle(isDisabled ? Color.secondary : Color.primary)
             }
-            .padding(.horizontal, 13)
+            .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 94, maxHeight: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 98, maxHeight: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
@@ -1087,7 +1180,7 @@ private struct LetterboxdBentoTile: View {
             }
             .padding(.horizontal, 13)
             .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 94, maxHeight: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 98, maxHeight: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color(hex: 0x14181C))

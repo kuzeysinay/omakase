@@ -16,6 +16,9 @@ actor APITokenProvider {
     static let shared = APITokenProvider()
 
     private var refreshTask: Task<String?, Never>?
+    private var cachedToken: String?
+    private var cachedUID: String?
+    private var cachedTokenExpiry: Date = .distantPast
 
     /// Resolves `OMAKASE_API_URL` from `Info.plist`, falling back to localhost only in `DEBUG` builds.
     nonisolated static let baseURL: URL = {
@@ -42,21 +45,42 @@ actor APITokenProvider {
         return authed
     }
 
-    /// Single-flight token fetch/refresh (`authenticated-requests` Rule 2).
+    /// Single-flight token fetch/refresh with in-memory caching (`authenticated-requests` Rule 2).
     func fetchToken(forceRefresh: Bool = false) async -> String? {
-        if forceRefresh, let existing = refreshTask {
+        let currentUID = await MainActor.run { Auth.auth().currentUser?.uid }
+        guard let currentUID else {
+            cachedToken = nil
+            cachedUID = nil
+            cachedTokenExpiry = .distantPast
+            return nil
+        }
+
+        if
+            !forceRefresh,
+            cachedUID == currentUID,
+            let cachedToken,
+            Date() < cachedTokenExpiry
+        {
+            return cachedToken
+        }
+
+        if let existing = refreshTask {
             return await existing.value
         }
+
         let task = Task<String?, Never> {
-            guard let user = Auth.auth().currentUser else { return nil }
+            guard let user = await MainActor.run(body: { Auth.auth().currentUser }) else { return nil }
             return try? await user.getIDToken(forcingRefresh: forceRefresh)
         }
-        if forceRefresh {
-            refreshTask = task
-        }
+        refreshTask = task
         let token = await task.value
-        if forceRefresh {
-            refreshTask = nil
+        refreshTask = nil
+
+        if let token {
+            cachedToken = token
+            cachedUID = currentUID
+            // Cache for 45 minutes (Firebase ID tokens are valid for 60 minutes)
+            cachedTokenExpiry = Date().addingTimeInterval(45 * 60)
         }
         return token
     }
@@ -67,18 +91,9 @@ struct SSEEvent: Sendable {
     var data: String
 }
 
-enum SSEError: Error, LocalizedError {
-    case badResponse(status: Int)
+enum SSEError: Error, Sendable {
+    case badResponse(status: Int, code: String?, retryAfter: Int?, resetsAt: String?, kind: String?)
     case notEventStream(contentType: String?)
-
-    var errorDescription: String? {
-        switch self {
-        case .badResponse(let status):
-            return "Server returned HTTP \(status)."
-        case .notEventStream(let contentType):
-            return "Expected text/event-stream, got \(contentType ?? "nothing")."
-        }
-    }
 }
 
 /// Opens an SSE connection and yields decoded events.
@@ -89,6 +104,16 @@ enum SSEError: Error, LocalizedError {
 /// for try await event in stream { ... }
 /// ```
 enum SSEClient {
+    /// Shared ephemeral session reused across SSE streams so HTTP/2 TLS connections stay warm
+    /// (`knowledge.networking.url-session-configuration` Rules 1-4).
+    private nonisolated static let streamSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.timeoutIntervalForRequest = 60
+        config.timeoutIntervalForResource = 300
+        return URLSession(configuration: config)
+    }()
+
     /// Not isolated to the main actor so callers can open streams from
     /// `Task.detached` (the app target uses `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`).
     nonisolated static func events(
@@ -115,11 +140,7 @@ enum SSEClient {
                         }
                     }
 
-                    let config = URLSessionConfiguration.ephemeral
-                    config.requestCachePolicy = .reloadIgnoringLocalCacheData
-                    config.timeoutIntervalForRequest = timeout
-                    config.timeoutIntervalForResource = max(timeout, 300)
-                    let session = URLSession(configuration: config)
+                    let session = Self.streamSession
 
                     let authedRequest = await APITokenProvider.shared.authorizedRequest(request)
                     var (bytes, response) = try await session.bytes(for: authedRequest)
@@ -131,10 +152,48 @@ enum SSEClient {
                     }
 
                     guard let http = response as? HTTPURLResponse else {
-                        throw SSEError.badResponse(status: -1)
+                        throw SSEError.badResponse(
+                            status: -1,
+                            code: nil,
+                            retryAfter: nil,
+                            resetsAt: nil,
+                            kind: nil
+                        )
                     }
                     guard (200..<300).contains(http.statusCode) else {
-                        throw SSEError.badResponse(status: http.statusCode)
+                        var errorData = Data()
+                        for try await byte in bytes {
+                            if Task.isCancelled { break }
+                            errorData.append(byte)
+                            if errorData.count >= 8192 { break }
+                        }
+                        var code: String?
+                        var retryAfter: Int?
+                        var resetsAt: String?
+                        var kind: String?
+                        if !errorData.isEmpty,
+                           let obj = try? JSONSerialization.jsonObject(with: errorData) as? [String: Any] {
+                            code = obj["code"] as? String
+                            if let raInt = obj["retry_after"] as? Int {
+                                retryAfter = raInt
+                            } else if let raDouble = obj["retry_after"] as? Double {
+                                retryAfter = Int(ceil(raDouble))
+                            }
+                            resetsAt = obj["resets_at"] as? String
+                            kind = obj["kind"] as? String
+                        }
+                        if retryAfter == nil,
+                           let raHeader = http.value(forHTTPHeaderField: "Retry-After")?.trimmingCharacters(in: .whitespacesAndNewlines),
+                           let parsed = Int(raHeader) {
+                            retryAfter = parsed
+                        }
+                        throw SSEError.badResponse(
+                            status: http.statusCode,
+                            code: code,
+                            retryAfter: retryAfter,
+                            resetsAt: resetsAt,
+                            kind: kind
+                        )
                     }
                     let contentType = (http.value(forHTTPHeaderField: "Content-Type") ?? "").lowercased()
                     guard contentType.contains("text/event-stream") else {

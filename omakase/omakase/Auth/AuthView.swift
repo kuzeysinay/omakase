@@ -786,7 +786,7 @@ struct AuthView: View {
     private var appleButton: some View {
         Button {
             focusedField = nil
-            authService.signInWithApple()
+            authService.signInWithApple(l10n: l10n)
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "apple.logo")
@@ -810,7 +810,7 @@ struct AuthView: View {
         Button {
             focusedField = nil
             Task {
-                await authService.signInWithGoogle()
+                await authService.signInWithGoogle(l10n: l10n)
             }
         } label: {
             HStack(spacing: 10) {

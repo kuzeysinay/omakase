@@ -5,10 +5,9 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator, Awaitable, Callable, Optional
 import uuid
 
-from fastapi import HTTPException
 from google.genai import types
 
 from app.config import (
@@ -20,10 +19,12 @@ from app.config import (
     genai_client,
     logger,
 )
+from app.errors import ErrorCode, OmakaseAPIError, classify_gemini_exception
 from app.prompts import (
     _DEEP_DIVE_SYSTEM,
     _POST_FORMATS,
     _build_deep_dive_prompt,
+    _build_expand_category_prompt,
     _build_user_prompt,
     _deep_dive_language_instruction,
     _expand_system_for_language,
@@ -37,11 +38,10 @@ _TAGS_LINE = re.compile(r"(?i)^TAGS:\s*(.+)$")
 
 # Gemini often emits the entire post body in one stream delta. Clients expect multiple small
 # `token` SSE events so the Swift UI can animate like Gemini in the browser.
-_SPLIT_STREAM_SOFT_CAP = 6
+_SPLIT_STREAM_SOFT_CAP = 8
 
-# Artificial delay (seconds) inserted between SSE token events to create a smooth
-# typing cadence on the client.
-_TOKEN_DRIP_DELAY = 0.045
+# Balanced delay (seconds) between SSE token events for a smooth, readable typewriter cadence (~1.4s total).
+_TOKEN_DRIP_DELAY = 0.022
 
 
 def _split_fragment_for_smooth_stream(
@@ -109,22 +109,57 @@ def _stream_chunk_text(chunk: object) -> str:
     return ""
 
 
+_SAFETY_REASON_SUBSTRINGS = ("SAFETY", "PROHIBITED", "BLOCKLIST", "SPII")
+
+
+def _is_safety_block_chunk(chunk: object) -> bool:
+    """Return True when Gemini indicates prompt or candidate safety blocking."""
+    try:
+        prompt_feedback = getattr(chunk, "prompt_feedback", None)
+        block_reason = getattr(prompt_feedback, "block_reason", None)
+        if block_reason is not None:
+            text = str(block_reason).upper()
+            if any(token in text for token in _SAFETY_REASON_SUBSTRINGS):
+                return True
+    except AttributeError:
+        pass
+
+    try:
+        cands = getattr(chunk, "candidates", None) or []
+        if cands:
+            finish_reason = getattr(cands[0], "finish_reason", None)
+            if finish_reason is not None:
+                text = str(finish_reason).upper()
+                if any(token in text for token in _SAFETY_REASON_SUBSTRINGS):
+                    return True
+    except (IndexError, AttributeError, TypeError):
+        pass
+
+    return False
+
+
 def _feed_tokens_from_stream_chunks(
     response: Any,
     queue: asyncio.Queue,
     loop: asyncio.AbstractEventLoop,
-) -> None:
+) -> bool:
     """Turn Gemini stream chunks into queue items.
 
     Emits ('title', str), then ('tags', list[str]), then body ('token', str) events.
+    Returns True if generation was halted by a safety block before yielding text.
     """
     carry = ""
     title_done = False
     tags_done = False
+    saw_text = False
     for chunk in response:
         text = _stream_chunk_text(chunk)
         if not text:
+            if not saw_text and _is_safety_block_chunk(chunk):
+                loop.call_soon_threadsafe(queue.put_nowait, ("blocked", None))
+                return True
             continue
+        saw_text = True
         carry += text
         if not title_done:
             if "\n" not in carry:
@@ -161,6 +196,7 @@ def _feed_tokens_from_stream_chunks(
         loop.call_soon_threadsafe(queue.put_nowait, ("token", carry))
     elif title_done and carry:
         _enqueue_stream_body_fragment(loop, queue, carry)
+    return False
 
 
 def _sse_event(data: dict, *, event: str | None = None) -> str:
@@ -179,6 +215,7 @@ async def _stream_post(
     seen_count: int,
     language: str,
     letterboxd_films: Optional[list[dict]] = None,
+    on_complete: Optional[Callable[[], Awaitable[Optional[dict[str, Any]]]]] = None,
 ) -> AsyncIterator[str]:
     """Yield SSE frames for one generated post."""
     post_id = str(uuid.uuid4())
@@ -192,7 +229,10 @@ async def _stream_post(
 
     if not GEMINI_API_KEY or genai_client is None:
         yield _sse_event(
-            {"message": "Content generation service is temporarily unavailable."},
+            {
+                "code": ErrorCode.SERVICE_UNAVAILABLE,
+                "message": "Content generation service is temporarily unavailable.",
+            },
             event="error",
         )
         return
@@ -208,17 +248,26 @@ async def _stream_post(
         def _produce() -> None:
             try:
                 assert genai_client is not None
+                # Use thinking_budget=0 + low temperature (0.35) for sub-second TTFT while
+                # keeping sampling strictly anchored to high-probability, documented facts.
+                # For Letterboxd film posts, retain a compact 128-token budget and 0.25 temp.
+                thinking_budget = 128 if letterboxd_films else 0
+                temp = 0.25 if letterboxd_films else 0.35
                 response = genai_client.models.generate_content_stream(
                     model=GEMINI_MODEL,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=_feed_system_instruction(language),
-                        thinking_config=types.ThinkingConfig(thinking_budget=1024),
+                        temperature=temp,
+                        top_p=0.85,
+                        max_output_tokens=360,
+                        thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
                         safety_settings=SAFETY_SETTINGS,
                     ),
                 )
-                _feed_tokens_from_stream_chunks(response, queue, loop)
-                loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+                blocked = _feed_tokens_from_stream_chunks(response, queue, loop)
+                if not blocked:
+                    loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
             except Exception as exc:  # noqa: BLE001
                 loop.call_soon_threadsafe(queue.put_nowait, ("error", exc))
 
@@ -244,39 +293,71 @@ async def _stream_post(
                 yield _sse_event({"tags": final_tags}, event="tags")
             elif kind == "done":
                 break
+            elif kind == "blocked":
+                saw_error = True
+                logger.warning("Gemini stream blocked by safety filter (post_id=%s)", post_id)
+                yield _sse_event(
+                    {
+                        "code": ErrorCode.CONTENT_BLOCKED,
+                        "message": "Content blocked by safety filter.",
+                    },
+                    event="error",
+                )
+                break
             elif kind == "error":
                 saw_error = True
                 logger.exception("Gemini streaming failed", exc_info=payload)
                 yield _sse_event(
-                    {"message": "Could not generate a post right now. Please try again."},
+                    {
+                        "code": classify_gemini_exception(payload),
+                        "message": "Generation failed.",
+                    },
                     event="error",
                 )
                 break
 
         await producer
 
-        if not saw_any_output and not saw_error:
+        if saw_error:
+            return
+
+        if not saw_any_output:
             logger.warning("Gemini returned empty stream for model=%s", GEMINI_MODEL)
             yield _sse_event(
-                {"message": "Could not generate a post right now. Please try again."},
+                {
+                    "code": ErrorCode.GENERATION_FAILED,
+                    "message": "Empty generation.",
+                },
                 event="error",
             )
+            return
 
     except asyncio.CancelledError:
         logger.info("Client disconnected from stream %s", post_id)
         raise
 
-    yield _sse_event({"id": post_id}, event="done")
+    done_payload: dict[str, Any] = {"id": post_id}
+    if on_complete is not None:
+        access_snapshot = await on_complete()
+        if access_snapshot is not None:
+            done_payload["access"] = access_snapshot
+    yield _sse_event(done_payload, event="done")
 
 
-async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
+async def _stream_deep_dive(
+    req: DeepDiveRequest,
+    on_complete: Optional[Callable[[], Awaitable[Optional[dict[str, Any]]]]] = None,
+) -> AsyncIterator[str]:
     """Yield SSE frames for a deep-dive expansion of an existing post."""
     post_id = str(uuid.uuid4())
     yield _sse_event({"id": post_id}, event="start")
 
     if not GEMINI_API_KEY or genai_client is None:
         yield _sse_event(
-            {"message": "Content generation service is temporarily unavailable."},
+            {
+                "code": ErrorCode.SERVICE_UNAVAILABLE,
+                "message": "Content generation service is temporarily unavailable.",
+            },
             event="error",
         )
         return
@@ -296,12 +377,16 @@ async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=system,
-                        thinking_config=types.ThinkingConfig(thinking_budget=1024),
+                        temperature=0.35,
+                        top_p=0.85,
+                        max_output_tokens=600,
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
                         safety_settings=SAFETY_SETTINGS,
                     ),
                 )
-                _feed_tokens_from_stream_chunks(response, queue, loop)
-                loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+                blocked = _feed_tokens_from_stream_chunks(response, queue, loop)
+                if not blocked:
+                    loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
             except Exception as exc:  # noqa: BLE001
                 loop.call_soon_threadsafe(queue.put_nowait, ("error", exc))
 
@@ -324,32 +409,58 @@ async def _stream_deep_dive(req: DeepDiveRequest) -> AsyncIterator[str]:
                 yield _sse_event({"tags": payload}, event="tags")
             elif kind == "done":
                 break
+            elif kind == "blocked":
+                saw_error = True
+                logger.warning("Gemini deep-dive blocked by safety filter (post_id=%s)", post_id)
+                yield _sse_event(
+                    {
+                        "code": ErrorCode.CONTENT_BLOCKED,
+                        "message": "Content blocked by safety filter.",
+                    },
+                    event="error",
+                )
+                break
             elif kind == "error":
                 saw_error = True
                 logger.exception("Gemini deep-dive streaming failed", exc_info=payload)
                 yield _sse_event(
-                    {"message": "Could not generate a deep dive right now. Please try again."},
+                    {
+                        "code": classify_gemini_exception(payload),
+                        "message": "Generation failed.",
+                    },
                     event="error",
                 )
                 break
 
         await producer
 
-        if not saw_any_output and not saw_error:
+        if saw_error:
+            return
+
+        if not saw_any_output:
             logger.warning(
                 "Gemini deep-dive returned empty stream for model=%s",
                 GEMINI_DEEP_DIVE_MODEL,
             )
             yield _sse_event(
-                {"message": "Could not generate a deep dive right now. Please try again."},
+                {
+                    "code": ErrorCode.GENERATION_FAILED,
+                    "message": "Empty generation.",
+                },
                 event="error",
             )
+            return
 
     except asyncio.CancelledError:
         logger.info("Client disconnected from deep-dive stream %s", post_id)
         raise
 
-    yield _sse_event({"id": post_id}, event="done")
+    done_payload: dict[str, Any] = {"id": post_id}
+    if on_complete is not None:
+        access_snapshot = await on_complete()
+        if access_snapshot is not None:
+            done_payload["access"] = access_snapshot
+    yield _sse_event(done_payload, event="done")
 
 
 def _generative_response_text(response: object) -> str:
@@ -412,8 +523,9 @@ def _parse_suggestion_strings(raw: str) -> list[str]:
 async def generate_interest_suggestions(req: SuggestRequest) -> list[str]:
     """Generate ~7 interest suggestions for the caller."""
     if not GEMINI_API_KEY or genai_client is None:
-        raise HTTPException(
+        raise OmakaseAPIError(
             status_code=503,
+            code=ErrorCode.SERVICE_UNAVAILABLE,
             detail="Suggestion service is temporarily unavailable.",
         )
 
@@ -452,48 +564,55 @@ async def generate_interest_suggestions(req: SuggestRequest) -> list[str]:
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=_suggest_system_for_language(req.language),
+                temperature=0.5,
+                max_output_tokens=160,
                 thinking_config=types.ThinkingConfig(thinking_budget=0),
                 safety_settings=SAFETY_SETTINGS,
             ),
         )
         raw = _generative_response_text(response)
         if not raw:
+            if _is_safety_block_chunk(response):
+                raise OmakaseAPIError(
+                    status_code=422,
+                    code=ErrorCode.CONTENT_BLOCKED,
+                    detail="Content blocked by safety filter.",
+                )
             fr = None
             candidates = getattr(response, "candidates", None)
             if candidates:
                 fr = getattr(candidates[0], "finish_reason", None)
             logger.warning("Interest suggestion: empty model text (finish_reason=%s)", fr)
-            raise ValueError(
-                "Model returned no text (blocked, empty, or unsupported response)."
+            raise OmakaseAPIError(
+                status_code=502,
+                code=ErrorCode.GENERATION_FAILED,
+                detail="Could not generate suggestions right now.",
             )
         return _parse_suggestion_strings(raw)[:10]
+    except OmakaseAPIError:
+        raise
     except Exception as exc:  # noqa: BLE001
         logger.warning("Interest suggestion failed: %s", exc)
-        raise HTTPException(
+        raise OmakaseAPIError(
             status_code=502,
+            code=classify_gemini_exception(exc),
             detail="Could not generate suggestions right now.",
         ) from exc
 
 
 async def generate_category_expansion(req: ExpandCategoryRequest) -> list[str]:
-    """Generate ~10 sub-interest suggestions within a broad category."""
+    """Generate 12 hyper-specific sub-interest suggestions within a broad category."""
     if not GEMINI_API_KEY or genai_client is None:
-        raise HTTPException(
+        raise OmakaseAPIError(
             status_code=503,
+            code=ErrorCode.SERVICE_UNAVAILABLE,
             detail="Category expansion service is temporarily unavailable.",
         )
 
-    parts: list[str] = [f'Category tapped: "{req.category}".']
-    if req.existing_interests:
-        parts.append(
-            "User already has these interests (do NOT repeat): "
-            + ", ".join(req.existing_interests)
-            + "."
-        )
-    user_prompt = (
-        "<user_context>\n"
-        + " ".join(parts)
-        + "\n</user_context>\n\nRespond with a JSON array only."
+    user_prompt = _build_expand_category_prompt(
+        category=req.category,
+        existing_interests=req.existing_interests,
+        language=req.language,
     )
 
     try:
@@ -503,17 +622,32 @@ async def generate_category_expansion(req: ExpandCategoryRequest) -> list[str]:
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=_expand_system_for_language(req.language),
+                temperature=0.85,
+                max_output_tokens=240,
                 thinking_config=types.ThinkingConfig(thinking_budget=0),
                 safety_settings=SAFETY_SETTINGS,
             ),
         )
         raw = _generative_response_text(response)
         if not raw:
-            raise ValueError("Model returned no text.")
+            if _is_safety_block_chunk(response):
+                raise OmakaseAPIError(
+                    status_code=422,
+                    code=ErrorCode.CONTENT_BLOCKED,
+                    detail="Content blocked by safety filter.",
+                )
+            raise OmakaseAPIError(
+                status_code=502,
+                code=ErrorCode.GENERATION_FAILED,
+                detail="Could not expand category right now.",
+            )
         return _parse_suggestion_strings(raw)[:12]
+    except OmakaseAPIError:
+        raise
     except Exception as exc:  # noqa: BLE001
         logger.warning("Category expansion failed: %s", exc)
-        raise HTTPException(
+        raise OmakaseAPIError(
             status_code=502,
+            code=classify_gemini_exception(exc),
             detail="Could not expand category right now.",
         ) from exc

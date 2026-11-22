@@ -11,10 +11,12 @@ struct TimelineView: View {
 
     @Environment(\.appLanguage) private var appLanguage
     let authService: AuthService
+    @Binding var deepLinkedPostId: String?
 
     @State private var viewModel: TimelineViewModel
     @State private var showUserSearch = false
     @State private var selectedAuthorId: String?
+    @State private var activeDeepLinkedPostId: String?
 
     // Inline top search bar state
     @State private var searchQuery: String = ""
@@ -22,12 +24,14 @@ struct TimelineView: View {
     @State private var isSearchingUsers = false
     @State private var followingSet: Set<String> = []
     @State private var pendingFollowActions: Set<String> = []
+    @State private var toastMessage: String?
     @FocusState private var isSearchFocused: Bool
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
-    init(authService: AuthService) {
+    init(authService: AuthService, deepLinkedPostId: Binding<String?> = .constant(nil)) {
         self.authService = authService
+        self._deepLinkedPostId = deepLinkedPostId
         _viewModel = State(initialValue: TimelineViewModel(authService: authService))
     }
 
@@ -50,11 +54,14 @@ struct TimelineView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Top Search Bar
-                topSearchBar
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 10)
+                // Top Search Bar + Discover/Following Mode Switcher
+                VStack(spacing: 10) {
+                    topSearchBar
+                    feedModePicker
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 10)
 
                 Divider().opacity(0.12)
 
@@ -62,6 +69,8 @@ struct TimelineView: View {
                     if viewModel.isLoading && viewModel.posts.isEmpty && trimmedQuery.isEmpty {
                         ProgressView(l10n.loadingTimeline)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let loadError = viewModel.loadError, viewModel.posts.isEmpty && trimmedQuery.isEmpty {
+                        timelineErrorState(loadError)
                     } else if !trimmedQuery.isEmpty {
                         searchResultsList
                     } else if viewModel.posts.isEmpty {
@@ -88,7 +97,11 @@ struct TimelineView: View {
             .refreshable {
                 await viewModel.refresh()
                 followingSet = Set(viewModel.followingUIDs)
+                if let loadError = viewModel.loadError, !viewModel.posts.isEmpty {
+                    toastMessage = loadError.message(l10n: l10n)
+                }
             }
+            .toast(message: $toastMessage)
             .task {
                 await viewModel.loadTimeline()
                 followingSet = Set(viewModel.followingUIDs)
@@ -116,6 +129,26 @@ struct TimelineView: View {
                     authService: authService
                 )
                 .environment(\.appLanguage, appLanguage)
+            }
+            .sheet(item: $activeDeepLinkedPostId) { postId in
+                CommentsView(postId: postId, authService: authService)
+                    .environment(\.appLanguage, appLanguage)
+            }
+            .onAppear {
+                if let postId = deepLinkedPostId {
+                    activeDeepLinkedPostId = postId
+                    deepLinkedPostId = nil
+                }
+            }
+            .onChange(of: deepLinkedPostId) { _, newPostId in
+                if let postId = newPostId {
+                    activeDeepLinkedPostId = postId
+                    deepLinkedPostId = nil
+                    Task { await viewModel.refresh() }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .omakaseDidReceiveForegroundNotification)) { _ in
+                Task { await viewModel.refresh() }
             }
             .onReceive(NotificationCenter.default.publisher(for: .omakaseDidUpdateBlockedUsers)) { _ in
                 let blocked = FirestoreService.shared.blockedUIDs
@@ -176,6 +209,14 @@ struct TimelineView: View {
         )
     }
 
+    private var feedModePicker: some View {
+        Picker("", selection: $viewModel.feedMode) {
+            Text(l10n.timelineModeDiscover).tag(TimelineFeedMode.discover)
+            Text(l10n.timelineModeFollowing).tag(TimelineFeedMode.following)
+        }
+        .pickerStyle(.segmented)
+    }
+
     // MARK: - Search Results View (Users + Filtered Posts)
 
     private var searchResultsList: some View {
@@ -219,13 +260,14 @@ struct TimelineView: View {
                                 },
                                 onDelete: {
                                     Task {
-                                        if let postId = post.id {
-                                            try? await FirestoreService.shared.deleteSharedPost(postId: postId)
-                                            withAnimation {
-                                                viewModel.removePost(id: postId)
-                                            }
-                                        }
+                                        await deletePost(post)
                                     }
+                                },
+                                onToast: { toastMessage = $0 },
+                                isFollowingAuthor: post.authorId == authService.uid ? nil : followingSet.contains(post.authorId),
+                                isFollowPending: pendingFollowActions.contains(post.authorId),
+                                onToggleFollowAuthor: {
+                                    Task { await toggleFollowAuthorFromCard(post: post) }
                                 }
                             )
                         }
@@ -321,31 +363,74 @@ struct TimelineView: View {
 
     // MARK: - Subviews
 
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "person.2.slash")
-                .font(.system(size: 44, weight: .light))
+    private func timelineErrorState(_ error: OmakaseError) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 40, weight: .light))
                 .foregroundStyle(.secondary)
 
-            Text(l10n.timelineEmptyHeadline)
-                .font(.headline)
-
-            Text(l10n.timelineEmptyDetail)
+            Text(error.message(l10n: l10n))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
             Button {
-                showUserSearch = true
+                Task {
+                    await viewModel.loadTimeline()
+                    followingSet = Set(viewModel.followingUIDs)
+                }
             } label: {
-                Label(l10n.findPeople, systemImage: "person.badge.plus")
+                Text(l10n.tryAgain)
                     .fontWeight(.semibold)
             }
             .buttonStyle(.borderedProminent)
             .tint(OmakaseTheme.chipActiveFill)
-            .controlSize(.large)
-            .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: viewModel.feedMode == .following ? "person.2" : "person.2.slash")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.secondary)
+
+            Text(viewModel.feedMode == .following ? l10n.followingEmptyHeadline : l10n.timelineEmptyHeadline)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+
+            Text(viewModel.feedMode == .following ? l10n.followingEmptyDetail : l10n.timelineEmptyDetail)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            if viewModel.feedMode == .following {
+                Button {
+                    withAnimation {
+                        viewModel.feedMode = .discover
+                    }
+                } label: {
+                    Label(l10n.exploreDiscoverCTA, systemImage: "sparkles")
+                        .fontWeight(.semibold)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(OmakaseTheme.chipActiveFill)
+                .controlSize(.large)
+                .padding(.top, 8)
+            } else {
+                Button {
+                    showUserSearch = true
+                } label: {
+                    Label(l10n.findPeople, systemImage: "person.badge.plus")
+                        .fontWeight(.semibold)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(OmakaseTheme.chipActiveFill)
+                .controlSize(.large)
+                .padding(.top, 8)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -353,7 +438,7 @@ struct TimelineView: View {
     private var postList: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                if viewModel.followingUIDs.isEmpty {
+                if viewModel.feedMode == .discover {
                     discoverBanner
                 }
 
@@ -366,13 +451,14 @@ struct TimelineView: View {
                         },
                         onDelete: {
                             Task {
-                                if let postId = post.id {
-                                    try? await FirestoreService.shared.deleteSharedPost(postId: postId)
-                                    withAnimation {
-                                        viewModel.removePost(id: postId)
-                                    }
-                                }
+                                await deletePost(post)
                             }
+                        },
+                        onToast: { toastMessage = $0 },
+                        isFollowingAuthor: post.authorId == authService.uid ? nil : followingSet.contains(post.authorId),
+                        isFollowPending: pendingFollowActions.contains(post.authorId),
+                        onToggleFollowAuthor: {
+                            Task { await toggleFollowAuthorFromCard(post: post) }
                         }
                     )
                 }
@@ -390,7 +476,7 @@ struct TimelineView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(l10n.discoverBannerTitle)
                     .font(.subheadline.bold())
-                Text(l10n.discoverBannerDetail)
+                Text(l10n.discoverFeedSubheader)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -410,8 +496,29 @@ struct TimelineView: View {
             return
         }
         isSearchingUsers = true
-        userResults = (try? await FirestoreService.shared.searchUsers(query: trimmed, currentUid: uid)) ?? []
+        do {
+            userResults = try await FirestoreService.shared.searchUsers(query: trimmed, currentUid: uid)
+        } catch {
+            let mapped = OmakaseError.from(error, context: .userSearch)
+            ErrorReporter.record(error, mapped: mapped, area: "timeline_user_search")
+            userResults = []
+            toastMessage = mapped.message(l10n: l10n)
+        }
         isSearchingUsers = false
+    }
+
+    private func deletePost(_ post: SharedPost) async {
+        guard let postId = post.id else { return }
+        do {
+            try await FirestoreService.shared.deleteSharedPost(postId: postId)
+            withAnimation {
+                viewModel.removePost(id: postId)
+            }
+        } catch {
+            let mapped = OmakaseError.from(error, context: .postDelete)
+            ErrorReporter.record(error, mapped: mapped, area: "timeline_delete_post")
+            toastMessage = mapped.message(l10n: l10n)
+        }
     }
 
     private func toggleFollow(user: UserProfile, currentlyFollowing: Bool) async {
@@ -429,10 +536,48 @@ struct TimelineView: View {
                     currentDisplayName: authService.displayName ?? "Omakase User"
                 )
                 followingSet.insert(user.id)
+                NotificationManager.shared.notifySocialEvent(
+                    type: "follow",
+                    targetUid: user.id,
+                    actorName: authService.displayName
+                )
             }
             await viewModel.loadTimeline()
-        } catch { }
+        } catch {
+            let context: SocialActionContext = currentlyFollowing ? .unfollow : .follow
+            let mapped = OmakaseError.from(error, context: context)
+            ErrorReporter.record(error, mapped: mapped, area: "timeline_toggle_follow")
+            toastMessage = mapped.message(l10n: l10n)
+        }
         pendingFollowActions.remove(user.id)
+    }
+
+    private func toggleFollowAuthorFromCard(post: SharedPost) async {
+        guard let uid = authService.uid, post.authorId != uid else { return }
+        let targetUid = post.authorId
+        guard !followingSet.contains(targetUid), !pendingFollowActions.contains(targetUid) else { return }
+
+        pendingFollowActions.insert(targetUid)
+        do {
+            try await FirestoreService.shared.follow(
+                targetUid: targetUid,
+                targetDisplayName: post.authorName,
+                currentUid: uid,
+                currentDisplayName: authService.displayName ?? "Omakase User"
+            )
+            followingSet.insert(targetUid)
+            NotificationManager.shared.notifySocialEvent(
+                type: "follow",
+                targetUid: targetUid,
+                actorName: authService.displayName
+            )
+            await viewModel.loadTimeline()
+        } catch {
+            let mapped = OmakaseError.from(error, context: .follow)
+            ErrorReporter.record(error, mapped: mapped, area: "timeline_card_follow")
+            toastMessage = mapped.message(l10n: l10n)
+        }
+        pendingFollowActions.remove(targetUid)
     }
 }
 

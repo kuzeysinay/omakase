@@ -18,6 +18,8 @@ struct UserSearchView: View {
     @State private var followingSet: Set<String> = []
     @State private var pendingActions: Set<String> = []
     @State private var selectedProfileUid: String?
+    @State private var toastMessage: String?
+    @State private var searchError: OmakaseError?
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -37,6 +39,7 @@ struct UserSearchView: View {
                     Button(l10n.done) { dismiss() }
                 }
             }
+            .toast(message: $toastMessage)
         }
         .task {
             guard let uid = authService.uid else { return }
@@ -71,6 +74,24 @@ struct UserSearchView: View {
         if isSearching {
             Spacer()
             ProgressView()
+            Spacer()
+        } else if let searchError, results.isEmpty {
+            Spacer()
+            VStack(spacing: 14) {
+                Image(systemName: "wifi.exclamationmark")
+                    .font(.system(size: 36, weight: .light))
+                    .foregroundStyle(.secondary)
+                Text(searchError.message(l10n: l10n))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 28)
+                Button(l10n.tryAgain) {
+                    Task { await search() }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(OmakaseTheme.chipActiveFill)
+            }
             Spacer()
         } else if results.isEmpty && !query.isEmpty {
             Spacer()
@@ -182,7 +203,15 @@ struct UserSearchView: View {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         isSearching = true
-        results = (try? await FirestoreService.shared.searchUsers(query: trimmed, currentUid: uid)) ?? []
+        searchError = nil
+        do {
+            results = try await FirestoreService.shared.searchUsers(query: trimmed, currentUid: uid)
+        } catch {
+            let mapped = OmakaseError.from(error, context: .userSearch)
+            ErrorReporter.record(error, mapped: mapped, area: "user_search")
+            results = []
+            searchError = mapped
+        }
         isSearching = false
     }
 
@@ -199,8 +228,18 @@ struct UserSearchView: View {
                     currentUid: uid, currentDisplayName: authService.displayName ?? "Omakase User"
                 )
                 followingSet.insert(user.id)
+                NotificationManager.shared.notifySocialEvent(
+                    type: "follow",
+                    targetUid: user.id,
+                    actorName: authService.displayName
+                )
             }
-        } catch { }
+        } catch {
+            let context: SocialActionContext = currentlyFollowing ? .unfollow : .follow
+            let mapped = OmakaseError.from(error, context: context)
+            ErrorReporter.record(error, mapped: mapped, area: "user_search_follow")
+            toastMessage = mapped.message(l10n: l10n)
+        }
         pendingActions.remove(user.id)
     }
 }

@@ -4,18 +4,24 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict, deque
+import hashlib
+import math
 import re
 import time
 from typing import Optional
 
-from fastapi import Header, HTTPException, Request as FastAPIRequest
+from fastapi import Header, Request as FastAPIRequest
 from google.auth.transport import requests as google_auth_requests
 from google.oauth2 import id_token
 
 from app.config import FIREBASE_PROJECT_ID, REQUIRE_AUTH, logger
+from app.errors import ErrorCode, OmakaseAPIError
 
 _GOOGLE_AUTH_REQUEST = google_auth_requests.Request()
 _RATE_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
+# Short-lived in-memory cache of verified Firebase token hashes -> (uid, expiry_epoch)
+_VERIFIED_TOKEN_CACHE: dict[str, tuple[str, float]] = {}
+_TOKEN_CACHE_TTL_SECONDS = 300.0
 
 # ---------------------------------------------------------------------------
 # Content moderation — first-pass guard at the API boundary.
@@ -61,9 +67,13 @@ def _check_rate_limit(
     while q and q[0] < cutoff:
         q.popleft()
     if len(q) >= max_calls:
-        raise HTTPException(
+        retry_after = max(1, math.ceil(window_seconds - (now - q[0])))
+        raise OmakaseAPIError(
             status_code=429,
+            code=ErrorCode.RATE_LIMITED,
             detail="Too many requests. Please wait a moment and try again.",
+            headers={"Retry-After": str(retry_after)},
+            extra={"retry_after": retry_after},
         )
     q.append(now)
 
@@ -77,6 +87,15 @@ async def verify_firebase_user(
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
         if token:
+            token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            now_wall = time.time()
+            cached = _VERIFIED_TOKEN_CACHE.get(token_hash)
+            if cached is not None:
+                cached_uid, expires_at = cached
+                if now_wall < expires_at:
+                    return f"uid:{cached_uid}"
+                _VERIFIED_TOKEN_CACHE.pop(token_hash, None)
+
             try:
                 claims = await asyncio.to_thread(
                     id_token.verify_firebase_token,
@@ -86,19 +105,38 @@ async def verify_firebase_user(
                 )
                 uid = str(claims.get("user_id") or claims.get("sub") or "")
                 if uid:
+                    exp_claim = float(claims.get("exp") or (now_wall + _TOKEN_CACHE_TTL_SECONDS))
+                    cache_until = min(exp_claim - 10.0, now_wall + _TOKEN_CACHE_TTL_SECONDS)
+                    if cache_until > now_wall:
+                        if len(_VERIFIED_TOKEN_CACHE) > 1024:
+                            _VERIFIED_TOKEN_CACHE.clear()
+                        _VERIFIED_TOKEN_CACHE[token_hash] = (uid, cache_until)
                     return f"uid:{uid}"
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Invalid Firebase ID token from %s: %s", client_host, exc)
                 if REQUIRE_AUTH:
-                    raise HTTPException(
+                    raise OmakaseAPIError(
                         status_code=401,
+                        code=ErrorCode.UNAUTHORIZED,
                         detail="Invalid or expired authentication token.",
                     ) from exc
 
     if REQUIRE_AUTH:
-        raise HTTPException(status_code=401, detail="Authentication required.")
+        raise OmakaseAPIError(
+            status_code=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail="Authentication required.",
+        )
 
     return f"ip:{client_host}"
+
+
+def extract_uid(caller_id: str) -> Optional[str]:
+    """Extract the Firebase UID from a verified caller key (`uid:<uid>`)."""
+    if caller_id.startswith("uid:"):
+        uid = caller_id[4:].strip()
+        return uid or None
+    return None
 
 
 def _sanitize_single_line(value: str, max_len: int) -> str:

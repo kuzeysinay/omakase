@@ -52,6 +52,13 @@ final class AuthService: NSObject {
     private var activeAppleController: ASAuthorizationController?
     @ObservationIgnored
     private weak var presentingWindow: UIWindow?
+    @ObservationIgnored
+    private var pendingAppleL10n: L10n?
+
+    private static var currentL10n: L10n {
+        let code = UserDefaults.standard.string(forKey: "omakase.language") ?? AppLanguage.english.rawValue
+        return L10n(lang: AppLanguage(rawValue: code) ?? .english)
+    }
 
     // MARK: - Init
 
@@ -61,6 +68,9 @@ final class AuthService: NSObject {
         authStateHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             Task { @MainActor in
                 self?.currentUser = user
+                ErrorReporter.setUserID(user?.uid)
+                await AccessManager.shared.syncAuthUser(uid: user?.uid)
+                await NotificationManager.shared.syncAuthUser(uid: user?.uid)
                 if let uid = user?.uid {
                     _ = try? await FirestoreService.shared.fetchBlockedUIDs(currentUid: uid)
                 }
@@ -189,7 +199,7 @@ final class AuthService: NSObject {
 
             currentUser = updatedUser
         } catch {
-            errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n)
+            errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n, area: "auth_email_signup")
         }
 
         isSigningIn = false
@@ -227,7 +237,7 @@ final class AuthService: NSObject {
 
             currentUser = authResult.user
         } catch {
-            errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n)
+            errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n, area: "auth_email_signin")
         }
 
         isSigningIn = false
@@ -248,42 +258,35 @@ final class AuthService: NSObject {
             try await Auth.auth().sendPasswordReset(withEmail: trimmedEmail)
             infoMessage = l10n.authResetPasswordSent
         } catch {
-            errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n)
+            errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n, area: "auth_password_reset")
         }
         isSigningIn = false
     }
 
-    private static func friendlyErrorMessage(for error: Error, l10n: L10n) -> String {
-        let nsError = error as NSError
-        if nsError.domain == AuthErrorDomain,
-           let code = AuthErrorCode(rawValue: nsError.code) {
-            switch code {
-            case .invalidEmail:
-                return l10n.authErrorInvalidEmail
-            case .emailAlreadyInUse:
-                return l10n.authErrorEmailInUse
-            case .weakPassword:
-                return l10n.authErrorWeakPassword
-            case .wrongPassword, .invalidCredential, .userNotFound:
-                return l10n.authErrorInvalidCredential
-            case .requiresRecentLogin:
-                return l10n.accountDeleteRequiresReauth
-            default:
-                break
-            }
-        }
-        return error.localizedDescription
+    private static func friendlyErrorMessage(
+        for error: Error,
+        l10n: L10n,
+        area: String = "auth",
+        fallback: OmakaseError = .authProviderFailed
+    ) -> String {
+        let rawMapped = OmakaseError.from(error)
+        let mapped = (rawMapped == .unknown) ? fallback : rawMapped
+        ErrorReporter.record(error, mapped: mapped, area: area)
+        return mapped.message(l10n: l10n)
     }
 
     // MARK: - Sign in with Apple (Guideline 4.8)
 
-    func signInWithApple() {
+    func signInWithApple(l10n: L10n? = nil) {
         guard !isSigningIn else { return }
         clearMessages()
+        let resolvedL10n = l10n ?? Self.currentL10n
+        pendingAppleL10n = resolvedL10n
 
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first else {
-            errorMessage = "Unable to find presentation window."
+            ErrorReporter.record(nil, mapped: .authProviderFailed, area: "auth_apple_window")
+            errorMessage = OmakaseError.authProviderFailed.message(l10n: resolvedL10n)
             return
         }
 
@@ -306,22 +309,25 @@ final class AuthService: NSObject {
 
     // MARK: - Google Sign-In
 
-    func signInWithGoogle() async {
+    func signInWithGoogle(l10n: L10n? = nil) async {
         guard !isSigningIn else { return }
         isSigningIn = true
         clearMessages()
+        let resolvedL10n = l10n ?? Self.currentL10n
 
         do {
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let rootVC = windowScene.windows.first?.rootViewController else {
-                errorMessage = "Unable to find root view controller."
+                ErrorReporter.record(nil, mapped: .authProviderFailed, area: "auth_google_rootvc")
+                errorMessage = OmakaseError.authProviderFailed.message(l10n: resolvedL10n)
                 isSigningIn = false
                 return
             }
 
             // Configure Google Sign-In with the Firebase client ID.
             guard let clientID = FirebaseApp.app()?.options.clientID else {
-                errorMessage = "Firebase client ID not found. Check GoogleService-Info.plist."
+                ErrorReporter.record(nil, mapped: .serviceUnavailable, area: "auth_google_config")
+                errorMessage = OmakaseError.serviceUnavailable.message(l10n: resolvedL10n)
                 isSigningIn = false
                 return
             }
@@ -329,7 +335,8 @@ final class AuthService: NSObject {
 
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootVC)
             guard let idToken = result.user.idToken?.tokenString else {
-                errorMessage = "Google Sign-In succeeded but no ID token was returned."
+                ErrorReporter.record(nil, mapped: .authProviderFailed, area: "auth_google_token")
+                errorMessage = OmakaseError.authProviderFailed.message(l10n: resolvedL10n)
                 isSigningIn = false
                 return
             }
@@ -349,7 +356,7 @@ final class AuthService: NSObject {
             let nsError = error as NSError
             // GIDSignInErrorCode.canceled == -5: do not surface cancellation as an error.
             if nsError.code != -5 {
-                errorMessage = error.localizedDescription
+                errorMessage = Self.friendlyErrorMessage(for: error, l10n: resolvedL10n, area: "auth_google")
             }
         }
 
@@ -358,18 +365,34 @@ final class AuthService: NSObject {
 
     // MARK: - Sign Out
 
-    func signOut() {
+    func signOut(l10n: L10n? = nil) {
+        let resolvedL10n = l10n ?? Self.currentL10n
         do {
             try Auth.auth().signOut()
             GIDSignIn.sharedInstance.signOut()
             FirestoreService.shared.clearBlockedCache()
             currentUser = nil
+            ErrorReporter.setUserID(nil)
             Task {
                 await Self.deleteKeychainAppleUserID()
+                await NotificationManager.shared.cancelDailyMenuReminder()
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = Self.friendlyErrorMessage(
+                for: error,
+                l10n: resolvedL10n,
+                area: "auth_signout",
+                fallback: .authSignOutFailed
+            )
         }
+    }
+
+    func signOutAndCleanup(l10n: L10n? = nil) async {
+        if let uid = currentUser?.uid {
+            await NotificationManager.shared.unregisterCurrentDevice(uid: uid)
+        }
+        await NotificationManager.shared.cancelDailyMenuReminder()
+        signOut(l10n: l10n)
     }
 
     // MARK: - Delete Account (Guideline 5.1.1(v))
@@ -381,6 +404,7 @@ final class AuthService: NSObject {
         clearMessages()
 
         do {
+            await NotificationManager.shared.cancelDailyMenuReminder()
             // 1. Delete all associated user data in Cloud Firestore first (while still authenticated as owner).
             try await FirestoreService.shared.deleteAllUserData(uid: uid)
 
@@ -402,10 +426,15 @@ final class AuthService: NSObject {
                let code = AuthErrorCode(rawValue: nsError.code),
                code == .requiresRecentLogin {
                 // Firestore data is already purged; sign out locally so the user can re-authenticate if needed.
-                signOut()
+                signOut(l10n: l10n)
                 errorMessage = l10n.accountDeleteRequiresReauth
             } else {
-                errorMessage = Self.friendlyErrorMessage(for: error, l10n: l10n)
+                errorMessage = Self.friendlyErrorMessage(
+                    for: error,
+                    l10n: l10n,
+                    area: "auth_delete_account",
+                    fallback: .unknown
+                )
             }
             isSigningIn = false
             return false
@@ -560,9 +589,13 @@ extension AuthService: ASAuthorizationControllerDelegate, ASAuthorizationControl
         }
         currentRawNonce = nil
 
+        let resolvedL10n = pendingAppleL10n ?? Self.currentL10n
+
         guard let appleIDToken = credential.identityToken,
               let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
-            errorMessage = "Unable to fetch identity token from Apple."
+            ErrorReporter.record(nil, mapped: .authProviderFailed, area: "auth_apple_token")
+            errorMessage = OmakaseError.authProviderFailed.message(l10n: resolvedL10n)
+            pendingAppleL10n = nil
             isSigningIn = false
             return
         }
@@ -612,8 +645,9 @@ extension AuthService: ASAuthorizationControllerDelegate, ASAuthorizationControl
 
                 currentUser = updatedUser
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = Self.friendlyErrorMessage(for: error, l10n: resolvedL10n, area: "auth_apple_signin")
             }
+            pendingAppleL10n = nil
             isSigningIn = false
         }
     }
@@ -622,12 +656,14 @@ extension AuthService: ASAuthorizationControllerDelegate, ASAuthorizationControl
         controller: ASAuthorizationController,
         didCompleteWithError error: Error
     ) {
+        let resolvedL10n = pendingAppleL10n ?? Self.currentL10n
+        pendingAppleL10n = nil
         activeAppleController = nil
         currentRawNonce = nil
         isSigningIn = false
 
         guard let authError = error as? ASAuthorizationError else {
-            errorMessage = error.localizedDescription
+            errorMessage = Self.friendlyErrorMessage(for: error, l10n: resolvedL10n, area: "auth_apple_delegate")
             return
         }
 
@@ -636,7 +672,7 @@ extension AuthService: ASAuthorizationControllerDelegate, ASAuthorizationControl
         case .canceled:
             break
         default:
-            errorMessage = authError.localizedDescription
+            errorMessage = Self.friendlyErrorMessage(for: authError, l10n: resolvedL10n, area: "auth_apple_delegate")
         }
     }
 }

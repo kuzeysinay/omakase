@@ -1419,4 +1419,836 @@ struct L10n {
         case .turkish: "Engellenen kullanıcı yok"
         }
     }
+
+    // MARK: - Error Handling & Status
+
+    var tryAgain: String {
+        switch lang {
+        case .english: "Try Again"
+        case .turkish: "Tekrar Dene"
+        }
+    }
+
+    var signInAgain: String {
+        switch lang {
+        case .english: "Sign In"
+        case .turkish: "Giriş Yap"
+        }
+    }
+
+    var editUsername: String {
+        switch lang {
+        case .english: "Edit Username"
+        case .turkish: "Kullanıcı Adını Düzenle"
+        }
+    }
+
+    var dismissLabel: String {
+        switch lang {
+        case .english: "Dismiss"
+        case .turkish: "Kapat"
+        }
+    }
+
+    var errorOfflineMessage: String {
+        switch lang {
+        case .english: "You're offline. You can still read saved plates."
+        case .turkish: "Çevrimdışısın. Kaydedilen tabakları okuyabilirsin."
+        }
+    }
+
+    var errorTimeoutTitle: String {
+        switch lang {
+        case .english: "Request Timed Out"
+        case .turkish: "Bağlantı Zaman Aşımına Uğradı"
+        }
+    }
+
+    var errorTimeoutMessage: String {
+        switch lang {
+        case .english: "The kitchen took too long to respond. Please try again."
+        case .turkish: "Mutfaktan yanıt gelmesi uzun sürdü. Lütfen tekrar dene."
+        }
+    }
+
+    var errorServerUnreachableTitle: String {
+        switch lang {
+        case .english: "Couldn't Connect"
+        case .turkish: "Bağlantı Kurulamadı"
+        }
+    }
+
+    var errorServerUnreachableMessage: String {
+        switch lang {
+        case .english: "Could not reach Omakase servers. Check your internet connection and try again."
+        case .turkish: "Omakase sunucularına ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene."
+        }
+    }
+
+    var errorUnauthorizedTitle: String {
+        switch lang {
+        case .english: "Session Expired"
+        case .turkish: "Oturumun Sona Erdi"
+        }
+    }
+
+    var errorUnauthorizedMessage: String {
+        switch lang {
+        case .english: "Please sign in again to continue."
+        case .turkish: "Devam etmek için lütfen tekrar giriş yap."
+        }
+    }
+
+    func errorRateLimitedMessage(seconds: Int?) -> String {
+        if let seconds, seconds > 0 {
+            switch lang {
+            case .english: return "Let's slow down a little. Try again in \(seconds) seconds."
+            case .turkish: return "Biraz yavaşlayalım. \(seconds) saniye sonra tekrar dene."
+            }
+        }
+        switch lang {
+        case .english: return "Let's slow down a little. Try again in a moment."
+        case .turkish: return "Biraz yavaşlayalım. Biraz bekleyip tekrar dene."
+        }
+    }
+
+    var errorQuotaExceededTitle: String {
+        switch lang {
+        case .english: "Today's Menu Is Complete"
+        case .turkish: "Bugünkü Menü Tamamlandı"
+        }
+    }
+
+    var errorQuotaExceededMessage: String {
+        switch lang {
+        case .english: "You've reached today's tasting limit. New plates will be ready tomorrow."
+        case .turkish: "Bugünkü tadım hakkını tamamladın. Yeni tabaklar yarın hazır olacak."
+        }
+    }
+
+    var errorContentBlockedMessage: String {
+        switch lang {
+        case .english: "We can't prepare a plate on this topic. Try another one."
+        case .turkish: "Bu konuda tabak hazırlayamıyoruz. Başka bir konu dene."
+        }
+    }
+
+    var errorGenerationFailedTitle: String {
+        switch lang {
+        case .english: "Couldn't Prepare Plate"
+        case .turkish: "Tabak Hazırlanamadı"
+        }
+    }
+
+    var errorGenerationFailedMessage: String {
+        switch lang {
+        case .english: "The chef couldn't finish this one. It didn't count toward your limit."
+        case .turkish: "Şef bu tabağı tamamlayamadı. Hakkından düşülmedi."
+        }
+    }
+
+    var errorServiceUnavailableTitle: String {
+        switch lang {
+        case .english: "Kitchen on a Short Break"
+        case .turkish: "Mutfak Kısa Bir Mola Verdi"
+        }
+    }
+
+    var errorServiceUnavailableMessage: String {
+        switch lang {
+        case .english: "The kitchen is taking a short break. Try again in a few minutes."
+        case .turkish: "Mutfak şu an kısa bir mola verdi. Birkaç dakika sonra tekrar dene."
+        }
+    }
+
+    var errorLetterboxdMissingUsername: String {
+        switch lang {
+        case .english: "Enter your Letterboxd username to load recent films."
+        case .turkish: "Son filmlerini yüklemek için Letterboxd kullanıcı adını gir."
+        }
+    }
+
+    var errorLetterboxdNotFoundMessage: String {
+        switch lang {
+        case .english: "No public films found for this Letterboxd username."
+        case .turkish: "Bu Letterboxd kullanıcı adında herkese açık film bulunamadı."
+        }
+    }
+
+    var errorLetterboxdPrivateMessage: String {
+        switch lang {
+        case .english: "This Letterboxd diary is private. Update your privacy settings or username."
+        case .turkish: "Bu Letterboxd günlüğü gizli. Gizlilik ayarlarını veya kullanıcı adını kontrol et."
+        }
+    }
+
+    var errorBillingSyncFailedMessage: String {
+        switch lang {
+        case .english: "Couldn't verify your subscription yet. Try Restore Purchases."
+        case .turkish: "Aboneliğin henüz doğrulanamadı. Satın Alımları Geri Yükle'yi dene."
+        }
+    }
+
+    var authErrorNetwork: String {
+        switch lang {
+        case .english: "You appear to be offline. Check your connection and try again."
+        case .turkish: "İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol edip tekrar dene."
+        }
+    }
+
+    var authErrorTooManyRequests: String {
+        switch lang {
+        case .english: "Too many attempts. Wait a moment and try again."
+        case .turkish: "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene."
+        }
+    }
+
+    var authErrorUserDisabled: String {
+        switch lang {
+        case .english: "This account is currently unavailable. Please contact support."
+        case .turkish: "Bu hesap şu anda kullanılamıyor. Lütfen destek ile iletişime geç."
+        }
+    }
+
+    var authErrorProviderFailed: String {
+        switch lang {
+        case .english: "Sign-in couldn't be completed. Please try again."
+        case .turkish: "Giriş tamamlanamadı. Lütfen tekrar dene."
+        }
+    }
+
+    var authErrorSignOutFailed: String {
+        switch lang {
+        case .english: "Could not sign out right now. Please try again."
+        case .turkish: "Şu anda çıkış yapılamadı. Lütfen tekrar dene."
+        }
+    }
+
+    var errorShareFailed: String {
+        switch lang {
+        case .english: "Couldn't share this plate. Please try again."
+        case .turkish: "Paylaşım tamamlanamadı. Lütfen tekrar dene."
+        }
+    }
+
+    var errorUnshareFailed: String {
+        switch lang {
+        case .english: "Couldn't remove from community. Please try again."
+        case .turkish: "Paylaşım kaldırılamadı. Lütfen tekrar dene."
+        }
+    }
+
+    var errorCommentSendFailed: String {
+        switch lang {
+        case .english: "Your comment wasn't sent. Your text is saved so you can try again."
+        case .turkish: "Yorumun gönderilemedi. Metnin duruyor, tekrar deneyebilirsin."
+        }
+    }
+
+    var errorCommentLoadFailed: String {
+        switch lang {
+        case .english: "Couldn't load comments right now."
+        case .turkish: "Yorumlar şu an yüklenemedi."
+        }
+    }
+
+    var errorCommentDeleteFailed: String {
+        switch lang {
+        case .english: "Couldn't delete the comment. Please try again."
+        case .turkish: "Yorum silinemedi. Lütfen tekrar dene."
+        }
+    }
+
+    var errorReportFailed: String {
+        switch lang {
+        case .english: "Your report wasn't sent. Please try again."
+        case .turkish: "Bildirimin gönderilemedi. Lütfen tekrar dene."
+        }
+    }
+
+    var errorBlockFailed: String {
+        switch lang {
+        case .english: "Couldn't block this user. Please try again."
+        case .turkish: "Kullanıcı engellenemedi. Lütfen tekrar dene."
+        }
+    }
+
+    var errorUnblockFailed: String {
+        switch lang {
+        case .english: "Couldn't unblock this user. Please try again."
+        case .turkish: "Engel kaldırılamadı. Lütfen tekrar dene."
+        }
+    }
+
+    var errorFollowFailed: String {
+        switch lang {
+        case .english: "Couldn't follow right now. Try again."
+        case .turkish: "Şu an takip edilemiyor. Tekrar dene."
+        }
+    }
+
+    var errorUnfollowFailed: String {
+        switch lang {
+        case .english: "Couldn't unfollow right now. Try again."
+        case .turkish: "Takipten çıkılamadı. Tekrar dene."
+        }
+    }
+
+    var errorReactionFailed: String {
+        switch lang {
+        case .english: "Couldn't update reaction. Please try again."
+        case .turkish: "Tepki güncellenemedi. Lütfen tekrar dene."
+        }
+    }
+
+    var errorTimelineLoadFailed: String {
+        switch lang {
+        case .english: "Couldn't load the community feed."
+        case .turkish: "Topluluk akışı yüklenemedi."
+        }
+    }
+
+    var errorUserSearchFailed: String {
+        switch lang {
+        case .english: "Couldn't search users right now. Please try again."
+        case .turkish: "Kullanıcı araması şu an yapılamadı. Lütfen tekrar dene."
+        }
+    }
+
+    var errorProfileLoadFailed: String {
+        switch lang {
+        case .english: "Couldn't load this profile right now."
+        case .turkish: "Bu profil şu an yüklenemedi."
+        }
+    }
+
+    var errorPostDeleteFailed: String {
+        switch lang {
+        case .english: "Couldn't delete this post. Please try again."
+        case .turkish: "Gönderi silinemedi. Lütfen tekrar dene."
+        }
+    }
+
+    var errorUnknownMessage: String {
+        switch lang {
+        case .english: "An unexpected situation occurred. Please try again."
+        case .turkish: "Beklenmeyen bir durum oluştu. Lütfen tekrar dene."
+        }
+    }
+
+    // MARK: - Monetization, Omakase Pro & Daily Limit
+
+    var proTitle: String { "Omakase Pro" }
+
+    var proHeadline: String {
+        switch lang {
+        case .english: "Unlimited tasting, zero noise."
+        case .turkish: "Sınırsız tadım, sıfır gürültü."
+        }
+    }
+
+    var proSubtitle: String {
+        switch lang {
+        case .english: "3 free plates a day is just a taste. Unlock unlimited plates, primary-source Deep Dives, and full Letterboxd synthesis."
+        case .turkish: "Günde 3 ücretsiz tabak sadece tadımlık. Sınırsız tabak, birincil kaynakçalı Deep Dive ve tam Letterboxd sentezini aç."
+        }
+    }
+
+    var proFeatureUnlimitedPlates: String {
+        switch lang {
+        case .english: "Unlimited daily plates & Letterboxd behind-the-scenes"
+        case .turkish: "Her gün sınırsız şef tabağı ve Letterboxd kamera arkası"
+        }
+    }
+
+    var proFeatureUnlimitedDeepDive: String {
+        switch lang {
+        case .english: "Unlimited Deep Dives with verified primary sources"
+        case .turkish: "Birincil kaynakçalı sınırsız Derinlemesine İnceleme"
+        }
+    }
+
+    var proFeatureUnlimitedSubtopics: String {
+        switch lang {
+        case .english: "Unlimited subtopic refreshes"
+        case .turkish: "Sınırsız alt konu yenileme"
+        }
+    }
+
+    var proFeatureProBadge: String {
+        switch lang {
+        case .english: "Pro badge on your Community profile"
+        case .turkish: "Topluluk profilinde Pro rozeti"
+        }
+    }
+
+    var proBestValueBadge: String {
+        switch lang {
+        case .english: "Best Value"
+        case .turkish: "En Avantajlı"
+        }
+    }
+
+    var proFreeTrialBadge: String {
+        switch lang {
+        case .english: "7-day free trial · Only ~$2.49/mo (Save 37%)"
+        case .turkish: "7 gün ücretsiz · Ayda yalnızca ~$2.49 (%37 avantaj)"
+        }
+    }
+
+    var proPlanYearly: String {
+        switch lang {
+        case .english: "Yearly"
+        case .turkish: "Yıllık"
+        }
+    }
+
+    var proPlanMonthly: String {
+        switch lang {
+        case .english: "Monthly"
+        case .turkish: "Aylık"
+        }
+    }
+
+    var proPerYearSuffix: String {
+        switch lang {
+        case .english: "/ year"
+        case .turkish: "/ yıl"
+        }
+    }
+
+    var proPerMonthSuffix: String {
+        switch lang {
+        case .english: "/ month"
+        case .turkish: "/ ay"
+        }
+    }
+
+    var proStartTrialCTA: String {
+        switch lang {
+        case .english: "Start 7-Day Free Trial"
+        case .turkish: "7 Gün Ücretsiz Dene"
+        }
+    }
+
+    var proSubscribeCTA: String {
+        switch lang {
+        case .english: "Continue with Omakase Pro"
+        case .turkish: "Omakase Pro ile Devam Et"
+        }
+    }
+
+    var proRestorePurchases: String {
+        switch lang {
+        case .english: "Restore Purchases"
+        case .turkish: "Satın Alımları Geri Yükle"
+        }
+    }
+
+    var proRestoreSuccess: String {
+        switch lang {
+        case .english: "Your Omakase Pro subscription is restored."
+        case .turkish: "Omakase Pro aboneliğin geri yüklendi."
+        }
+    }
+
+    var proRestoreEmpty: String {
+        switch lang {
+        case .english: "No active subscription was found to restore."
+        case .turkish: "Geri yüklenecek aktif bir abonelik bulunamadı."
+        }
+    }
+
+    var proPurchaseSuccess: String {
+        switch lang {
+        case .english: "Welcome to Omakase Pro."
+        case .turkish: "Omakase Pro'ya hoş geldin."
+        }
+    }
+
+    var proPaymentPending: String {
+        switch lang {
+        case .english: "Your purchase is pending approval and will activate once confirmed."
+        case .turkish: "Satın alma onayı bekleniyor; onaylandığında aboneliğin otomatik açılacak."
+        }
+    }
+
+    var proSubscriptionDisclosure: String {
+        switch lang {
+        case .english:
+            "Payment is charged to your Apple ID account at confirmation (or after the 7-day trial ends). Subscription renews automatically unless canceled at least 24 hours before the end of the current period."
+        case .turkish:
+            "Ödeme onay anında (veya 7 günlük deneme bittiğinde) Apple ID hesabından tahsil edilir. Dönem bitiminden en az 24 saat önce iptal edilmedikçe abonelik otomatik yenilenir."
+        }
+    }
+
+    var proManageSubscription: String {
+        switch lang {
+        case .english: "Manage Subscription"
+        case .turkish: "Aboneliği Yönet"
+        }
+    }
+
+    var proActiveStatus: String {
+        switch lang {
+        case .english: "Active"
+        case .turkish: "Aktif"
+        }
+    }
+
+    var proTrialStatus: String {
+        switch lang {
+        case .english: "Free Trial"
+        case .turkish: "Ücretsiz Deneme"
+        }
+    }
+
+    var proBillingIssueStatus: String {
+        switch lang {
+        case .english: "Billing issue — update payment method"
+        case .turkish: "Ödeme sorunu — ödeme yöntemini güncelle"
+        }
+    }
+
+    func proRenewsOn(_ dateText: String) -> String {
+        switch lang {
+        case .english: "Renews on \(dateText)"
+        case .turkish: "Yenilenme tarihi: \(dateText)"
+        }
+    }
+
+    func proExpiresOn(_ dateText: String) -> String {
+        switch lang {
+        case .english: "Expires on \(dateText)"
+        case .turkish: "Bitiş tarihi: \(dateText)"
+        }
+    }
+
+    var proProductsUnavailable: String {
+        switch lang {
+        case .english: "Subscription options are loading from the App Store. Try again shortly."
+        case .turkish: "Abonelik paketleri App Store'dan yükleniyor. Kısa süre sonra tekrar dene."
+        }
+    }
+
+    var proShareForDeepDiveCTA: String {
+        switch lang {
+        case .english: "Tip: Share any plate today to unlock +1 bonus Deep Dive for free."
+        case .turkish: "İpucu: Bugün bir tabak paylaşarak ücretsiz +1 ekstra Derinlemesine İnceleme kazanabilirsin."
+        }
+    }
+
+    var limitCardTitle: String {
+        switch lang {
+        case .english: "Today's Menu Is Complete"
+        case .turkish: "Bugünkü Menü Tamamlandı"
+        }
+    }
+
+    var limitCardSubtitle: String {
+        switch lang {
+        case .english: "The chef has served all 3 free plates for today. Unlock Omakase Pro for unlimited reading or wait for tomorrow's menu."
+        case .turkish: "Şef bugünlük 3 ücretsiz tabağı sundu. Sınırsız okuma için Omakase Pro'ya geç veya yarının menüsünü bekle."
+        }
+    }
+
+    func limitCardNextMenuIn(_ countdown: String) -> String {
+        switch lang {
+        case .english: "Next menu in \(countdown)"
+        case .turkish: "Yeni menüye \(countdown)"
+        }
+    }
+
+    var limitCardUpgradeCTA: String {
+        switch lang {
+        case .english: "Continue with Omakase Pro"
+        case .turkish: "Omakase Pro ile Devam Et"
+        }
+    }
+
+    var limitCardRemindCTA: String {
+        switch lang {
+        case .english: "Remind Me Tomorrow"
+        case .turkish: "Yarın Hatırlat"
+        }
+    }
+
+    var limitCardRemindPendingToast: String {
+        switch lang {
+        case .english: "Daily menu reminders are coming in the next step."
+        case .turkish: "Günlük menü hatırlatıcısı bir sonraki adımda aktif edilecek."
+        }
+    }
+
+    var limitCardBackToPlates: String {
+        switch lang {
+        case .english: "Re-read today's plates"
+        case .turkish: "Bugünkü tabaklara dön"
+        }
+    }
+
+    var toastShareBonusGranted: String {
+        switch lang {
+        case .english: "+1 bonus Deep Dive unlocked for today!"
+        case .turkish: "Bugün için +1 ekstra Derinlemesine İnceleme açıldı!"
+        }
+    }
+
+    var profileMembershipSection: String {
+        switch lang {
+        case .english: "Membership"
+        case .turkish: "Üyelik"
+        }
+    }
+
+    var profileUpgradeToPro: String {
+        switch lang {
+        case .english: "Upgrade to Omakase Pro"
+        case .turkish: "Omakase Pro'ya Geç"
+        }
+    }
+
+    func profileDailyQuotaSummary(
+        platesRemaining: Int,
+        platesLimit: Int,
+        deepDivesRemaining: Int,
+        deepDivesLimit: Int
+    ) -> String {
+        switch lang {
+        case .english:
+            "Today: \(platesRemaining)/\(platesLimit) plates · \(deepDivesRemaining)/\(deepDivesLimit) deep dives left"
+        case .turkish:
+            "Bugün: \(platesRemaining)/\(platesLimit) tabak · \(deepDivesRemaining)/\(deepDivesLimit) inceleme kaldı"
+        }
+    }
+
+    // MARK: - Notifications (Phase 3)
+
+    var notificationsSectionTitle: String {
+        switch lang {
+        case .english: "Notifications"
+        case .turkish: "Bildirimler"
+        }
+    }
+
+    var notificationsDailyMenuToggle: String {
+        switch lang {
+        case .english: "Daily Menu Reminder"
+        case .turkish: "Günlük Menü Hatırlatıcısı"
+        }
+    }
+
+    var notificationsReminderTime: String {
+        switch lang {
+        case .english: "Reminder Time"
+        case .turkish: "Hatırlatma Saati"
+        }
+    }
+
+    var notificationsCommentsToggle: String {
+        switch lang {
+        case .english: "Comment Notifications"
+        case .turkish: "Yorum Bildirimleri"
+        }
+    }
+
+    var notificationsDigestToggle: String {
+        switch lang {
+        case .english: "Daily Follower & Reaction Digest"
+        case .turkish: "Günlük Takipçi & Tepki Özeti"
+        }
+    }
+
+    var notificationsDeniedBanner: String {
+        switch lang {
+        case .english: "Notifications are off — Open Settings"
+        case .turkish: "Bildirimler kapalı — Ayarlar'da aç"
+        }
+    }
+
+    var notificationsProvisionalHint: String {
+        switch lang {
+        case .english: "Notifications are currently delivered quietly to Notification Center."
+        case .turkish: "Bildirimler şu anda Bildirim Merkezi'ne sessiz teslim ediliyor."
+        }
+    }
+
+    var notificationsQuietHoursFooter: String {
+        switch lang {
+        case .english: "Social updates pause between 22:00 and 08:00. Followers and reactions arrive once daily."
+        case .turkish: "Sosyal bildirimler 22:00–08:00 arası duraklatılır. Takipçi ve tepkiler günde tek özet olarak gelir."
+        }
+    }
+
+    var notificationsDeniedAlertTitle: String {
+        switch lang {
+        case .english: "Notifications Disabled"
+        case .turkish: "Bildirim İzni Kapalı"
+        }
+    }
+
+    var notificationsDeniedAlertMessage: String {
+        switch lang {
+        case .english: "Allow notifications in iOS Settings so Omakase can let you know when tomorrow's menu is ready."
+        case .turkish: "Yarının menüsü hazır olduğunda haber verebilmemiz için iOS Ayarlar'dan bildirimlere izin ver."
+        }
+    }
+
+    var openSettingsCTA: String {
+        switch lang {
+        case .english: "Open Settings"
+        case .turkish: "Ayarları Aç"
+        }
+    }
+
+    func limitCardRemindScheduledToast(timeText: String) -> String {
+        switch lang {
+        case .english: "Reminder set for \(timeText)."
+        case .turkish: "Hatırlatıcı \(timeText) için ayarlandı."
+        }
+    }
+
+    var notificationsNotGrantedToast: String {
+        switch lang {
+        case .english: "Notifications weren't enabled. You can turn them on anytime in Profile."
+        case .turkish: "Bildirimler açılmadı. İstediğin zaman Profil ekranından açabilirsin."
+        }
+    }
+
+    var commentNotificationPromptTitle: String {
+        switch lang {
+        case .english: "Get notified about new comments on your plates"
+        case .turkish: "Paylaşımlarına yorum geldiğinde haber al"
+        }
+    }
+
+    var turnOnCTA: String {
+        switch lang {
+        case .english: "Turn On"
+        case .turkish: "Aç"
+        }
+    }
+
+    var dailyMenuNotificationTitle: String {
+        switch lang {
+        case .english: "Today's Menu"
+        case .turkish: "Günün Menüsü"
+        }
+    }
+
+    func dailyMenuNotificationBody(interests: [String]) -> String {
+        switch lang {
+        case .english:
+            if interests.count >= 2 {
+                return "\(interests[0]) and \(interests[1]) are on the menu today."
+            } else if let first = interests.first, !first.isEmpty {
+                return "\(first) is featured on today's menu."
+            } else {
+                return "Fresh plates curated for your taste are ready today."
+            }
+        case .turkish:
+            if interests.count >= 2 {
+                return "Bugün mutfakta \(interests[0]) ve \(interests[1]) var."
+            } else if let first = interests.first, !first.isEmpty {
+                return "Bugün mutfakta \(first) öne çıkıyor."
+            } else {
+                return "Şefin bugünkü tabakları hazır."
+            }
+        }
+    }
+
+    var hiddenPreviewDailyMenu: String {
+        switch lang {
+        case .english: "Today's Menu"
+        case .turkish: "Günün Menüsü"
+        }
+    }
+
+    var hiddenPreviewComment: String {
+        switch lang {
+        case .english: "New comment"
+        case .turkish: "Yeni yorum"
+        }
+    }
+
+    var hiddenPreviewDigest: String {
+        switch lang {
+        case .english: "Community summary"
+        case .turkish: "Topluluk özeti"
+        }
+    }
+
+    // MARK: - Daily Plate Quota Stress Pill & Social Discover Mode
+
+    func feedQuotaPlatesRemaining(remaining: Int, limit: Int) -> String {
+        switch lang {
+        case .english:
+            if remaining <= 0 {
+                return "Limit · 0/\(limit)"
+            } else if remaining == 1 {
+                return "Last 1 · 1/\(limit)"
+            } else {
+                return "\(remaining)/\(limit) Left"
+            }
+        case .turkish:
+            if remaining <= 0 {
+                return "Doldu · 0/\(limit)"
+            } else if remaining == 1 {
+                return "Son 1 Hak · 1/\(limit)"
+            } else {
+                return "Kalan: \(remaining)/\(limit)"
+            }
+        }
+    }
+
+    func feedQuotaAccessibilityLabel(remaining: Int, limit: Int) -> String {
+        switch lang {
+        case .english:
+            "Daily free plates remaining: \(remaining) of \(limit). Tap to upgrade to Omakase Pro."
+        case .turkish:
+            "Günlük ücretsiz tabak hakkı: \(limit) üzerinden \(remaining) kaldı. Omakase Pro'ya geçmek için dokun."
+        }
+    }
+
+    var timelineModeDiscover: String {
+        switch lang {
+        case .english: "Discover"
+        case .turkish: "Keşfet"
+        }
+    }
+
+    var timelineModeFollowing: String {
+        switch lang {
+        case .english: "Following"
+        case .turkish: "Takip Edilenler"
+        }
+    }
+
+    var discoverFeedSubheader: String {
+        switch lang {
+        case .english: "Fresh plates shared by readers across the community."
+        case .turkish: "Topluluktaki farklı okurların paylaştığı seçme tabaklar."
+        }
+    }
+
+    var followingEmptyHeadline: String {
+        switch lang {
+        case .english: "No posts from people you follow yet"
+        case .turkish: "Takip ettiğin kişilerden henüz paylaşım yok"
+        }
+    }
+
+    var followingEmptyDetail: String {
+        switch lang {
+        case .english: "Switch to Discover to see random readers and follow tastes you like."
+        case .turkish: "Farklı okurları görmek ve zevkine uyanları takip etmek için Keşfet sekmesine geç."
+        }
+    }
+
+    var exploreDiscoverCTA: String {
+        switch lang {
+        case .english: "Explore Discover Feed"
+        case .turkish: "Keşfet Akışına Geç"
+        }
+    }
 }

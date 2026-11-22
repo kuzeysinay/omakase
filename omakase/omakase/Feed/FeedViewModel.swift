@@ -6,6 +6,7 @@
 import Foundation
 import Network
 import Observation
+import SwiftUI
 
 @Observable
 @MainActor
@@ -15,7 +16,11 @@ final class FeedViewModel {
 
     private(set) var posts: [Post] = []
     private(set) var isGenerating: Bool = false
-    private(set) var errorMessage: String?
+    private(set) var activeError: OmakaseError?
+    var pendingToastError: OmakaseError?
+    private(set) var letterboxdIssue: OmakaseError?
+    var shouldPresentSoftPaywall: Bool = false
+    var requestedPaywallSource: PaywallSource?
 
     // MARK: - Config
 
@@ -33,6 +38,16 @@ final class FeedViewModel {
     private var streamingTask: Task<Void, Never>?
     /// The post the current `streamingTask` is filling; only that task may clear `isGenerating`.
     private var activeStreamPostID: UUID?
+    private var activeStreamHasError: Bool = false
+
+    private enum RetryAction {
+        case nextPost
+        case dedicated(topic: String, categoryId: String?)
+        case letterboxd(username: String)
+        case deepDive(postID: UUID)
+    }
+
+    private var lastRetryAction: RetryAction?
 
     // MARK: - Letterboxd
 
@@ -43,11 +58,12 @@ final class FeedViewModel {
     /// The Letterboxd username, persisted via FeedView's @AppStorage.
     var letterboxdUsername: String = ""
     private(set) var isFetchingLetterboxd: Bool = false
-    private(set) var letterboxdError: String?
 
     // MARK: - Reading Cooldown
     var readingCooldownRemaining: Int = 0
     var readingCooldownTotal: Int = 0
+    private(set) var readingCooldownStartDate: Date?
+    private(set) var readingCooldownEndDate: Date?
     var isCooldownActive: Bool { readingCooldownRemaining > 0 }
     private var cooldownTimerTask: Task<Void, Never>? = nil
 
@@ -57,16 +73,44 @@ final class FeedViewModel {
         let words = text.split { $0.isWhitespace }.count
         // Ensure reading cooldown is between 15s and 25s
         let seconds = max(15, min(25, words / 3))
+        let now = Date()
+        let endDate = now.addingTimeInterval(TimeInterval(seconds))
         readingCooldownTotal = seconds
         readingCooldownRemaining = seconds
+        readingCooldownStartDate = now
+        readingCooldownEndDate = endDate
 
         cooldownTimerTask = Task { @MainActor in
-            while readingCooldownRemaining > 0 {
-                try? await Task.sleep(for: .seconds(1))
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(250))
                 guard !Task.isCancelled else { break }
-                readingCooldownRemaining -= 1
+                let remaining = endDate.timeIntervalSinceNow
+                if remaining <= 0 {
+                    readingCooldownRemaining = 0
+                    readingCooldownStartDate = nil
+                    readingCooldownEndDate = nil
+                    if !AccessManager.shared.isPro,
+                       !UserDefaults.standard.bool(forKey: "omakase.hasShownFirstPlatePaywall"),
+                       posts.contains(where: { $0.isComplete && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                        shouldPresentSoftPaywall = true
+                    }
+                    break
+                } else {
+                    let nextSeconds = max(1, Int(ceil(remaining)))
+                    if readingCooldownRemaining != nextSeconds {
+                        readingCooldownRemaining = nextSeconds
+                    }
+                }
             }
         }
+    }
+
+    private func clearReadingCooldown() {
+        cooldownTimerTask?.cancel()
+        cooldownTimerTask = nil
+        readingCooldownRemaining = 0
+        readingCooldownStartDate = nil
+        readingCooldownEndDate = nil
     }
 
     // MARK: - Init
@@ -91,8 +135,17 @@ final class FeedViewModel {
     /// stream is in flight — the previous one is cancelled.
     func requestNextPost() {
         guard !isGenerating && !isCooldownActive else { return }
+        if isOffline {
+            pendingToastError = .offline
+            return
+        }
+        if AccessManager.shared.isPlateLimitReached {
+            return
+        }
+
         streamingTask?.cancel()
-        errorMessage = nil
+        activeError = nil
+        lastRetryAction = .nextPost
 
         let post = Post()
         // Newest last — append so new posts appear below in Reels-style feed.
@@ -100,130 +153,67 @@ final class FeedViewModel {
         let postID = post.id
         isGenerating = true
         activeStreamPostID = postID
+        activeStreamHasError = false
 
-        let url = baseURL.appendingPathComponent("feed/stream")
         var requestBody: [String: Any] = [
             "interests": interests,
             "seen_count": max(posts.count - 1, 0),
             "language": contentLanguage.rawValue,
+            "timezone": TimeZone.current.identifier,
         ]
-
-        // Inject Letterboxd films when the mode is active.
         if isLetterboxdActive, !letterboxdFilms.isEmpty {
             requestBody["letterboxd_films"] = letterboxdFilms.map { $0.asDictionary }
         }
 
-        let bodyData = (try? JSONSerialization.data(withJSONObject: requestBody)) ?? Data()
-
-        // `Task { }` created here would inherit MainActor and block the UI on
-        // URLSession; use `detached` and hop back per event.
-        let streamURL = url
-        let streamBody = bodyData
-        let streamPostID = postID
-        let apiBaseForErrors = baseURL
-        streamingTask = Task.detached(priority: .userInitiated) {
-            let stream = SSEClient.events(
-                from: streamURL,
-                method: "POST",
-                headers: ["Content-Type": "application/json"],
-                body: streamBody
-            )
-
-            do {
-                for try await event in stream {
-                    if Task.isCancelled { break }
-                    let isBodyToken = (event.event == "token")
-                    await MainActor.run { [weak self] in
-                        guard let self else { return }
-                        self.handle(event: event, for: streamPostID)
-                    }
-                    if isBodyToken {
-                        await Task.yield()
-                    }
-                }
-                let streamEndedByCancellation = Task.isCancelled
-                await MainActor.run { [weak self] in
-                    guard let self else { return }
-                    if streamEndedByCancellation {
-                        self.handleStreamAbandoned(postID: streamPostID)
-                    } else {
-                        let p = self.posts.first { $0.id == streamPostID }
-                        if
-                            let p,
-                            !p.isComplete,
-                            p.text.isEmpty,
-                            self.errorMessage == nil
-                        {
-                            let l10n = L10n(lang: self.contentLanguage)
-                            self.errorMessage = l10n.streamEndedNoText
-                            self.handleStreamAbandoned(postID: streamPostID)
-                        }
-                    }
-                }
-            } catch is CancellationError {
-                await MainActor.run { [weak self] in
-                    self?.handleStreamAbandoned(postID: streamPostID)
-                }
-            } catch {
-                await MainActor.run { [weak self] in
-                    guard let self else { return }
-                    self.errorMessage = Self.friendlyStreamError(
-                        error,
-                        apiBase: apiBaseForErrors,
-                        l10n: L10n(lang: self.contentLanguage)
-                    )
-                    self.handleStreamAbandoned(postID: streamPostID)
-                }
-            }
-            await MainActor.run { [weak self] in
-                guard
-                    let self,
-                    self.activeStreamPostID == streamPostID
-                else { return }
-                self.isGenerating = false
-                if let post = self.posts.first(where: { $0.id == streamPostID }), post.isComplete, !post.text.isEmpty {
-                    self.startReadingCooldown(for: post.text)
-                }
-            }
-        }
+        streamPost(postID: postID, requestBody: requestBody, area: "feed_next")
     }
 
     /// Generate a single post specifically and exclusively focused on the tapped topic,
     /// without mutating the user's persistent interests list in memory.
-    func requestDedicatedPost(topic: String) {
+    func requestDedicatedPost(topic: String, categoryId: String? = nil) {
         guard !isGenerating && !isCooldownActive else { return }
-        streamingTask?.cancel()
-        readingCooldownRemaining = 0
-        errorMessage = nil
+        if isOffline {
+            pendingToastError = .offline
+            return
+        }
+        if AccessManager.shared.isPlateLimitReached {
+            return
+        }
 
-        let post = Post()
+        streamingTask?.cancel()
+        clearReadingCooldown()
+        activeError = nil
+        lastRetryAction = .dedicated(topic: topic, categoryId: categoryId)
+
+        let resolvedCategoryId = categoryId ?? InterestCategory.resolveMainCategory(tags: [topic], title: topic).id
+        let post = Post(tags: [topic], categoryId: resolvedCategoryId)
         posts.append(post)
         let postID = post.id
         isGenerating = true
         activeStreamPostID = postID
+        activeStreamHasError = false
 
-        streamDedicatedPost(topic: topic, postID: postID)
-    }
-
-    /// Internal helper that initiates SSE streaming for a newly created placeholder post.
-    private func streamDedicatedPost(topic: String, postID: UUID) {
-        let url = baseURL.appendingPathComponent("feed/stream")
         var requestBody: [String: Any] = [
             "interests": [topic],
             "seen_count": max(posts.count - 1, 0),
             "language": contentLanguage.rawValue,
+            "timezone": TimeZone.current.identifier,
         ]
-
         if isLetterboxdActive, !letterboxdFilms.isEmpty {
             requestBody["letterboxd_films"] = letterboxdFilms.map { $0.asDictionary }
         }
 
-        let bodyData = (try? JSONSerialization.data(withJSONObject: requestBody)) ?? Data()
-        let streamURL = url
-        let streamBody = bodyData
-        let streamPostID = postID
-        let apiBaseForErrors = baseURL
+        streamPost(postID: postID, requestBody: requestBody, area: "feed_dedicated")
+    }
 
+    /// Shared SSE post-streaming helper used by feed, dedicated topic, and Letterboxd posts.
+    private func streamPost(postID: UUID, requestBody: [String: Any], area: String) {
+        let streamURL = baseURL.appendingPathComponent("feed/stream")
+        let streamBody = (try? JSONSerialization.data(withJSONObject: requestBody)) ?? Data()
+        let streamPostID = postID
+
+        // `Task { }` created here would inherit MainActor and block the UI on
+        // URLSession; use `detached` and hop back per event.
         streamingTask = Task.detached(priority: .userInitiated) {
             let stream = SSEClient.events(
                 from: streamURL,
@@ -252,10 +242,14 @@ final class FeedViewModel {
                     } else if let p = self.posts.first(where: { $0.id == streamPostID }),
                               !p.isComplete,
                               p.text.isEmpty,
-                              self.errorMessage == nil {
-                        let l10n = L10n(lang: self.contentLanguage)
-                        self.errorMessage = l10n.streamEndedNoText
-                        self.handleStreamAbandoned(postID: streamPostID)
+                              !self.activeStreamHasError {
+                        self.handleStreamFailure(
+                            nil,
+                            mapped: .generationFailed,
+                            postID: streamPostID,
+                            isDeepDive: false,
+                            area: "\(area)_empty"
+                        )
                     }
                 }
             } catch is CancellationError {
@@ -265,12 +259,14 @@ final class FeedViewModel {
             } catch {
                 await MainActor.run { [weak self] in
                     guard let self else { return }
-                    self.errorMessage = Self.friendlyStreamError(
+                    let mapped = OmakaseError.from(error)
+                    self.handleStreamFailure(
                         error,
-                        apiBase: apiBaseForErrors,
-                        l10n: L10n(lang: self.contentLanguage)
+                        mapped: mapped == .unknown ? .generationFailed : mapped,
+                        postID: streamPostID,
+                        isDeepDive: false,
+                        area: area
                     )
-                    self.handleStreamAbandoned(postID: streamPostID)
                 }
             }
 
@@ -280,24 +276,57 @@ final class FeedViewModel {
                     self.activeStreamPostID == streamPostID
                 else { return }
                 self.isGenerating = false
-                if let post = self.posts.first(where: { $0.id == streamPostID }), post.isComplete, !post.text.isEmpty {
+                if !self.activeStreamHasError,
+                   let post = self.posts.first(where: { $0.id == streamPostID }),
+                   post.isComplete,
+                   !post.text.isEmpty {
                     self.startReadingCooldown(for: post.text)
                 }
             }
         }
     }
 
+    func retryLastRequest() {
+        guard let action = lastRetryAction else { return }
+        activeError = nil
+        switch action {
+        case .nextPost:
+            requestNextPost()
+        case .dedicated(let topic, let categoryId):
+            requestDedicatedPost(topic: topic, categoryId: categoryId)
+        case .letterboxd(let username):
+            requestLetterboxdDedicatedPost(username: username)
+        case .deepDive(let postID):
+            if let post = posts.first(where: { $0.id == postID }) {
+                requestDeepDive(for: post)
+            }
+        }
+    }
+
     func dismissError() {
-        errorMessage = nil
+        activeError = nil
+    }
+
+    func dismissLetterboxdIssue() {
+        letterboxdIssue = nil
+    }
+
+    func consumeToastError() -> OmakaseError? {
+        defer { pendingToastError = nil }
+        return pendingToastError
     }
 
     func reset() {
         streamingTask?.cancel()
         streamingTask = nil
+        clearReadingCooldown()
         activeStreamPostID = nil
+        activeStreamHasError = false
         posts = []
         isGenerating = false
-        errorMessage = nil
+        activeError = nil
+        pendingToastError = nil
+        letterboxdIssue = nil
     }
 
     func removePost(id: UUID) {
@@ -337,11 +366,16 @@ final class FeedViewModel {
     func fetchLetterboxdFilms() {
         let username = letterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !username.isEmpty else {
-            letterboxdError = "No Letterboxd username set."
+            letterboxdIssue = .letterboxdNotFound
             return
         }
+        if isOffline {
+            pendingToastError = .offline
+            return
+        }
+
         isFetchingLetterboxd = true
-        letterboxdError = nil
+        letterboxdIssue = nil
 
         Task {
             do {
@@ -350,15 +384,24 @@ final class FeedViewModel {
                     self.letterboxdFilms = films
                     self.isFetchingLetterboxd = false
                     if films.isEmpty {
-                        self.letterboxdError = "No films found for @\(username)."
+                        ErrorReporter.record(nil, mapped: .letterboxdNotFound, area: "letterboxd_fetch_empty")
+                        self.letterboxdIssue = .letterboxdNotFound
                     }
                 }
             } catch is CancellationError {
-                // ignore
+                await MainActor.run {
+                    self.isFetchingLetterboxd = false
+                }
             } catch {
                 await MainActor.run {
-                    self.letterboxdError = error.localizedDescription
+                    let mapped = OmakaseError.from(error)
+                    ErrorReporter.record(error, mapped: mapped, area: "letterboxd_fetch")
                     self.isFetchingLetterboxd = false
+                    if mapped == .letterboxdNotFound || mapped == .letterboxdPrivate {
+                        self.letterboxdIssue = mapped
+                    } else {
+                        self.presentError(mapped)
+                    }
                 }
             }
         }
@@ -367,45 +410,110 @@ final class FeedViewModel {
     /// Request a cinema post specifically contextualized with the user's Letterboxd watched films.
     func requestLetterboxdDedicatedPost(username overrideUsername: String? = nil) {
         guard !isGenerating && !isCooldownActive else { return }
+        if isOffline {
+            pendingToastError = .offline
+            return
+        }
+        if AccessManager.shared.isPlateLimitReached {
+            return
+        }
 
+        let previousUsername = letterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
         if let overrideUsername, !overrideUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            self.letterboxdUsername = overrideUsername.trimmingCharacters(in: .whitespacesAndNewlines)
-        } else if self.letterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let cleanOverride = overrideUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleanOverride.caseInsensitiveCompare(previousUsername) != .orderedSame {
+                letterboxdFilms = []
+            }
+            self.letterboxdUsername = cleanOverride
+        } else if previousUsername.isEmpty {
             self.letterboxdUsername = UserDefaults.standard.string(forKey: "omakase.letterboxd_username") ?? ""
         }
+
         let username = letterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !username.isEmpty else { return }
+        guard !username.isEmpty else {
+            letterboxdIssue = .letterboxdNotFound
+            return
+        }
 
         streamingTask?.cancel()
-        readingCooldownRemaining = 0
-        errorMessage = nil
+        clearReadingCooldown()
+        activeError = nil
+        letterboxdIssue = nil
+        activeStreamHasError = false
         isLetterboxdActive = true
+        lastRetryAction = .letterboxd(username: username)
 
-        let post = Post()
+        let post = Post(tags: ["Film"], categoryId: "film")
         posts.append(post)
         let postID = post.id
         isGenerating = true
         activeStreamPostID = postID
 
         if !letterboxdFilms.isEmpty {
-            streamDedicatedPost(topic: "Film", postID: postID)
+            let requestBody: [String: Any] = [
+                "interests": ["Film"],
+                "seen_count": max(posts.count - 1, 0),
+                "language": contentLanguage.rawValue,
+                "timezone": TimeZone.current.identifier,
+                "letterboxd_films": letterboxdFilms.map { $0.asDictionary },
+            ]
+            streamPost(postID: postID, requestBody: requestBody, area: "letterboxd_feed")
             return
         }
 
         isFetchingLetterboxd = true
         Task {
-            var fetched: [LetterboxdFilm] = []
             do {
-                fetched = try await LetterboxdService.fetchFilms(username: username)
+                let fetched = try await LetterboxdService.fetchFilms(username: username)
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.isFetchingLetterboxd = false
+                    if fetched.isEmpty {
+                        ErrorReporter.record(nil, mapped: .letterboxdNotFound, area: "letterboxd_empty")
+                        self.handleStreamAbandoned(postID: postID)
+                        if self.activeStreamPostID == postID {
+                            self.isGenerating = false
+                        }
+                        self.isLetterboxdActive = false
+                        self.letterboxdIssue = .letterboxdNotFound
+                        return
+                    }
+                    self.letterboxdFilms = fetched
+                    let requestBody: [String: Any] = [
+                        "interests": ["Film"],
+                        "seen_count": max(self.posts.count - 1, 0),
+                        "language": self.contentLanguage.rawValue,
+                        "timezone": TimeZone.current.identifier,
+                        "letterboxd_films": fetched.map { $0.asDictionary },
+                    ]
+                    self.streamPost(postID: postID, requestBody: requestBody, area: "letterboxd_feed")
+                }
+            } catch is CancellationError {
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.isFetchingLetterboxd = false
+                    self.handleStreamAbandoned(postID: postID)
+                    if self.activeStreamPostID == postID {
+                        self.isGenerating = false
+                    }
+                }
             } catch {
-                // Non-fatal fallback: stream high-quality Film post even if RSS fails
-            }
-
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.isFetchingLetterboxd = false
-                self.letterboxdFilms = fetched
-                self.streamDedicatedPost(topic: "Film", postID: postID)
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.isFetchingLetterboxd = false
+                    let mapped = OmakaseError.from(error)
+                    ErrorReporter.record(error, mapped: mapped, area: "letterboxd_dedicated")
+                    self.handleStreamAbandoned(postID: postID)
+                    if self.activeStreamPostID == postID {
+                        self.isGenerating = false
+                    }
+                    self.isLetterboxdActive = false
+                    if mapped == .letterboxdNotFound || mapped == .letterboxdPrivate {
+                        self.letterboxdIssue = mapped
+                    } else {
+                        self.presentError(mapped)
+                    }
+                }
             }
         }
     }
@@ -413,10 +521,21 @@ final class FeedViewModel {
     // MARK: - Deep Dive
 
     func requestDeepDive(for post: Post) {
-        streamingTask?.cancel()
+        if isOffline {
+            pendingToastError = .offline
+            return
+        }
+        if AccessManager.shared.isDeepDiveLimitReached {
+            requestedPaywallSource = .deepDiveLimit
+            return
+        }
         guard !isGenerating else { return }
+
+        streamingTask?.cancel()
         isGenerating = true
-        errorMessage = nil
+        activeError = nil
+        activeStreamHasError = false
+        lastRetryAction = .deepDive(postID: post.id)
 
         guard let targetPost = posts.first(where: { $0.id == post.id }) else {
             isGenerating = false
@@ -437,13 +556,13 @@ final class FeedViewModel {
             "original_text": post.text,
             "interests": interests,
             "language": contentLanguage.rawValue,
+            "timezone": TimeZone.current.identifier,
         ]
         let bodyData = (try? JSONSerialization.data(withJSONObject: requestBody)) ?? Data()
 
         let streamURL = url
         let streamBody = bodyData
         let streamPostID = deepDiveId
-        let apiBaseForErrors = baseURL
         streamingTask = Task.detached(priority: .userInitiated) {
             let stream = SSEClient.events(
                 from: streamURL,
@@ -469,13 +588,17 @@ final class FeedViewModel {
                     guard let self else { return }
                     if streamEndedByCancellation {
                         self.handleStreamAbandoned(postID: streamPostID)
-                    } else {
-                        let p = self.posts.first { $0.id == streamPostID }
-                        if let p, !p.isComplete, p.text.isEmpty, self.errorMessage == nil {
-                            let l10n = L10n(lang: self.contentLanguage)
-                            self.errorMessage = l10n.streamEndedNoText
-                            self.markPostComplete(streamPostID)
-                        }
+                    } else if let p = self.posts.first(where: { $0.id == streamPostID }),
+                              !p.isComplete,
+                              (p.deepDiveText ?? "").isEmpty,
+                              !self.activeStreamHasError {
+                        self.handleStreamFailure(
+                            nil,
+                            mapped: .generationFailed,
+                            postID: streamPostID,
+                            isDeepDive: true,
+                            area: "deep_dive_empty"
+                        )
                     }
                 }
             } catch is CancellationError {
@@ -485,12 +608,14 @@ final class FeedViewModel {
             } catch {
                 await MainActor.run { [weak self] in
                     guard let self else { return }
-                    self.errorMessage = Self.friendlyStreamError(
+                    let mapped = OmakaseError.from(error)
+                    self.handleStreamFailure(
                         error,
-                        apiBase: apiBaseForErrors,
-                        l10n: L10n(lang: self.contentLanguage)
+                        mapped: mapped == .unknown ? .generationFailed : mapped,
+                        postID: streamPostID,
+                        isDeepDive: true,
+                        area: "deep_dive"
                     )
-                    self.markPostComplete(streamPostID)
                 }
             }
             await MainActor.run { [weak self] in
@@ -529,6 +654,9 @@ final class FeedViewModel {
             }
         case "done":
             markPostComplete(postID)
+            if let accessDict = payload["access"] as? [String: Any] {
+                AccessManager.shared.applySSEAccessPayload(accessDict)
+            }
             if let idx = posts.firstIndex(where: { $0.id == postID }) {
                 Task {
                     await PostCacheService.shared.cachePost(posts[idx])
@@ -536,12 +664,71 @@ final class FeedViewModel {
                 }
             }
         case "error":
-            let message = (payload["message"] as? String) ?? "Unknown server error."
-            errorMessage = message
-            markPostComplete(postID)
+            let code = payload["code"] as? String
+            let retryAfter = (payload["retry_after"] as? Int)
+                ?? (payload["retry_after"] as? Double).map { Int(ceil($0)) }
+            let resetsAtRaw = payload["resets_at"] as? String
+            let kind = payload["kind"] as? String
+            var mapped = OmakaseError.fromBackendCode(
+                code,
+                retryAfter: retryAfter,
+                resetsAt: Self.parseISO8601Date(resetsAtRaw),
+                kind: kind
+            )
+            if mapped == .unknown {
+                mapped = .generationFailed
+            }
+            let isDeepDive = posts.first(where: { $0.id == postID })?.deepDiveText != nil
+            handleStreamFailure(
+                nil,
+                mapped: mapped,
+                postID: postID,
+                isDeepDive: isDeepDive,
+                area: isDeepDive ? "deep_dive_sse_error" : "feed_sse_error"
+            )
         default:
             // `start` or anything we don't care about — ignore.
             break
+        }
+    }
+
+    private func handleStreamFailure(
+        _ rawError: Error?,
+        mapped: OmakaseError,
+        postID: UUID,
+        isDeepDive: Bool,
+        area: String
+    ) {
+        activeStreamHasError = true
+        ErrorReporter.record(rawError, mapped: mapped, area: area)
+
+        if isDeepDive {
+            if let post = posts.first(where: { $0.id == postID }) {
+                if (post.deepDiveText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    post.deepDiveText = nil
+                }
+                post.isComplete = true
+            }
+        } else {
+            handleStreamAbandoned(postID: postID)
+        }
+
+        presentError(mapped)
+    }
+
+    private func presentError(_ mapped: OmakaseError) {
+        if case .quotaExceeded(let kind, let resetsAt) = mapped {
+            AccessManager.shared.applyQuotaExceeded(kind: kind, resetsAt: resetsAt)
+            if kind == .deepDive {
+                requestedPaywallSource = .deepDiveLimit
+            }
+            return
+        }
+        switch mapped.presentation {
+        case .toast, .inline:
+            pendingToastError = mapped
+        case .alert:
+            activeError = mapped
         }
     }
 
@@ -566,10 +753,12 @@ final class FeedViewModel {
 
     private func appendText(_ text: String, to postID: UUID) {
         guard let post = posts.first(where: { $0.id == postID }) else { return }
-        if post.deepDiveText != nil {
-            post.deepDiveText! += text
-        } else {
-            post.text += text
+        withAnimation(.easeOut(duration: 0.14)) {
+            if post.deepDiveText != nil {
+                post.deepDiveText! += text
+            } else {
+                post.text += text
+            }
         }
     }
 
@@ -588,18 +777,16 @@ final class FeedViewModel {
         }
     }
 
-    /// Maps URLSession / transport errors to a short hint (default URL error text is vague).
-    private static func friendlyStreamError(_ error: Error, apiBase: URL, l10n: L10n) -> String {
-        if let urlError = error as? URLError {
-            switch urlError.code {
-            case .cannotConnectToHost, .cannotFindHost, .networkConnectionLost, .notConnectedToInternet,
-                 .timedOut, .dnsLookupFailed:
-                return l10n.couldNotConnect(apiBase: apiBase.absoluteString)
-            default:
-                break
-            }
+    private static func parseISO8601Date(_ raw: String?) -> Date? {
+        guard let raw, !raw.isEmpty else { return nil }
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = withFraction.date(from: raw) {
+            return date
         }
-        return error.localizedDescription
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        return standard.date(from: raw)
     }
 
     private static func decodeJSON(_ raw: String) -> [String: Any] {

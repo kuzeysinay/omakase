@@ -46,14 +46,24 @@ enum ShareService {
         return renderer.uiImage
     }
 
-    static func presentShareSheet(post: Post, language: AppLanguage = .english) {
+    static func presentShareSheet(
+        post: Post,
+        language: AppLanguage = .english,
+        onShareCompleted: (() -> Void)? = nil
+    ) {
         guard let image = renderCardImage(for: post, language: language) else { return }
-        
+
         let itemSource = ShareItemSource(post: post, image: image)
         let activityVC = UIActivityViewController(
             activityItems: [itemSource],
             applicationActivities: nil
         )
+        activityVC.completionWithItemsHandler = { _, completed, _, _ in
+            guard completed else { return }
+            Task { @MainActor in
+                onShareCompleted?()
+            }
+        }
 
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let rootVC = windowScene.windows.first?.rootViewController

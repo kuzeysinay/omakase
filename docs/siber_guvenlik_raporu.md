@@ -1,7 +1,7 @@
 # 🛡️ Omakase — Kapsamlı Siber Güvenlik Durumu ve Tehdit Analizi Raporu
 
-> **Denetim & Sertleştirme Tarihi:** 13 Kasım 2026  
-> **Kapsam:** Tüm Omakase ekosistemi — iOS İstemcisi (`omakase/`), FastAPI & Cloud Run Backend (`backend/`), Cloud Firestore Kuralları (`firestore.rules`), Web & Hosting Altyapısı (`web/`, `firebase.json`), API Anahtarları ve Sır (Secret) Yönetimi.  
+> **Denetim & Sertleştirme Tarihi:** 22 Kasım 2026  
+> **Kapsam:** Tüm Omakase ekosistemi — iOS İstemcisi (`omakase/`), FastAPI & Cloud Run Backend (`backend/`), Cloud Firestore Kuralları (`firestore.rules`), Web & Hosting Altyapısı (`web/`, `firebase.json`), API Anahtarları, RevenueCat / Bildirim Altyapısı ve Sır (Secret) Yönetimi.  
 > **Dayanak:** Kod tabanı statik güvenlik denetimi, git geçmişi taraması, [OWASP Mobile Top 10 / MASVS](https://mas.owasp.org/), [OWASP API Security Top 10](https://owasp.org/API-Security/), [`knowledge.networking.authenticated-requests`](file:///Users/kuzey/projects/omakase/.agents/knowledge/networking/authenticated-requests.md) ve Apple [`knowledge.app-store-review-guidelines.data-security`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/data-security.md).
 
 ---
@@ -40,6 +40,8 @@ Omakase kod tabanında tespit edilen **tüm kod seviyesi güvenlik zafiyetleri (
 | **S-08** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Backend / AI | Doğrudan metin birleştirmeye dayalı Prompt Injection yüzeyi | Kontrol karakteri temizliği + `<user_context>` XML izolasyonu ve sistem prompt savunma kuralları ([`backend/app/prompts.py`](file:///Users/kuzey/projects/omakase/backend/app/prompts.py)) |
 | **S-09** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Web & Auth | `firebase.json` eksik güvenlik başlıkları (CSP/HSTS) ve 6 karakter parola sınırı | `firebase.json` CSP/HSTS/X-Frame-Options eklendi; yeni kayıtlarda minimum parola 8 karaktere çıkarıldı ([`firebase.json`](file:///Users/kuzey/projects/omakase/firebase.json), [`AuthService.swift#L154`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift#L154)) |
 | **S-10** | ✅ **GÜVENLİ** | ✅ **KORUNDU** | iOS / Depolama | `GEMINI_API_KEY` gizliliği, Sign in with Apple SHA-256 Nonce + Keychain ve ATS uyumluluğu | İstemci tarafı sır sızıntısı yok; `Release` derlemelerinde `http://127.0.0.1` fallback'i `#if DEBUG` ile kapatıldı ([`SSEClient.swift#L26-L40`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L26-L40)) |
+| **S-11** | 🟠 **ORTA-YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Firestore Rules | `following`/`followers`/`shared_posts`/`comments`/`moderation_reports` belgelerinde eksik `hasOnly` anahtar kilidi, kendini takip etme, engelli kullanıcıların `following` yazması ve yazarın `reportedBy` listesini silebilme riski | [`firestore.rules`](file:///Users/kuzey/projects/omakase/firestore.rules) tüm validator'lara `hasOnly` + timestamp tip kilidi eklendi, kendini takip & engelli takip yazımı engellendi, yazarın `reportedBy` dizisini değiştirmesi kilitlendi |
+| **S-12** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Backend / Billing & Push | `/billing/status` ve `/billing/sync` uç noktalarında rate-limit eksikliği + `/notifications/events` `actor_name` spoofing yüzeyi | [`billing.py`](file:///Users/kuzey/projects/omakase/backend/app/routers/billing.py) için `_check_rate_limit` (`status`: 30/dk, `sync`: 10/dk) ve [`notification_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/notification_service.py) içinde `_resolve_actor_display_name` (Firestore otoritesi) eklendi |
 
 ---
 
@@ -164,3 +166,31 @@ flowchart LR
   - `Application restrictions` → `iOS apps` → `kuzeysinay.omakase`
   - `API restrictions` → `Generative Language API` erişimini kapatıp yalnızca Firebase/Firestore API'lerini bırakın.
 - [ ] **4. Firebase Console'da App Check (App Attest) ve Email Enumeration Protection'ı Etkinleştirin.**
+
+---
+
+## 8. Bölüm 6: 22 Kasım 2026 Güncel Denetim (`firebase-security-rules-auditor` & Faz 1–3 Taraması)
+
+### 8.1. Faz 1–3 Yeni Sistemlerinin Güvenlik Doğrulaması
+* **Monetizasyon (`/billing/*` & `entitlements`/`usage`):** `REVENUECAT_SECRET_API_KEY` ve `REVENUECAT_WEBHOOK_SECRET` yalnızca sunucu ortam değişkenlerinden okunur; webhook doğrulaması sabit zamanlı `hmac.compare_digest` ile yapılır. İstemci tarafı `entitlements/{uid}` ve `usage/{uid}_{yyyymmdd}` koleksiyonlarına yazamaz (`allow create, update, delete: if false`). `/billing/status` (30/dk) ve `/billing/sync` (10/dk) uç noktalarına rate limiter eklendi (`S-12`).
+* **Bildirim Sistemi (`/notifications/*`, `devices`, `notification_prefs`, `notification_queue`, `notification_cooldowns`):** `notification_queue` ve `notification_cooldowns` tüm istemci okuma/yazmalarına kapalıdır. `/notifications/process-queue` `X-Omakase-Cron-Secret` ile sabit zamanlı korunur. `record_social_event` içinde alıcı UID'si gönderi yazarından veya `followers` alt koleksiyonundan sunucu tarafında doğrulanır ve `_resolve_actor_display_name` ile push gönderen ismi Firestore'dan okunur (`S-12`).
+* **Hata Sözleşmesi & Telemetri (`OmakaseError` + Crashlytics):** Teknik istisnalar ve stack trace'ler asla iOS kullanıcı arayüzüne veya API JSON yanıtlarına basılmaz; `ErrorReporter.record` yalnızca non-fatal telemetri toplar.
+
+### 8.2. `firebase-security-rules-auditor` Red Team Değerlendirme Çıktısı (`firestore.rules`)
+
+`S-11` sıkılaştırması (`hasOnly` alan beyaz listeleri, `timestamp` tip kontrolleri, kendini takip etme engeli, çift yönlü engel kontrolü ve yazarların `reportedBy` dizisini değiştirememesi) sonrası denetim skoru:
+
+```json
+{
+  "score": 5,
+  "summary": "firestore.rules enforces strict ownership, immutable author/ID fields, server-only isolation for entitlements/usage/notification_queue/notification_cooldowns, bounded string/list sizes, and whitelisted schema keys across all user-writable collections.",
+  "findings": [
+    {
+      "check": "Update Bypass & Identity-Level Security (S-11)",
+      "severity": "minor",
+      "issue": "Resolved: Author updates on shared_posts and comments previously omitted a guard preventing removal of reportedBy entries, and follow/block/post/comment/report docs lacked strict hasOnly key allowlists.",
+      "recommendation": "Deployed strict hasOnly allowlists, timestamp type checks, self-follow prevention, target block check on following, and reportedBy immutability for authors."
+    }
+  ]
+}
+```

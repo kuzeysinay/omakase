@@ -120,14 +120,14 @@ Sorduğun ikinci kritik soru: *"Reklam vermeli miyim, nasıl bir strateji izleme
 * ABD/İngiltere'de iOS Eğitim/Kültür kategorisinde bir uygulama indirme maliyeti (**CPI - Cost Per Install**) ortalama **\$2.50 – \$5.00** arasındadır.
 * Eğer indiren 100 kişiden en az 8–10 tanesi ilk 3 gün içinde yıllık/aylık aboneliğe geçmiyorsa, reklama harcadığın her \$100 sana \$20 olarak döner.
 
-### 4.2. Ücretli Reklama Geçmeden Önce Kurulması Gereken "Paywall Matematiği"
-Reklam bütçesinin kendini amorti etmesi (ROAS > 1.0) için uygulamada şu dönüşüm hunisinin hazır olması şarttır:
-1. **Onboarding Sonrası "Yumuşak Yıllık Paywall" (3 Gün Ücretsiz Deneme):**
-   - Kullanıcı 3 adımlı kaydı tamamlayıp ilk Bento seçimini yaptıktan ve **ilk mikro-hikayesini + Deep Dive'ını hayranlıkla okuduktan hemen sonra** (veya 2. günün başında) karşısına zarif bir **Omakase Pro** ekranı çıkmalıdır.
+### 4.2. Lansman (v1.0) İle Birlikte Devreye Alınacak "Paywall Matematiği"
+Uygulama **ilk günden (v1.0)** ödeme sistemiyle çıkacağı için hem sunucu/AI maliyetleri kontrol altında tutulur hem de ilk günden **Cost Per Trial** verisi birikir:
+1. **İlk Değer Anı + "Günün Menüsü" Limiti (7 Gün Ücretsiz Deneme):**
+   - Kullanıcı **ilk mikro-hikayesini okuyup cooldown bittikten hemen sonra** kapatılabilir yumuşak bir **Omakase Pro** ekranı görür; ana tetikleyici ise ücretsiz katmandaki **"Günün Menüsü" (günde 5 tabak + 1 Deep Dive)** limiti dolduğunda çıkan satır içi limit kartıdır.
    - **Fiyat Çapası (Pricing Anchor):**
-     - Aylık: **\$4.99 / ay**
-     - Yıllık: **\$29.99 / yıl** (*"3 Gün Ücretsiz Dene — Ayda sadece \$2.49"*).
-   - Küresel iOS uygulamalarında gelirlerin **%75'i yıllık abonelik + 3 günlük ücretsiz deneme (free trial)** paketinden gelir; çünkü bu sayede reklam verdiğin gün (Day 0) kullanıcının deneme başlatıp başlatmadığını ölçebilirsin (**Cost Per Trial**).
+     - Aylık: **\$3.99 / ay** (deneme yok)
+     - Yıllık: **\$29.99 / yıl** (*"7 Gün Ücretsiz Dene — Ayda sadece \$2.49"*).
+   - Küresel iOS uygulamalarında gelirlerin **%75'i yıllık abonelik + ücretsiz deneme (free trial)** paketinden gelir; çünkü bu sayede reklam verdiğin gün (Day 0) kullanıcının deneme başlatıp başlatmadığını ölçebilirsin (**Cost Per Trial**). (7 günün seçilme sebebi: uygulamanın günlük okuma ritmine alışmak için bir haftalık döngü sunmasıdır; Ay 2'de 3 gün vs 7 gün A/B testi yapılabilir.)
 
 ### 4.3. Hangi Aşamada, Nereye ve Ne Kadar Reklam Verilmeli?
 
@@ -193,14 +193,14 @@ Uygulamanın içindeki [`ShareCardView.swift`](file:///Users/kuzey/projects/omak
 
 ```mermaid
 flowchart LR
-    P1["📅 Gün 1–30: Otomasyon & Tohumlama<br/>• US TikTok/IG Hesap Kurulumu<br/>• Python Kart Üretim Scripti<br/>• Günde 2 İngilizce Photo Carousel<br/>• Show HN & r/nosurf Lansmanı"] --> P2["📅 Gün 31–60: Dönüşüm & Viral Döngü<br/>• Yıllık Deneme Paywall'u ($29.99/yıl)<br/>• Paylaşım Başına +Deep Dive Ödülü<br/>• Product Hunt Lansmanı<br/>• İlk 2.500 Global Kullanıcı"]
+    P1["📅 Gün 1–30: Lansman, Paywall & Organik Motor<br/>• RevenueCat Paywall ($3.99/ay • $29.99/yıl, 7 gün deneme)<br/>• Paylaşım Başına +2 Deep Dive Ödülü & Bildirim Sistemi<br/>• US TikTok/IG + Python Kart Scripti (Günde 2 Carousel)<br/>• Show HN & r/nosurf Lansmanı"] --> P2["📅 Gün 31–60: Viral Döngü & Optimizasyon<br/>• Paylaşım Kartlarına @username İmzası<br/>• RevenueCat Offerings Deneme A/B Testi (7 vs 3 gün)<br/>• Product Hunt Lansmanı<br/>• İlk 2.500 Global Kullanıcı"]
     P2 --> P3["📅 Gün 61–90: Ölçekleme & Paid UA<br/>• Apple Search Ads ($100 Kredi Testi)<br/>• Organik Kazanan Postlara Spark Ads<br/>• Mikro-Substack/Creator İşbirlikleri<br/>• Hedef: 10.000 Global İndirme"]
 ```
 
 | Dönem | Temel Aksiyonlar | Başarı Metriği (KPI) | Bütçe |
 |-------|------------------|----------------------|-------|
-| **Ay 1 (Organik Motor)** | US eSIM ile 2 TikTok + 1 IG hesabı açılması; Omakase promptlarıyla otomatik 3'lü Photo Mode slayt üreticisinin kurulması; günde 2 post; `r/nosurf`, `r/digitalminimalism` ve `Show HN` paylaşımları. | 50.000+ toplam organik gösterim, `getomakase.app` üzerinde 2.000+ Canlı Tadım, ilk 500–1.000 global iOS kullanıcısı. | **\$0** (Sadece ~\$10 US eSIM) |
-| **Ay 2 (Ürün İçi Viralite & Paywall)** | Yıllık 3 gün denemeli Paywall entegrasyonu; paylaşım kartlarına `@username` imzası ve paylaşım başına ekstra Deep Dive ödülü; Product Hunt lansmanı. | D7 Retention ≥ %25, Paywall Trial Başlatma Oranı ≥ %6, 2.500–4.000 toplam kullanıcı. | **\$0** |
+| **Ay 1 (Lansman, Paywall & Organik Motor)** | v1.0 ile **RevenueCat Paywall**'un (\$3.99/ay, \$29.99/yıl + 7 gün deneme), sunucu tarafı günlük kota + paylaşımda **+2 Deep Dive ödülünün**, yerel/sosyal bildirim sisteminin ve kod bazlı hata yönetiminin yayına alınması; US eSIM ile 2 TikTok + 1 IG hesabı; günde 2 Photo Mode post; `r/nosurf`, `r/digitalminimalism` ve `Show HN` paylaşımları. | 50.000+ toplam organik gösterim, `getomakase.app` üzerinde 2.000+ Canlı Tadım, ilk 500–1.000 global iOS kullanıcısı, Paywall Trial Başlatma Oranı ≥ %6. | **\$0** (Sadece ~\$10 US eSIM) |
+| **Ay 2 (Ürün İçi Viralite & Optimizasyon)** | Paylaşım kartlarına `@username` imzası; RevenueCat Offerings üzerinden 3 gün vs 7 gün deneme süresi ve paywall kopyası A/B testleri; Product Hunt lansmanı. | D7 Retention ≥ %25, Trial → Ücretli Dönüşüm ≥ %35, 2.500–4.000 toplam kullanıcı. | **\$0** |
 | **Ay 3 (Kaldıraçlı Reklam & Ölçek)** | Apple Search Ads US/UK testi; Ay 1–2'de organik olarak 50k+ izlenen TikTok postlarına günde \$15 Spark Ads çıkılması; 3 adet mikro-küratör (Substack/TikTok) sponsorluğu. | CAC (Abone Edinme Maliyeti) < \$18, Yıllık LTV ≈ \$25.50 (Net), 10.000+ global kullanıcı ve pozitif nakit akışı. | **\$300 – \$600** (Test Bütçesi) |
 
 ---

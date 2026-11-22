@@ -81,9 +81,9 @@ omakase/
 │   ├── main.py              # FastAPI uygulama giriş noktası (uvicorn main:app)
 │   ├── Dockerfile           # Cloud Run deployment konteyneri (non-root appuser)
 │   └── requirements.txt
-├── docs/                    # Detaylı mimari, strateji, PMF/pazarlama, App Store ve hukuk raporları
+├── docs/                    # Detaylı mimari, strateji, PMF/pazarlama, App Store ve güvenlik raporları
+│   ├── master_rapor.md      # Tüm raporları tek dokümanda birleştiren yönetici özeti (Master Rapor)
 │   ├── appstore_raporu.md   # Apple Agent Kit tabanlı App Store gönderim ve uyumluluk denetimi
-│   ├── fikri_mulkiyet.md    # Marka, telif, Apple marka kuralları ve Letterboxd adil kullanım raporu
 │   ├── gelecek_stratejisi.md# Moat analizi, doyum psikolojisi ve kültürel entegrasyon vizyonu
 │   ├── ozellik_fikirleri.md # Tamamlanan 8 temel sistem ve v1/v2/v3 özellik yol haritası
 │   ├── pazarlama_ve_dagitim_stratejisi.md # Küresel dağıtım (US/UK), TikTok otomasyonu ve Paid UA stratejisi
@@ -160,10 +160,10 @@ Detaylı rapor ve analizler için `docs/` klasörünü inceleyebilirsiniz:
 
 | Doküman | Açıklama |
 |---------|----------|
+| [👑 **Master Rapor (Yönetici Özeti)**](docs/master_rapor.md) | **Tüm raporların (Mimari, PMF, Küresel Pazarlama, App Store, Siber Güvenlik ve Yol Haritası) tek belgede birleştirilmiş özeti.** |
 | [📄 App Store Raporu](docs/appstore_raporu.md) | Apple Agent Kit tabanlı App Review, `PrivacyInfo.xcprivacy`, Xcode yapılandırma ve Archive/Validate denetimi. |
 | [🛡️ Siber Güvenlik Raporu](docs/siber_guvenlik_raporu.md) | API anahtarları, Cloud Run backend, Firestore kuralları, iOS istemci ve Web siber güvenlik analizi. |
 | [🚀 Küresel Pazarlama & Dağıtım Stratejisi](docs/pazarlama_ve_dagitim_stratejisi.md) | Tier-1 küresel açılım (US/UK), otomatize TikTok Photo Mode büyüme motoru, Paid UA matematiği ve sıfır bütçeli dağıtım kanalları. |
 | [📈 Ürün Analizi & PMF Raporu](docs/urun_analizi_ve_pazarlama.md) | Product-Market Fit hipotezi, hedef personalar (ICP), AARRR hunisi, birim ekonomisi ve App Store (ASO) vitrin stratejisi. |
-| [⚖️ Fikri Mülkiyet Raporu](docs/fikri_mulkiyet.md) | Letterboxd RSS adil kullanımı, Apple marka kuralları, prompt ticari sırları ve UGC hukuku. |
 | [🔮 Gelecek Stratejisi](docs/gelecek_stratejisi.md) | 5 katmanlı Moat analizi, doyum psikolojisi, web edinim hunisi ve kültürel entegrasyon vizyonu. |
 | [💡 Özellik Haritası](docs/ozellik_fikirleri.md) | Tamamlanan 8 temel sistem (3 adımlı `@username` kaydı, 12 kategori, Topluluk, Web) ve v2/v3 yol haritası. |

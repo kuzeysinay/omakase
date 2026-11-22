@@ -14,27 +14,33 @@ struct BookmarkEntry: Identifiable, Codable, Equatable, Sendable {
     var tags: [String]
     var postCreatedAt: Date
     var savedAt: Date
-    var collectionName: String = "All"
+    /// Canonical Main Subject ID (`InterestCategory.id`, e.g. "food", "science", "film").
+    var collectionName: String = "science"
     /// Deep dive expansion text, if available when bookmarked.
     var deepDiveText: String?
     /// The format template used to generate this post.
     var postFormat: String?
 
-    init(from post: Post, collectionName: String = "All") {
+    init(from post: Post, collectionName: String? = nil) {
         id = post.id
         title = post.title
         text = post.text
         tags = post.tags
         postCreatedAt = post.createdAt
         savedAt = Date()
-        self.collectionName = collectionName
+        let resolvedMain = InterestCategory.resolveMainCategory(
+            categoryId: collectionName ?? post.categoryId,
+            tags: post.tags,
+            title: post.title,
+            text: post.text
+        )
+        self.collectionName = resolvedMain.id
         self.deepDiveText = post.deepDiveText
         self.postFormat = post.postFormat
     }
 
-    /// Backward-compatible decoding: bookmarks saved before the `tags`,
-    /// `collectionName`, `deepDiveText` or `postFormat` fields existed
-    /// will decode with sensible defaults.
+    /// Backward-compatible decoding: bookmarks saved before `collectionName` was normalized
+    /// to a main category ID are automatically mapped to their canonical `InterestCategory.id`.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
@@ -43,7 +49,15 @@ struct BookmarkEntry: Identifiable, Codable, Equatable, Sendable {
         tags = (try? c.decode([String].self, forKey: .tags)) ?? []
         postCreatedAt = try c.decode(Date.self, forKey: .postCreatedAt)
         savedAt = try c.decode(Date.self, forKey: .savedAt)
-        collectionName = (try? c.decode(String.self, forKey: .collectionName)) ?? "All"
+        let rawCollection = (try? c.decode(String.self, forKey: .collectionName)) ?? ""
+        let resolvedMain = InterestCategory.resolveMainCategory(
+            categoryId: rawCollection,
+            tags: tags,
+            title: title,
+            text: text,
+            legacyCollectionName: rawCollection
+        )
+        collectionName = resolvedMain.id
         deepDiveText = try? c.decode(String.self, forKey: .deepDiveText)
         postFormat = try? c.decode(String.self, forKey: .postFormat)
     }
@@ -56,6 +70,7 @@ struct BookmarkEntry: Identifiable, Codable, Equatable, Sendable {
             text: text,
             isComplete: true,
             tags: tags,
+            categoryId: collectionName,
             postFormat: postFormat,
             deepDiveText: deepDiveText,
             createdAt: postCreatedAt
@@ -67,9 +82,10 @@ struct BookmarkEntry: Identifiable, Codable, Equatable, Sendable {
 @MainActor
 final class BookmarkStore {
 
+    static let shared = BookmarkStore()
+
     private(set) var entries: [BookmarkEntry] = []
     private let defaultsKey = "omakase.bookmarks.v1"
-    private let collectionsKey = "omakase.collections.v1"
 
     init() {
         load()
@@ -85,22 +101,14 @@ final class BookmarkStore {
         if entries.contains(where: { $0.id == post.id }) {
             entries.removeAll(where: { $0.id == post.id })
         } else {
-            if post.tags.isEmpty {
-                var entry = BookmarkEntry(from: post)
-                entry.collectionName = "All"
-                entries.insert(entry, at: 0)
-            } else {
-                var cols = customCollections
-                for tag in post.tags {
-                    if !cols.contains(tag) {
-                        cols.append(tag)
-                    }
-                    var entry = BookmarkEntry(from: post)
-                    entry.collectionName = tag
-                    entries.insert(entry, at: 0)
-                }
-                customCollections = cols
-            }
+            let mainCat = InterestCategory.resolveMainCategory(
+                categoryId: post.categoryId,
+                tags: post.tags,
+                title: post.title,
+                text: post.text
+            )
+            let entry = BookmarkEntry(from: post, collectionName: mainCat.id)
+            entries.insert(entry, at: 0)
         }
         save()
     }
@@ -110,12 +118,12 @@ final class BookmarkStore {
         save()
     }
 
-    func removeAll(in collection: String? = nil) {
-        if let collection {
-            if collection == "All" {
+    func removeAll(in collectionId: String? = nil) {
+        if let collectionId {
+            if collectionId == "All" {
                 entries = []
             } else {
-                entries.removeAll { $0.collectionName == collection }
+                entries.removeAll { $0.collectionName == collectionId }
             }
         } else {
             entries = []
@@ -123,96 +131,86 @@ final class BookmarkStore {
         save()
     }
 
-    // MARK: - Collections
+    // MARK: - Main Subject Folders
 
-    /// All unique collection names, always starting with "All".
+    /// Canonical folder IDs: always starts with `"All"`, followed by Main Subject IDs (`InterestCategory.id`)
+    /// that currently contain saved posts (preserving `InterestCategory.presets` order).
     var collectionNames: [String] {
-        var names = ["All"]
-        let custom = customCollections
-        names.append(contentsOf: custom)
-        return names
+        var ids = ["All"]
+        let populatedMainIds = Set(entries.map(\.collectionName))
+        for cat in InterestCategory.presets where populatedMainIds.contains(cat.id) {
+            ids.append(cat.id)
+        }
+        return ids
     }
 
-    private var customCollections: [String] {
-        get {
-            guard let data = UserDefaults.standard.data(forKey: collectionsKey),
-                  let names = try? JSONDecoder().decode([String].self, from: data)
-            else { return [] }
-            return names
+    /// Returns the localized display title for a folder ID (`"All"` or an `InterestCategory.id`).
+    func displayTitle(for collectionId: String, language: AppLanguage) -> String {
+        if collectionId == "All" {
+            return language == .turkish ? "Tümü" : "All"
         }
-        set {
-            if let data = try? JSONEncoder().encode(newValue) {
-                UserDefaults.standard.set(data, forKey: collectionsKey)
-            }
+        if let cat = InterestCategory.category(forId: collectionId) {
+            return cat.localizedName(for: language)
         }
+        return collectionId
     }
 
-    func entries(in collection: String) -> [BookmarkEntry] {
-        if collection == "All" {
+    /// Returns the SF Symbol icon name for a folder ID (`"All"` or an `InterestCategory.id`).
+    func iconName(for collectionId: String) -> String {
+        if collectionId == "All" {
+            return "tray.full.fill"
+        }
+        if let cat = InterestCategory.category(forId: collectionId) {
+            return cat.iconName
+        }
+        return "folder.fill"
+    }
+
+    func entries(in collectionId: String) -> [BookmarkEntry] {
+        if collectionId == "All" {
             var seen = Set<UUID>()
             return entries.filter { seen.insert($0.id).inserted }
         }
-        return entries.filter { $0.collectionName == collection }
+        return entries.filter { $0.collectionName == collectionId }
     }
 
-    func entryCount(in collection: String) -> Int {
-        entries(in: collection).count
+    func entryCount(in collectionId: String) -> Int {
+        entries(in: collectionId).count
     }
 
-    func createCollection(name: String) {
-        guard !name.isEmpty, name != "All", !customCollections.contains(name) else { return }
-        var cols = customCollections
-        cols.append(name)
-        customCollections = cols
-    }
-
-    func renameCollection(old: String, new: String) {
-        guard old != "All", !new.isEmpty else { return }
-        var cols = customCollections
-        if let idx = cols.firstIndex(of: old) {
-            cols[idx] = new
-            customCollections = cols
-            // Update all entries in old collection
-            for i in entries.indices where entries[i].collectionName == old {
-                entries[i].collectionName = new
-            }
+    func moveToCollection(entryId: UUID, collectionId: String) {
+        guard InterestCategory.category(forId: collectionId) != nil else { return }
+        if let idx = entries.firstIndex(where: { $0.id == entryId }) {
+            entries[idx].collectionName = collectionId
             save()
         }
     }
 
-    func deleteCollection(name: String, deleteEntries: Bool = false) {
-        guard name != "All" else { return }
-        var cols = customCollections
-        cols.removeAll { $0 == name }
-        customCollections = cols
-        if deleteEntries {
-            entries.removeAll { $0.collectionName == name }
-        } else {
-            // Move entries back to "All"
-            for i in entries.indices where entries[i].collectionName == name {
-                entries[i].collectionName = "All"
-            }
-        }
-        save()
-    }
-
-    func moveToCollection(entryId: UUID, collection: String) {
-        if let first = entries.first(where: { $0.id == entryId }) {
-            entries.removeAll(where: { $0.id == entryId })
-            var updated = first
-            updated.collectionName = collection
-            entries.insert(updated, at: 0)
-            save()
-        }
-    }
-
-    // MARK: - Persistence
+    // MARK: - Persistence & Automatic Migration
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: defaultsKey) else { return }
-        if let decoded = try? JSONDecoder().decode([BookmarkEntry].self, from: data) {
-            entries = decoded
+        guard let data = UserDefaults.standard.data(forKey: defaultsKey),
+              let decoded = try? JSONDecoder().decode([BookmarkEntry].self, from: data)
+        else { return }
+
+        // Deduplicate by post UUID (legacy versions created multiple entries per post, one per tag)
+        // and ensure every entry's `collectionName` is a canonical Main Subject ID.
+        var seen = Set<UUID>()
+        var migrated: [BookmarkEntry] = []
+        for var entry in decoded {
+            guard seen.insert(entry.id).inserted else { continue }
+            let mainCat = InterestCategory.resolveMainCategory(
+                categoryId: entry.collectionName,
+                tags: entry.tags,
+                title: entry.title,
+                text: entry.text,
+                legacyCollectionName: entry.collectionName
+            )
+            entry.collectionName = mainCat.id
+            migrated.append(entry)
         }
+        entries = migrated
+        save()
     }
 
     func save() {

@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 /// A sheet view that shows comments for a shared post.
 struct CommentsView: View {
@@ -20,6 +21,11 @@ struct CommentsView: View {
     @State private var moderationErrorMessage: String?
     @State private var showReportConfirmation = false
     @State private var commentToBlockAuthor: Comment?
+    @State private var toastMessage: String?
+    @State private var loadError: OmakaseError?
+    @State private var notificationManager = NotificationManager.shared
+    @State private var hasSentCommentInSession = false
+    @AppStorage("omakase.dismissedCommentNotifPrompt") private var dismissedNotifPrompt = false
 
     private var l10n: L10n { L10n(lang: appLanguage) }
     private let maxCharacters = 280
@@ -30,6 +36,23 @@ struct CommentsView: View {
                 if isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let loadError, comments.isEmpty {
+                    VStack(spacing: 14) {
+                        Image(systemName: "wifi.exclamationmark")
+                            .font(.system(size: 36, weight: .light))
+                            .foregroundStyle(.secondary)
+                        Text(loadError.message(l10n: l10n))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 28)
+                        Button(l10n.tryAgain) {
+                            Task { await loadComments() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(OmakaseTheme.chipActiveFill)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if comments.isEmpty {
                     emptyState
                 } else {
@@ -48,6 +71,43 @@ struct CommentsView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(Color.red.opacity(0.08))
+                }
+
+                if hasSentCommentInSession,
+                   !dismissedNotifPrompt,
+                   notificationManager.authorizationStatus == .notDetermined {
+                    HStack(spacing: 10) {
+                        Image(systemName: "bell")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(OmakaseTheme.ink)
+                        Text(l10n.commentNotificationPromptTitle)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 4)
+                        Button(l10n.turnOnCTA) {
+                            Task {
+                                _ = await notificationManager.requestAuthorizationIfNeeded()
+                                dismissedNotifPrompt = true
+                            }
+                        }
+                        .font(.caption.weight(.bold))
+                        .buttonStyle(.borderedProminent)
+                        .tint(OmakaseTheme.chipActiveFill)
+                        .controlSize(.mini)
+
+                        Button {
+                            dismissedNotifPrompt = true
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(OmakaseTheme.wash)
                 }
 
                 Divider()
@@ -101,6 +161,7 @@ struct CommentsView: View {
             } message: {
                 Text(l10n.confirmBlockUserMessage)
             }
+            .toast(message: $toastMessage)
         }
     }
 
@@ -299,10 +360,16 @@ struct CommentsView: View {
 
     private func loadComments() async {
         isLoading = true
+        loadError = nil
         do {
             comments = try await FirestoreService.shared.fetchComments(postId: postId)
         } catch {
-            // Silently fail; user sees empty state
+            let mapped = OmakaseError.from(error, context: .commentLoad)
+            ErrorReporter.record(error, mapped: mapped, area: "comments_load")
+            loadError = mapped
+            if !comments.isEmpty {
+                toastMessage = mapped.message(l10n: l10n)
+            }
         }
         isLoading = false
     }
@@ -330,9 +397,20 @@ struct CommentsView: View {
                 authorName: name,
                 authorPhotoURL: authService.photoURL?.absoluteString
             )
+            hasSentCommentInSession = true
+            NotificationManager.shared.notifySocialEvent(
+                type: "comment",
+                postId: postId,
+                actorName: name,
+                commentPreview: text
+            )
+            await notificationManager.refreshAuthorizationStatus()
             await loadComments()
         } catch {
             newCommentText = text
+            let mapped = OmakaseError.from(error, context: .commentSend)
+            ErrorReporter.record(error, mapped: mapped, area: "comments_send")
+            toastMessage = mapped.message(l10n: l10n)
         }
     }
 
@@ -344,7 +422,9 @@ struct CommentsView: View {
                 comments.removeAll { $0.id == commentId }
             }
         } catch {
-            // Silently fail
+            let mapped = OmakaseError.from(error, context: .commentDelete)
+            ErrorReporter.record(error, mapped: mapped, area: "comments_delete")
+            toastMessage = mapped.message(l10n: l10n)
         }
     }
 
@@ -360,7 +440,9 @@ struct CommentsView: View {
             )
             showReportConfirmation = true
         } catch {
-            // Silently fail
+            let mapped = OmakaseError.from(error, context: .report)
+            ErrorReporter.record(error, mapped: mapped, area: "comments_report")
+            toastMessage = mapped.message(l10n: l10n)
         }
     }
 
@@ -375,8 +457,11 @@ struct CommentsView: View {
             withAnimation {
                 comments.removeAll { $0.authorId == comment.authorId }
             }
+            toastMessage = l10n.userBlockedToast
         } catch {
-            // Silently fail
+            let mapped = OmakaseError.from(error, context: .block)
+            ErrorReporter.record(error, mapped: mapped, area: "comments_block")
+            toastMessage = mapped.message(l10n: l10n)
         }
     }
 }

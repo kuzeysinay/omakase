@@ -5,7 +5,54 @@
 
 import SwiftUI
 
-// MARK: - Level 1: Collection List
+// MARK: - Type-Safe Navigation Route for Saved Posts
+
+enum BookmarksNavigationRoute: Hashable {
+    case collections
+    case collectionEntries(String)
+    case entryDetail(UUID)
+}
+
+extension View {
+    /// Registers all Saved Posts destinations at the root of a `NavigationStack`
+    /// so every push (`collections` -> `collectionEntries` -> `entryDetail`) resolves unambiguously.
+    func bookmarksNavigationDestinations(
+        bookmarkStore: BookmarkStore,
+        authService: AuthService,
+        appLanguage: AppLanguage
+    ) -> some View {
+        self.navigationDestination(for: BookmarksNavigationRoute.self) { route in
+            switch route {
+            case .collections:
+                BookmarksCollectionsView(
+                    bookmarkStore: bookmarkStore,
+                    authService: authService
+                )
+                .environment(\.appLanguage, appLanguage)
+
+            case .collectionEntries(let collectionId):
+                CollectionEntriesView(
+                    bookmarkStore: bookmarkStore,
+                    authService: authService,
+                    collectionId: collectionId
+                )
+                .environment(\.appLanguage, appLanguage)
+
+            case .entryDetail(let entryId):
+                if let entry = bookmarkStore.entries.first(where: { $0.id == entryId }) {
+                    BookmarkDetailView(
+                        entry: entry,
+                        bookmarkStore: bookmarkStore,
+                        authService: authService
+                    )
+                    .environment(\.appLanguage, appLanguage)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Modal Wrapper (if presented as a sheet)
 
 struct BookmarksSheet: View {
 
@@ -16,121 +63,79 @@ struct BookmarksSheet: View {
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
-    // MARK: - New-collection alert state
-
-    @State private var showNewCollectionAlert = false
-    @State private var newCollectionName = ""
-
-    // MARK: - Rename-collection alert state
-
-    @State private var showRenameAlert = false
-    @State private var renameTarget = ""
-    @State private var renameNewName = ""
-
-    // MARK: - Delete-collection confirmation state
-
-    @State private var showDeleteCollectionConfirmation = false
-    @State private var deleteCollectionTarget = ""
-
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(bookmarkStore.collectionNames, id: \.self) { name in
-                    NavigationLink(value: name) {
-                        HStack {
-                            Label(name, systemImage: name == "All" ? "tray.full.fill" : "folder.fill")
-                            Spacer()
-                            Text("\(bookmarkStore.entryCount(in: name))")
-                                .foregroundStyle(.secondary)
-                                .font(.subheadline)
-                        }
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        if name != "All" {
-                            Button(role: .destructive) {
-                                deleteCollectionTarget = name
-                                showDeleteCollectionConfirmation = true
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-
-                            Button {
-                                renameTarget = name
-                                renameNewName = name
-                                showRenameAlert = true
-                            } label: {
-                                Label("Rename", systemImage: "pencil")
-                            }
-                            .tint(OmakaseTheme.ink)
-                        }
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle(l10n.collectionsTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: String.self) { collectionName in
-                CollectionEntriesView(
+            BookmarksCollectionsView(bookmarkStore: bookmarkStore, authService: authService)
+                .bookmarksNavigationDestinations(
                     bookmarkStore: bookmarkStore,
                     authService: authService,
-                    collectionName: collectionName
+                    appLanguage: appLanguage
                 )
-            }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(l10n.done) { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        newCollectionName = ""
-                        showNewCollectionAlert = true
-                    } label: {
-                        Image(systemName: "plus")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(l10n.done) { dismiss() }
                     }
                 }
-            }
-            .alert("New Collection", isPresented: $showNewCollectionAlert) {
-                TextField("Collection Name", text: $newCollectionName)
-                Button("Cancel", role: .cancel) { }
-                Button("Create") {
-                    bookmarkStore.createCollection(name: newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines))
-                }
-            }
-            .alert("Rename Collection", isPresented: $showRenameAlert) {
-                TextField("Collection Name", text: $renameNewName)
-                Button("Cancel", role: .cancel) { }
-                Button("Rename") {
-                    let trimmed = renameNewName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    bookmarkStore.renameCollection(old: renameTarget, new: trimmed)
-                }
-            }
-            .alert("Delete Collection", isPresented: $showDeleteCollectionConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Keep Bookmarks") {
-                    withAnimation {
-                        bookmarkStore.deleteCollection(name: deleteCollectionTarget, deleteEntries: false)
-                    }
-                }
-                Button("Delete All", role: .destructive) {
-                    withAnimation {
-                        bookmarkStore.deleteCollection(name: deleteCollectionTarget, deleteEntries: true)
-                    }
-                }
-            } message: {
-                Text("Delete \"\(deleteCollectionTarget)\"? You can keep its bookmarks (moved to All) or delete them too.")
-            }
         }
     }
 }
 
-// MARK: - Level 2: Entries in a Collection
+// MARK: - Level 1: Main Subject Folders List
 
-private struct CollectionEntriesView: View {
+struct BookmarksCollectionsView: View {
 
     @Environment(\.appLanguage) private var appLanguage
     @Bindable var bookmarkStore: BookmarkStore
     let authService: AuthService
-    let collectionName: String
+
+    private var l10n: L10n { L10n(lang: appLanguage) }
+
+    var body: some View {
+        Group {
+            if bookmarkStore.entries.isEmpty {
+                ContentUnavailableView {
+                    Label(l10n.noBookmarks, systemImage: "bookmark")
+                } description: {
+                    Text(l10n.bookmarksHint)
+                }
+            } else {
+                List {
+                    ForEach(bookmarkStore.collectionNames, id: \.self) { collectionId in
+                        NavigationLink(value: BookmarksNavigationRoute.collectionEntries(collectionId)) {
+                            HStack(spacing: 12) {
+                                Label {
+                                    Text(bookmarkStore.displayTitle(for: collectionId, language: appLanguage))
+                                        .font(.body.weight(collectionId == "All" ? .semibold : .regular))
+                                        .foregroundStyle(.primary)
+                                } icon: {
+                                    Image(systemName: bookmarkStore.iconName(for: collectionId))
+                                        .foregroundStyle(OmakaseTheme.ink)
+                                }
+                                Spacer()
+                                Text("\(bookmarkStore.entryCount(in: collectionId))")
+                                    .foregroundStyle(.secondary)
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped)
+            }
+        }
+        .navigationTitle(l10n.collectionsTitle)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Level 2: Entries in a Main Subject Folder
+
+struct CollectionEntriesView: View {
+
+    @Environment(\.appLanguage) private var appLanguage
+    @Bindable var bookmarkStore: BookmarkStore
+    let authService: AuthService
+    let collectionId: String
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -150,7 +155,7 @@ private struct CollectionEntriesView: View {
     @State private var showDeleteConfirmation = false
 
     private var filteredEntries: [BookmarkEntry] {
-        bookmarkStore.entries(in: collectionName)
+        bookmarkStore.entries(in: collectionId)
     }
 
     var body: some View {
@@ -164,7 +169,7 @@ private struct CollectionEntriesView: View {
             } else {
                 List(selection: isEditing ? $selection : nil) {
                     ForEach(filteredEntries) { entry in
-                        NavigationLink(value: entry.id) {
+                        NavigationLink(value: BookmarksNavigationRoute.entryDetail(entry.id)) {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                      ? l10n.savedPostFallbackTitle
@@ -175,7 +180,7 @@ private struct CollectionEntriesView: View {
                                 Text(entry.postCreatedAt.localizedFormatted(for: appLanguage))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                Text(entry.text)
+                                Text(Post.sanitizeTemplateLabels(from: entry.text))
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(4)
@@ -191,7 +196,7 @@ private struct CollectionEntriesView: View {
                             }
                         }
                         .contextMenu {
-                            moveToMenu(for: entry.id)
+                            moveToMenu(for: entry)
                         }
                     }
                 }
@@ -226,17 +231,8 @@ private struct CollectionEntriesView: View {
                 .animation(.easeInOut(duration: 0.25), value: selection.isEmpty)
             }
         }
-        .navigationTitle(collectionName)
+        .navigationTitle(bookmarkStore.displayTitle(for: collectionId, language: appLanguage))
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: UUID.self) { entryId in
-            if let entry = bookmarkStore.entries.first(where: { $0.id == entryId }) {
-                BookmarkDetailView(
-                    entry: entry,
-                    bookmarkStore: bookmarkStore,
-                    authService: authService
-                )
-            }
-        }
         .toolbar {
             if !filteredEntries.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -281,19 +277,19 @@ private struct CollectionEntriesView: View {
         }
     }
 
-    // MARK: - Move-to submenu
+    // MARK: - Move-to Main Subject submenu
 
     @ViewBuilder
-    private func moveToMenu(for entryId: UUID) -> some View {
-        let otherCollections = bookmarkStore.collectionNames.filter { $0 != collectionName }
-        if !otherCollections.isEmpty {
-            Menu("Move to…") {
-                ForEach(otherCollections, id: \.self) { target in
-                    Button(target) {
-                        withAnimation {
-                            bookmarkStore.moveToCollection(entryId: entryId, collection: target)
-                        }
+    private func moveToMenu(for entry: BookmarkEntry) -> some View {
+        let otherCategories = InterestCategory.presets.filter { $0.id != entry.collectionName }
+        Menu(appLanguage == .turkish ? "Kategori Değiştir…" : "Move to Category…") {
+            ForEach(otherCategories) { targetCat in
+                Button {
+                    withAnimation {
+                        bookmarkStore.moveToCollection(entryId: entry.id, collectionId: targetCat.id)
                     }
+                } label: {
+                    Label(targetCat.localizedName(for: appLanguage), systemImage: targetCat.iconName)
                 }
             }
         }
@@ -339,7 +335,7 @@ private struct CollectionEntriesView: View {
                 }
                 selection.removeAll()
             case .all:
-                bookmarkStore.removeAll(in: collectionName)
+                bookmarkStore.removeAll(in: collectionId)
             }
         }
         pendingDelete = nil
@@ -348,7 +344,7 @@ private struct CollectionEntriesView: View {
 
 // MARK: - Level 3: Bookmark Detail View
 
-private struct BookmarkDetailView: View {
+struct BookmarkDetailView: View {
 
     let entry: BookmarkEntry
     @Bindable var bookmarkStore: BookmarkStore
@@ -387,7 +383,7 @@ private struct BookmarkDetailView: View {
                 }
 
                 // Full post body
-                Text(entry.text)
+                Text(post.cleanDisplayBody)
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -455,12 +451,13 @@ private struct BookmarkDetailView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: isShared ? "paperplane.fill" : "paperplane")
                                     .font(.title3)
+                                    .foregroundStyle(isShared ? OmakaseTheme.ink : .primary)
                                 Text(isShared
                                      ? (l10n.lang == .turkish ? "Paylaşıldı" : "Shared")
                                      : (l10n.lang == .turkish ? "Paylaş" : "Share"))
                                     .font(.subheadline.weight(.medium))
                             }
-                            .foregroundStyle(isShared ? .primary : .secondary)
+                            .foregroundStyle(.primary)
                         }
                     }
                     .buttonStyle(.borderless)
@@ -474,7 +471,7 @@ private struct BookmarkDetailView: View {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.title3)
                         }
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                     }
                     .buttonStyle(.borderless)
 
@@ -503,7 +500,7 @@ private struct BookmarkDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showDeepDiveSheet) {
             DeepDiveReaderSheet(
-                text: entry.deepDiveText ?? "",
+                text: Post.sanitizeTemplateLabels(from: entry.deepDiveText ?? ""),
                 title: l10n.lang == .turkish ? "Derinlemesine İnceleme" : "Deep Dive"
             )
             .environment(\.appLanguage, appLanguage)
@@ -545,11 +542,18 @@ private struct BookmarkDetailView: View {
             } else {
                 try await FirestoreService.shared.sharePost(post, author: user)
                 isShared = true
-                toastMessage = l10n.toastPostShared
+                if AccessManager.shared.canClaimShareBonus,
+                   await AccessManager.shared.claimShareBonus() {
+                    toastMessage = l10n.toastShareBonusGranted
+                } else {
+                    toastMessage = l10n.toastPostShared
+                }
             }
         } catch {
-            print("Error toggling share: \(error)")
-            toastMessage = "Error: \(error.localizedDescription)"
+            let context: SocialActionContext = isShared ? .unshare : .share
+            let mapped = OmakaseError.from(error, context: context)
+            ErrorReporter.record(error, mapped: mapped, area: "bookmarks_toggle_share")
+            toastMessage = mapped.message(l10n: l10n)
         }
         isSharePending = false
     }

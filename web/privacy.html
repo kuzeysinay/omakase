@@ -34,7 +34,7 @@
     <!-- TURKISH -->
     <article class="legal-card" lang="tr">
       <h1>Gizlilik Politikası</h1>
-      <p class="legal-meta">Son Güncelleme: 15 Kasım 2026 • Yürürlük Tarihi: 12 Kasım 2026</p>
+      <p class="legal-meta">Son Güncelleme: 22 Kasım 2026 • Yürürlük Tarihi: 12 Kasım 2026</p>
 
       <p>
         Omakase ("biz", "uygulama"), kullanıcılarının mahremiyetine ve zihinsel dinginliğine saygı duyar. Bu Gizlilik Politikası, Omakase iOS uygulamasını ve <strong>getomakase.app</strong> web sitesini kullandığınızda hangi verilerin işlendiğini, nasıl korunduğunu ve haklarınızı açıklar.
@@ -54,7 +54,10 @@
       </p>
       <ul>
         <li><strong>Google Firebase (Authentication &amp; Cloud Firestore):</strong> Güvenli oturum açma ve topluluk veritabanı barındırma.</li>
-        <li><strong>Google Cloud Run &amp; Gemini API (Gemini 3.1 Flash-Lite):</strong> Seçtiğiniz ilgi alanlarına göre gerçek zamanlı mikro-hikayeler ve derin okuma (Deep Dive) makaleleri üretmek için kullanılır. Kişisel kimlik bilgileriniz (e-posta vb.) yapay zekâ istemlerine dahil edilmez.</li>
+        <li><strong>Google Cloud Run &amp; Gemini API (Gemini 3.5 Flash / 3.1 Flash-Lite):</strong> Seçtiğiniz ilgi alanlarına göre gerçek zamanlı mikro-hikayeler ve derin okuma (Deep Dive) makaleleri üretmek için kullanılır. Kişisel kimlik bilgileriniz (e-posta vb.) yapay zekâ istemlerine dahil edilmez.</li>
+        <li><strong>Abonelik ve Satın Alma Doğrulaması (RevenueCat &amp; StoreKit 2):</strong> Omakase Pro abonelik durumunuzu ve satın alma yetkilerinizi doğrulamak için kişisel kredi kartı bilgisi saklamadan yalnızca anonimleştirilmiş Apple işlem tanımlayıcıları ve Firebase kullanıcı kimliği (UID) işlenir.</li>
+        <li><strong>Hata ve Kilitlenme Tanı Verileri (Firebase Crashlytics):</strong> Uygulama kararlılığını artırmak ve hataları çözmek amacıyla kişisel metinlerinizi içermeyen teknik kilitlenme ve tanı kayıtları toplanır.</li>
+        <li><strong>Anlık Bildirimler (APNs &amp; Firebase Cloud Messaging):</strong> Yalnızca siz açıkça bildirim izni verdiğinizde günlük menü hatırlatıcılarını ve sosyal bildirimleri (yorum, takip, tepki) iletmek amacıyla cihaz bildirim belirteci (<code>fcmToken</code>), dil ve saat dilimi bilginiz saklanır. Çıkış yaptığınızda veya hesabınızı sildiğinizde bu cihaz kaydı silinir.</li>
         <li><strong>Apple Identity Services (Sign in with Apple):</strong> Apple kimliğinizle güvenli ve gizlilik odaklı giriş yapmanızı sağlar.</li>
       </ul>
 
@@ -83,7 +86,7 @@
     <!-- ENGLISH -->
     <article class="legal-card" lang="en">
       <h1>Privacy Policy</h1>
-      <p class="legal-meta">Last Updated: November 15, 2026 • Effective Date: November 12, 2026</p>
+      <p class="legal-meta">Last Updated: November 22, 2026 • Effective Date: November 12, 2026</p>
 
       <p>
         Omakase ("we", "our", or "the App") respects your privacy. This Privacy Policy explains what information we collect when you use the Omakase iOS application and <strong>getomakase.app</strong>, how we use and protect it, and how you can exercise your rights.
@@ -103,7 +106,10 @@
       </p>
       <ul>
         <li><strong>Google Firebase (Authentication &amp; Cloud Firestore):</strong> For secure authentication and cloud data storage.</li>
-        <li><strong>Google Cloud Run &amp; Gemini API (Gemini 3.1 Flash-Lite):</strong> For generating real-time cultural micro-stories and Deep Dive expansions based on your selected topics. Personal identifiers (such as your email) are never sent to the AI model.</li>
+        <li><strong>Google Cloud Run &amp; Gemini API (Gemini 3.5 Flash / 3.1 Flash-Lite):</strong> For generating real-time cultural micro-stories and Deep Dive expansions based on your selected topics. Personal identifiers (such as your email) are never sent to the AI model.</li>
+        <li><strong>Subscription &amp; Purchase Verification (RevenueCat &amp; StoreKit 2):</strong> Processes anonymized Apple transaction identifiers and your Firebase UID strictly to verify Omakase Pro entitlements and restore purchases, without storing payment card details.</li>
+        <li><strong>Crash &amp; Diagnostic Logs (Firebase Crashlytics):</strong> Collects technical crash reports and non-fatal error diagnostics (without personal reading content) to improve app stability.</li>
+        <li><strong>Push Notifications (APNs &amp; Firebase Cloud Messaging):</strong> Only if you explicitly grant notification permission, we store your device token (<code>fcmToken</code>), language, and timezone to deliver daily reminders and social alerts. Signing out or deleting your account removes this device token.</li>
         <li><strong>Sign in with Apple:</strong> For privacy-preserving authentication on iOS.</li>
       </ul>
 

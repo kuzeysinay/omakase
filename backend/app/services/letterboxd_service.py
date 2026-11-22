@@ -8,9 +8,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
-from fastapi import HTTPException
-
 from app.config import logger
+from app.errors import ErrorCode, OmakaseAPIError
 from app.schemas import LetterboxdFilmsRequest
 from app.security import _MAX_RSS_BYTES, _sanitize_single_line
 
@@ -66,30 +65,61 @@ async def fetch_letterboxd_films(req: LetterboxdFilmsRequest) -> list[dict]:
             with urlopen(request, timeout=10) as resp:
                 final_url = resp.geturl() or ""
                 if not final_url.startswith("https://letterboxd.com/"):
-                    raise ValueError("Unexpected redirect target from Letterboxd.")
+                    raise OmakaseAPIError(
+                        status_code=502,
+                        code=ErrorCode.SERVICE_UNAVAILABLE,
+                        detail="Unexpected redirect target from Letterboxd.",
+                    )
                 data = resp.read(_MAX_RSS_BYTES + 1)
                 if len(data) > _MAX_RSS_BYTES:
-                    raise ValueError(
-                        "Letterboxd RSS response exceeded maximum allowed size."
+                    raise OmakaseAPIError(
+                        status_code=502,
+                        code=ErrorCode.SERVICE_UNAVAILABLE,
+                        detail="Letterboxd RSS response exceeded maximum allowed size.",
                     )
                 return data
+        except OmakaseAPIError:
+            raise
         except HTTPError as exc:
             if exc.code == 404:
-                raise ValueError(
-                    f"Letterboxd user '{req.username}' not found."
+                raise OmakaseAPIError(
+                    status_code=404,
+                    code=ErrorCode.LETTERBOXD_NOT_FOUND,
+                    detail=f"Letterboxd user '{req.username}' not found.",
                 ) from exc
-            raise ValueError(f"Letterboxd returned HTTP {exc.code}.") from exc
+            if exc.code in (401, 403):
+                raise OmakaseAPIError(
+                    status_code=403,
+                    code=ErrorCode.LETTERBOXD_PRIVATE,
+                    detail=f"Letterboxd profile '{req.username}' is private.",
+                ) from exc
+            raise OmakaseAPIError(
+                status_code=502,
+                code=ErrorCode.SERVICE_UNAVAILABLE,
+                detail=f"Letterboxd returned HTTP {exc.code}.",
+            ) from exc
         except URLError as exc:
-            raise ValueError("Could not reach Letterboxd.") from exc
+            raise OmakaseAPIError(
+                status_code=502,
+                code=ErrorCode.SERVICE_UNAVAILABLE,
+                detail="Could not reach Letterboxd.",
+            ) from exc
 
     try:
         xml_bytes = await asyncio.to_thread(_fetch)
         return _parse_letterboxd_rss(xml_bytes, limit=req.limit)
+    except OmakaseAPIError:
+        raise
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise OmakaseAPIError(
+            status_code=502,
+            code=ErrorCode.SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
     except Exception as exc:  # noqa: BLE001
         logger.warning("Letterboxd fetch failed: %s", exc)
-        raise HTTPException(
+        raise OmakaseAPIError(
             status_code=502,
+            code=ErrorCode.SERVICE_UNAVAILABLE,
             detail="Failed to fetch Letterboxd data.",
         ) from exc

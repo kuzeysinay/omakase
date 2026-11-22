@@ -7,10 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		31E1A42BF50A4D0F036F944E /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 638242FD98ABC76F4D0C4391 /* FirebaseCrashlytics */; };
 		6FA13F422FAD2BE900617193 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 6FA13F412FAD2BE900617193 /* FirebaseAuth */; };
 		6FA13F442FAD2BE900617193 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 6FA13F432FAD2BE900617193 /* FirebaseFirestore */; };
 		6FA13F472FAD2C5600617193 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 6FA13F462FAD2C5600617193 /* GoogleSignIn */; };
 		6FA13F492FAD2C5600617193 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6FA13F482FAD2C5600617193 /* GoogleSignInSwift */; };
+		9A3AF1EB8C6717F6930406C0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = DC67AD6C6F82D9611BAA06FD /* FirebaseMessaging */; };
+		FBBBF3521D4A9138077248F8 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 1D08C65EF559E554013B6475 /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +50,9 @@
 				6FA13F442FAD2BE900617193 /* FirebaseFirestore in Frameworks */,
 				6FA13F472FAD2C5600617193 /* GoogleSignIn in Frameworks */,
 				6FA13F492FAD2C5600617193 /* GoogleSignInSwift in Frameworks */,
+				31E1A42BF50A4D0F036F944E /* FirebaseCrashlytics in Frameworks */,
+				FBBBF3521D4A9138077248F8 /* RevenueCat in Frameworks */,
+				9A3AF1EB8C6717F6930406C0 /* FirebaseMessaging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +85,7 @@
 				6FB6E2772F9945C7000E7AF9 /* Sources */,
 				6FB6E2782F9945C7000E7AF9 /* Frameworks */,
 				6FB6E2792F9945C7000E7AF9 /* Resources */,
+				0F1216EE46445E8374CC37FF /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -93,6 +100,9 @@
 				6FA13F432FAD2BE900617193 /* FirebaseFirestore */,
 				6FA13F462FAD2C5600617193 /* GoogleSignIn */,
 				6FA13F482FAD2C5600617193 /* GoogleSignInSwift */,
+				638242FD98ABC76F4D0C4391 /* FirebaseCrashlytics */,
+				1D08C65EF559E554013B6475 /* RevenueCat */,
+				DC67AD6C6F82D9611BAA06FD /* FirebaseMessaging */,
 			);
 			productName = omakase;
 			productReference = 6FB6E27B2F9945C7000E7AF9 /* omakase.app */;
@@ -125,6 +135,7 @@
 			packageReferences = (
 				6FA13F402FAD2BE900617193 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				6FA13F452FAD2C5600617193 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				C915C13FAEF6840B0E242B35 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6FB6E27C2F9945C7000E7AF9 /* Products */;
@@ -145,6 +156,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		0F1216EE46445E8374CC37FF /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}.debug.dylib",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		6FB6E2772F9945C7000E7AF9 /* Sources */ = {
@@ -191,7 +224,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = S88MSGP5UR;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -283,8 +316,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = omakase/omakase.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = S88MSGP5UR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -300,6 +335,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = kuzeysinay.omakase;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -318,8 +354,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = omakase/omakase.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = S88MSGP5UR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -334,6 +372,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = kuzeysinay.omakase;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -387,9 +426,27 @@
 				minimumVersion = 10.0.0;
 			};
 		};
+		C915C13FAEF6840B0E242B35 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.103.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		1D08C65EF559E554013B6475 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C915C13FAEF6840B0E242B35 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		638242FD98ABC76F4D0C4391 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6FA13F402FAD2BE900617193 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
 		6FA13F412FAD2BE900617193 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6FA13F402FAD2BE900617193 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
@@ -409,6 +466,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6FA13F452FAD2C5600617193 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		DC67AD6C6F82D9611BAA06FD /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6FA13F402FAD2BE900617193 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

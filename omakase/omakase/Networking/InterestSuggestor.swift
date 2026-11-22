@@ -32,17 +32,21 @@ enum InterestSuggestor {
         excludeSuggestions: [String] = [],
         language: AppLanguage
     ) async throws -> InterestSuggestResponse {
+        let l10n = L10n(lang: language)
         let url = baseURL.appendingPathComponent("interests/suggest")
         var body: [String: Any] = [
             "interests": interests,
             "draft": draft,
             "language": language.rawValue,
+            "timezone": TimeZone.current.identifier,
         ]
         if !excludeSuggestions.isEmpty {
             body["exclude_suggestions"] = excludeSuggestions
         }
         guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else {
-            return InterestSuggestResponse(suggestions: [], loadingIssue: "Could not build the request.")
+            let mapped = OmakaseError.generationFailed
+            ErrorReporter.record(nil, mapped: mapped, area: "interest_suggest_encode")
+            return InterestSuggestResponse(suggestions: [], loadingIssue: mapped.message(l10n: l10n))
         }
 
         var request = URLRequest(url: url, timeoutInterval: 60)
@@ -59,57 +63,47 @@ enum InterestSuggestor {
             }
             if Task.isCancelled { throw CancellationError() }
             guard let http = response as? HTTPURLResponse else {
-                return InterestSuggestResponse(suggestions: [], loadingIssue: "Invalid server response.")
+                let mapped = OmakaseError.serviceUnavailable
+                ErrorReporter.record(nil, mapped: mapped, area: "interest_suggest_response")
+                return InterestSuggestResponse(suggestions: [], loadingIssue: mapped.message(l10n: l10n))
             }
             guard (200..<300).contains(http.statusCode) else {
-                let detail = Self.parseFastAPIDetail(data: data)
-                    ?? HTTPURLResponse.localizedString(forStatusCode: http.statusCode)
-                return InterestSuggestResponse(
-                    suggestions: [],
-                    loadingIssue: "Suggestions failed (\(http.statusCode)): \(detail)"
+                let mapped = OmakaseError.fromHTTP(
+                    status: http.statusCode,
+                    data: data,
+                    retryAfterHeader: http.value(forHTTPHeaderField: "Retry-After")
                 )
+                let finalMapped = mapped == .unknown ? OmakaseError.generationFailed : mapped
+                ErrorReporter.record(
+                    nil,
+                    mapped: finalMapped,
+                    area: "interest_suggest_http",
+                    metadata: ["status": "\(http.statusCode)"]
+                )
+                return InterestSuggestResponse(suggestions: [], loadingIssue: finalMapped.message(l10n: l10n))
             }
             guard
                 let decoded = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                 let list = decoded["suggestions"] as? [String]
             else {
-                return InterestSuggestResponse(
-                    suggestions: [],
-                    loadingIssue: "Server returned an unexpected format."
-                )
+                let mapped = OmakaseError.generationFailed
+                ErrorReporter.record(nil, mapped: mapped, area: "interest_suggest_decode")
+                return InterestSuggestResponse(suggestions: [], loadingIssue: mapped.message(l10n: l10n))
             }
             let cleaned = list.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
             if cleaned.isEmpty {
-                return InterestSuggestResponse(
-                    suggestions: [],
-                    loadingIssue: "No ideas in the response. Try refresh or check the backend logs."
-                )
+                return InterestSuggestResponse(suggestions: [], loadingIssue: l10n.couldNotLoadIdeas)
             }
             return InterestSuggestResponse(suggestions: cleaned, loadingIssue: nil)
         } catch let error as CancellationError {
             throw error
         } catch {
+            let mapped = OmakaseError.from(error)
+            ErrorReporter.record(error, mapped: mapped, area: "interest_suggest")
             return InterestSuggestResponse(
                 suggestions: [],
-                loadingIssue: error.localizedDescription
+                loadingIssue: mapped.message(l10n: l10n)
             )
         }
-    }
-
-    /// FastAPI often uses `{ "detail": "..." }` or a validation array for errors.
-    private static func parseFastAPIDetail(data: Data) -> String? {
-        guard
-            let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else {
-            return nil
-        }
-        if let s = obj["detail"] as? String {
-            return s
-        }
-        if let arr = obj["detail"] as? [[String: Any]] {
-            let parts = arr.compactMap { $0["msg"] as? String }
-            if !parts.isEmpty { return parts.joined(separator: " ") }
-        }
-        return nil
     }
 }

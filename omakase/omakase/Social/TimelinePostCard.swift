@@ -15,6 +15,10 @@ struct TimelinePostCard: View {
     let authService: AuthService
     var onAuthorTap: () -> Void
     var onDelete: (() -> Void)? = nil
+    var onToast: ((String) -> Void)? = nil
+    var isFollowingAuthor: Bool? = nil
+    var isFollowPending: Bool = false
+    var onToggleFollowAuthor: (() -> Void)? = nil
 
     @Environment(\.appLanguage) private var appLanguage
     private var l10n: L10n { L10n(lang: appLanguage) }
@@ -83,11 +87,18 @@ struct TimelinePostCard: View {
             Button(l10n.blockUser, role: .destructive) {
                 Task {
                     guard let uid = authService.uid else { return }
-                    try? await FirestoreService.shared.blockUser(
-                        targetUid: post.authorId,
-                        targetDisplayName: post.authorName,
-                        currentUid: uid
-                    )
+                    do {
+                        try await FirestoreService.shared.blockUser(
+                            targetUid: post.authorId,
+                            targetDisplayName: post.authorName,
+                            currentUid: uid
+                        )
+                        onToast?(l10n.userBlockedToast)
+                    } catch {
+                        let mapped = OmakaseError.from(error, context: .block)
+                        ErrorReporter.record(error, mapped: mapped, area: "timeline_card_block")
+                        onToast?(mapped.message(l10n: l10n))
+                    }
                 }
             }
         } message: {
@@ -130,6 +141,31 @@ struct TimelinePostCard: View {
 
             Spacer()
 
+            if post.authorId != authService.uid,
+               let isFollowing = isFollowingAuthor,
+               !isFollowing,
+               let onToggleFollowAuthor {
+                Button(action: onToggleFollowAuthor) {
+                    if isFollowPending {
+                        ProgressView()
+                            .controlSize(.mini)
+                            .tint(Color(uiColor: .systemBackground))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                    } else {
+                        Text("+ \(l10n.follow)")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color(uiColor: .systemBackground))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                    }
+                }
+                .buttonStyle(.plain)
+                .background(OmakaseTheme.ink, in: Capsule())
+                .disabled(isFollowPending)
+                .accessibilityLabel(l10n.follow)
+            }
+
             if post.authorId == authService.uid {
                 Menu {
                     Button(role: .destructive) {
@@ -153,12 +189,18 @@ struct TimelinePostCard: View {
                     Button {
                         Task {
                             guard let uid = authService.uid, let postId = post.id else { return }
-                            try? await FirestoreService.shared.reportPost(
-                                postId: postId,
-                                reportedAuthorUid: post.authorId,
-                                reporterUid: uid
-                            )
-                            showReportConfirmation = true
+                            do {
+                                try await FirestoreService.shared.reportPost(
+                                    postId: postId,
+                                    reportedAuthorUid: post.authorId,
+                                    reporterUid: uid
+                                )
+                                showReportConfirmation = true
+                            } catch {
+                                let mapped = OmakaseError.from(error, context: .report)
+                                ErrorReporter.record(error, mapped: mapped, area: "timeline_card_report")
+                                onToast?(mapped.message(l10n: l10n))
+                            }
                         }
                     } label: {
                         Label(l10n.reportPost, systemImage: "flag")
@@ -351,10 +393,18 @@ struct TimelinePostCard: View {
                 localReactionCounts[likeKey, default: 0] += 1
                 myReaction = likeKey
                 try await FirestoreService.shared.addReaction(postId: postId, emoji: likeKey, uid: uid)
+                NotificationManager.shared.notifySocialEvent(
+                    type: "reaction",
+                    postId: postId,
+                    actorName: authService.displayName
+                )
             }
         } catch {
+            let mapped = OmakaseError.from(error, context: .reaction)
+            ErrorReporter.record(error, mapped: mapped, area: "timeline_card_reaction")
             myReaction = await FirestoreService.shared.fetchMyReaction(postId: postId, uid: uid)
             localReactionCounts = post.reactionCounts ?? [:]
+            onToast?(mapped.message(l10n: l10n))
         }
     }
 }

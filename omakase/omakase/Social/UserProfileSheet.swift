@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 /// Shows another user's profile with follow/unfollow, report, and block actions.
 struct UserProfileSheet: View {
@@ -24,6 +25,8 @@ struct UserProfileSheet: View {
     @State private var isLoadingPosts = true
     @State private var showBlockConfirm = false
     @State private var showReportConfirmation = false
+    @State private var toastMessage: String?
+    @State private var loadError: OmakaseError?
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -34,6 +37,23 @@ struct UserProfileSheet: View {
                     ScrollView {
                         profileContent(profile)
                     }
+                } else if let loadError {
+                    VStack(spacing: 14) {
+                        Image(systemName: "person.crop.circle.badge.exclamationmark")
+                            .font(.system(size: 40, weight: .light))
+                            .foregroundStyle(.secondary)
+                        Text(loadError.message(l10n: l10n))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                        Button(l10n.tryAgain) {
+                            Task { await loadProfile() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(OmakaseTheme.chipActiveFill)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -51,11 +71,17 @@ struct UserProfileSheet: View {
                             Button {
                                 Task {
                                     guard let uid = authService.uid else { return }
-                                    try? await FirestoreService.shared.reportUser(
-                                        reportedUid: userId,
-                                        reporterUid: uid
-                                    )
-                                    showReportConfirmation = true
+                                    do {
+                                        try await FirestoreService.shared.reportUser(
+                                            reportedUid: userId,
+                                            reporterUid: uid
+                                        )
+                                        showReportConfirmation = true
+                                    } catch {
+                                        let mapped = OmakaseError.from(error, context: .report)
+                                        ErrorReporter.record(error, mapped: mapped, area: "user_profile_report")
+                                        toastMessage = mapped.message(l10n: l10n)
+                                    }
                                 }
                             } label: {
                                 Label(l10n.reportUser, systemImage: "flag")
@@ -63,7 +89,7 @@ struct UserProfileSheet: View {
 
                             if isBlocked {
                                 Button {
-                                    Task { await toggleBlock() }
+                                    Task { _ = await toggleBlock() }
                                 } label: {
                                     Label(l10n.unblockUser, systemImage: "hand.raised.slash")
                                 }
@@ -87,8 +113,9 @@ struct UserProfileSheet: View {
                 Button(l10n.cancel, role: .cancel) { }
                 Button(l10n.blockUser, role: .destructive) {
                     Task {
-                        await toggleBlock()
-                        dismiss()
+                        if await toggleBlock() {
+                            dismiss()
+                        }
                     }
                 }
             } message: {
@@ -99,6 +126,7 @@ struct UserProfileSheet: View {
             } message: {
                 Text(l10n.reportSubmittedToast)
             }
+            .toast(message: $toastMessage)
         }
         .task { await loadProfile() }
     }
@@ -156,7 +184,7 @@ struct UserProfileSheet: View {
                         .disabled(isPending)
                     } else {
                         Button {
-                            Task { await toggleBlock() }
+                            Task { _ = await toggleBlock() }
                         } label: {
                             Label(l10n.unblockUser, systemImage: "hand.raised.slash")
                                 .fontWeight(.semibold)
@@ -201,7 +229,8 @@ struct UserProfileSheet: View {
                             post: post,
                             authService: authService,
                             onAuthorTap: { },
-                            onDelete: nil
+                            onDelete: nil,
+                            onToast: { toastMessage = $0 }
                         )
                     }
                 }
@@ -219,7 +248,17 @@ struct UserProfileSheet: View {
 
     private func loadProfile() async {
         guard let uid = authService.uid else { return }
-        profile = try? await FirestoreService.shared.fetchUserProfile(uid: userId)
+        loadError = nil
+        do {
+            profile = try await FirestoreService.shared.fetchUserProfile(uid: userId)
+            if profile == nil {
+                loadError = .socialActionFailed(.profileLoad)
+            }
+        } catch {
+            let mapped = OmakaseError.from(error, context: .profileLoad)
+            ErrorReporter.record(error, mapped: mapped, area: "user_profile_load")
+            loadError = mapped
+        }
         isBlocked = FirestoreService.shared.isUserBlocked(targetUid: userId)
         isFollowing = (try? await FirestoreService.shared.isFollowing(targetUid: userId, currentUid: uid)) ?? false
         followerCount = (try? await FirestoreService.shared.fetchFollowerCount(uid: userId)) ?? 0
@@ -242,14 +281,25 @@ struct UserProfileSheet: View {
                     currentUid: uid, currentDisplayName: authService.displayName ?? ""
                 )
                 isFollowing = true; followerCount += 1
+                NotificationManager.shared.notifySocialEvent(
+                    type: "follow",
+                    targetUid: userId,
+                    actorName: authService.displayName
+                )
             }
-        } catch { }
+        } catch {
+            let context: SocialActionContext = isFollowing ? .unfollow : .follow
+            let mapped = OmakaseError.from(error, context: context)
+            ErrorReporter.record(error, mapped: mapped, area: "user_profile_follow")
+            toastMessage = mapped.message(l10n: l10n)
+        }
         isPending = false
     }
 
-    private func toggleBlock() async {
-        guard let uid = authService.uid else { return }
+    private func toggleBlock() async -> Bool {
+        guard let uid = authService.uid else { return false }
         isPending = true
+        defer { isPending = false }
         do {
             if isBlocked {
                 try await FirestoreService.shared.unblockUser(targetUid: userId, currentUid: uid)
@@ -264,9 +314,16 @@ struct UserProfileSheet: View {
                 isBlocked = true
                 isFollowing = false
                 userPosts = []
+                toastMessage = l10n.userBlockedToast
             }
-        } catch { }
-        isPending = false
+            return true
+        } catch {
+            let context: SocialActionContext = isBlocked ? .unblock : .block
+            let mapped = OmakaseError.from(error, context: context)
+            ErrorReporter.record(error, mapped: mapped, area: "user_profile_block")
+            toastMessage = mapped.message(l10n: l10n)
+            return false
+        }
     }
 }
 
@@ -278,13 +335,18 @@ struct MyProfileSheet: View {
 
     @Environment(\.appLanguage) private var appLanguage
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var profile: UserProfile?
     @State private var followerCount = 0
     @State private var followingCount = 0
     @State private var userPosts: [SharedPost] = []
     @State private var isLoadingPosts = true
+    @State private var bookmarkStore = BookmarkStore.shared
+    @State private var accessManager = AccessManager.shared
+    @State private var notificationManager = NotificationManager.shared
 
+    @AppStorage("omakase.interests") private var storedInterests: String = ""
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
     @AppStorage("omakase.language") private var languageCode: String = AppLanguage.english.rawValue
     @AppStorage("omakase.appearance") private var appearanceCode: String = AppAppearance.system.rawValue
@@ -292,6 +354,9 @@ struct MyProfileSheet: View {
     @State private var tempLetterboxdUsername = ""
     @State private var isShowingDeleteAccountAlert = false
     @State private var isDeletingAccount = false
+    @State private var accountErrorMessage: String?
+    @State private var isShowingPaywall = false
+    @State private var profileToastMessage: String?
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -307,9 +372,19 @@ struct MyProfileSheet: View {
                         avatarView
 
                         VStack(spacing: 4) {
-                            Text(profile?.displayName ?? authService.displayName ?? "")
-                                .font(.title2.bold())
-                                .multilineTextAlignment(.center)
+                            HStack(spacing: 6) {
+                                Text(profile?.displayName ?? authService.displayName ?? "")
+                                    .font(.title2.bold())
+                                    .multilineTextAlignment(.center)
+                                if accessManager.isPro {
+                                    Text("PRO")
+                                        .font(.caption2.weight(.bold).monospaced())
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 2)
+                                        .background(OmakaseTheme.chipActiveFill, in: Capsule())
+                                        .foregroundStyle(OmakaseTheme.chipActiveText)
+                                }
+                            }
                             if let profile {
                                 Text(profile.formattedHandle)
                                     .font(.subheadline.weight(.medium))
@@ -359,6 +434,25 @@ struct MyProfileSheet: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
 
+                // MARK: - Saved Posts
+                Section(l10n.lang == .turkish ? "Kaydedilenler" : "Saved") {
+                    NavigationLink(value: BookmarksNavigationRoute.collections) {
+                        HStack(spacing: 10) {
+                            Label {
+                                Text(l10n.lang == .turkish ? "Kaydedilmiş Gönderiler" : "Saved Posts")
+                                    .foregroundStyle(.primary)
+                            } icon: {
+                                Image(systemName: "bookmark.fill")
+                                    .foregroundStyle(OmakaseTheme.ink)
+                            }
+                            Spacer()
+                            Text("\(bookmarkStore.entryCount(in: "All"))")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 // MARK: - Posts
                 Section(userPosts.isEmpty ? l10n.profilePosts : "\(l10n.profilePosts) (\(userPosts.count))") {
                     if isLoadingPosts {
@@ -395,6 +489,91 @@ struct MyProfileSheet: View {
                             .listRowSeparator(.hidden)
                         }
                     }
+                }
+
+                // MARK: - Membership (Omakase Pro)
+                Section(l10n.profileMembershipSection) {
+                    if accessManager.isPro {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Label(l10n.proTitle, systemImage: "checkmark.seal.fill")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text(proStatusLabel)
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.primary.opacity(0.08), in: Capsule())
+                                    .foregroundStyle(.primary)
+                            }
+                            if let expDate = accessManager.effectiveExpirationDate {
+                                let dateText = expDate.formatted(date: .abbreviated, time: .omitted)
+                                Text(accessManager.effectiveWillRenew ? l10n.proRenewsOn(dateText) : l10n.proExpiresOn(dateText))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 2)
+
+                        Button {
+                            Task { await accessManager.openManageSubscriptions() }
+                        } label: {
+                            HStack {
+                                Label(l10n.proManageSubscription, systemImage: "creditcard")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    } else {
+                        Button {
+                            isShowingPaywall = true
+                        } label: {
+                            HStack {
+                                Label {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(l10n.profileUpgradeToPro)
+                                            .font(.body.weight(.semibold))
+                                            .foregroundStyle(.primary)
+                                        Text(
+                                            l10n.profileDailyQuotaSummary(
+                                                platesRemaining: accessManager.snapshot.platesRemaining,
+                                                platesLimit: accessManager.snapshot.platesLimit,
+                                                deepDivesRemaining: accessManager.snapshot.deepDivesRemaining,
+                                                deepDivesLimit: accessManager.snapshot.deepDivesLimit
+                                            )
+                                        )
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    }
+                                } icon: {
+                                    Image(systemName: "sparkles")
+                                        .foregroundStyle(OmakaseTheme.ink)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+
+                    Button {
+                        Task { await handleProfileRestore() }
+                    } label: {
+                        HStack {
+                            Label(l10n.proRestorePurchases, systemImage: "arrow.clockwise")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if accessManager.isRestoring {
+                                ProgressView().controlSize(.small)
+                            }
+                        }
+                    }
+                    .disabled(accessManager.isRestoring)
                 }
 
                 // MARK: - Preferences
@@ -451,6 +630,140 @@ struct MyProfileSheet: View {
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.tertiary)
                         }
+                    }
+                }
+
+                // MARK: - Notifications (Phase 3)
+                Section {
+                    if notificationManager.authorizationStatus == .denied {
+                        Button {
+                            notificationManager.openSystemNotificationSettings()
+                        } label: {
+                            HStack(spacing: 10) {
+                                Label {
+                                    Text(l10n.notificationsDeniedBanner)
+                                        .foregroundStyle(.primary)
+                                } icon: {
+                                    Image(systemName: "bell.slash")
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    } else {
+                        if notificationManager.authorizationStatus == .provisional {
+                            Button {
+                                notificationManager.openSystemNotificationSettings()
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Text(l10n.notificationsProvisionalHint)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Spacer(minLength: 4)
+                                    Image(systemName: "arrow.up.right")
+                                        .font(.caption2.bold())
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+
+                        Toggle(
+                            isOn: Binding(
+                                get: { notificationManager.dailyReminderEnabled },
+                                set: { newValue in
+                                    Task {
+                                        await notificationManager.setDailyReminderEnabled(
+                                            newValue,
+                                            interests: parsedStoredInterests,
+                                            language: appLanguage,
+                                            menuCompletedToday: !accessManager.isPro && accessManager.snapshot.platesRemaining == 0
+                                        )
+                                    }
+                                }
+                            )
+                        ) {
+                            Label {
+                                Text(l10n.notificationsDailyMenuToggle)
+                            } icon: {
+                                Image(systemName: "bell.badge")
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                        .tint(OmakaseTheme.ink)
+
+                        if notificationManager.dailyReminderEnabled {
+                            DatePicker(
+                                selection: Binding(
+                                    get: { notificationManager.reminderDateBinding },
+                                    set: { newDate in
+                                        Task {
+                                            await notificationManager.updateReminderTime(
+                                                newDate,
+                                                interests: parsedStoredInterests,
+                                                language: appLanguage,
+                                                menuCompletedToday: !accessManager.isPro && accessManager.snapshot.platesRemaining == 0
+                                            )
+                                        }
+                                    }
+                                ),
+                                displayedComponents: .hourAndMinute
+                            ) {
+                                Label {
+                                    Text(l10n.notificationsReminderTime)
+                                } icon: {
+                                    Image(systemName: "clock")
+                                        .foregroundStyle(.primary)
+                                }
+                            }
+                        }
+
+                        Toggle(
+                            isOn: Binding(
+                                get: { notificationManager.commentPushEnabled },
+                                set: { newValue in
+                                    Task {
+                                        await notificationManager.setCommentPushEnabled(newValue)
+                                    }
+                                }
+                            )
+                        ) {
+                            Label {
+                                Text(l10n.notificationsCommentsToggle)
+                            } icon: {
+                                Image(systemName: "bubble.left.and.bubble.right")
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                        .tint(OmakaseTheme.ink)
+
+                        Toggle(
+                            isOn: Binding(
+                                get: { notificationManager.dailyDigestEnabled },
+                                set: { newValue in
+                                    Task {
+                                        await notificationManager.setDailyDigestEnabled(newValue)
+                                    }
+                                }
+                            )
+                        ) {
+                            Label {
+                                Text(l10n.notificationsDigestToggle)
+                            } icon: {
+                                Image(systemName: "sparkles.rectangle.stack")
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                        .tint(OmakaseTheme.ink)
+                    }
+                } header: {
+                    Text(l10n.notificationsSectionTitle)
+                } footer: {
+                    if notificationManager.authorizationStatus != .denied {
+                        Text(l10n.notificationsQuietHoursFooter)
                     }
                 }
 
@@ -517,8 +830,14 @@ struct MyProfileSheet: View {
                 // MARK: - Account / Sign Out & Delete Account (Guideline 5.1.1(v))
                 Section(l10n.profileAccount) {
                     Button {
-                        authService.signOut()
-                        dismiss()
+                        Task {
+                            await authService.signOutAndCleanup(l10n: l10n)
+                            if authService.isAuthenticated, let err = authService.errorMessage {
+                                accountErrorMessage = err
+                            } else {
+                                dismiss()
+                            }
+                        }
                     } label: {
                         Label(l10n.signOut, systemImage: "rectangle.portrait.and.arrow.right")
                             .foregroundStyle(.primary)
@@ -543,6 +862,11 @@ struct MyProfileSheet: View {
             .listStyle(.insetGrouped)
             .navigationTitle(l10n.myProfile)
             .navigationBarTitleDisplayMode(.inline)
+            .bookmarksNavigationDestinations(
+                bookmarkStore: bookmarkStore,
+                authService: authService,
+                appLanguage: appLanguage
+            )
             .toolbar {
                 if !isTab {
                     ToolbarItem(placement: .cancellationAction) {
@@ -572,13 +896,41 @@ struct MyProfileSheet: View {
                     isDeletingAccount = false
                     if deleted {
                         dismiss()
+                    } else if let err = authService.errorMessage {
+                        accountErrorMessage = err
                     }
                 }
             }
         } message: {
             Text(l10n.confirmDeleteAccountMessage)
         }
+        .alert(
+            l10n.errorSomethingWrong,
+            isPresented: Binding(
+                get: { accountErrorMessage != nil },
+                set: { if !$0 { accountErrorMessage = nil } }
+            )
+        ) {
+            Button(l10n.ok, role: .cancel) { accountErrorMessage = nil }
+        } message: {
+            Text(accountErrorMessage ?? "")
+        }
+        .sheet(isPresented: $isShowingPaywall) {
+            OmakasePaywallView(
+                source: .profile,
+                onToast: { profileToastMessage = $0 }
+            )
+            .environment(\.appLanguage, appLanguage)
+        }
+        .toast(message: $profileToastMessage)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await notificationManager.refreshAuthorizationStatus() }
+            }
+        }
         .task {
+            await accessManager.refreshAccessStatus()
+            await notificationManager.refreshAuthorizationStatus()
             guard let uid = authService.uid else { return }
             profile = try? await FirestoreService.shared.fetchUserProfile(uid: uid)
             followerCount = (try? await FirestoreService.shared.fetchFollowerCount(uid: uid)) ?? 0
@@ -609,6 +961,36 @@ struct MyProfileSheet: View {
             .font(.system(size: 80))
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(.secondary)
+    }
+
+    private var proStatusLabel: String {
+        switch accessManager.effectiveStatus {
+        case "trial":
+            return l10n.proTrialStatus
+        case "billing_issue":
+            return l10n.proBillingIssueStatus
+        default:
+            return l10n.proActiveStatus
+        }
+    }
+
+    private func handleProfileRestore() async {
+        let outcome = await accessManager.restorePurchases()
+        switch outcome {
+        case .restored:
+            profileToastMessage = l10n.proRestoreSuccess
+        case .nothingToRestore:
+            profileToastMessage = l10n.proRestoreEmpty
+        case .failed(let error):
+            profileToastMessage = error.message(l10n: l10n)
+        }
+    }
+
+    private var parsedStoredInterests: [String] {
+        storedInterests
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 
     private func statCell(value: Int, label: String) -> some View {

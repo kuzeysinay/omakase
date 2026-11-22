@@ -6,17 +6,31 @@
 import Foundation
 import Observation
 
-/// Drives the social timeline tab — fetches shared posts from followed users.
+enum TimelineFeedMode: String, CaseIterable, Identifiable, Sendable {
+    case discover
+    case following
+
+    var id: String { rawValue }
+}
+
+/// Drives the social timeline tab — supports a shuffled Discover feed across
+/// community readers as well as a dedicated Following feed.
 @Observable
 @MainActor
 final class TimelineViewModel {
 
     // MARK: - Published state
 
-    private(set) var posts: [SharedPost] = []
+    var feedMode: TimelineFeedMode = .discover
+    private(set) var discoverPosts: [SharedPost] = []
+    private(set) var followingPosts: [SharedPost] = []
     private(set) var isLoading: Bool = false
-    private(set) var errorMessage: String?
+    private(set) var loadError: OmakaseError?
     private(set) var followingUIDs: [String] = []
+
+    var posts: [SharedPost] {
+        feedMode == .discover ? discoverPosts : followingPosts
+    }
 
     private let authService: AuthService
     @ObservationIgnored
@@ -41,43 +55,83 @@ final class TimelineViewModel {
 
     // MARK: - Actions
 
-    /// Load the timeline: fetch following list, then fetch their shared posts.
+    /// Load both the shuffled Discover feed and the Following feed.
     func loadTimeline() async {
         guard let uid = authService.uid else { return }
         isLoading = true
-        errorMessage = nil
+        loadError = nil
 
         do {
-            followingUIDs = try await FirestoreService.shared.fetchFollowingUIDs(currentUid: uid)
+            async let fetchedFollowingUIDs = FirestoreService.shared.fetchFollowingUIDs(currentUid: uid)
+            async let fetchedDiscover = FirestoreService.shared.fetchDiscoverTimeline(limit: 60)
 
-            if followingUIDs.isEmpty {
-                // Show discover feed when not following anyone yet.
-                posts = try await FirestoreService.shared.fetchDiscoverTimeline(limit: 50)
+            let (resolvedFollowing, rawDiscover) = try await (fetchedFollowingUIDs, fetchedDiscover)
+            followingUIDs = resolvedFollowing
+            discoverPosts = Self.interleaveAndShuffleDiscoverPosts(rawDiscover)
+
+            if resolvedFollowing.isEmpty {
+                followingPosts = []
             } else {
-                // Include own shared posts in timeline too.
-                var allUIDs = followingUIDs
+                var allUIDs = resolvedFollowing
                 allUIDs.append(uid)
-                posts = try await FirestoreService.shared.fetchTimeline(followingUIDs: allUIDs)
+                followingPosts = try await FirestoreService.shared.fetchTimeline(followingUIDs: allUIDs)
             }
         } catch {
-            errorMessage = error.localizedDescription
+            let mapped = OmakaseError.from(error, context: .timelineLoad)
+            ErrorReporter.record(error, mapped: mapped, area: "timeline_load")
+            loadError = mapped
         }
 
         isLoading = false
     }
 
     func removePost(id: String) {
-        posts.removeAll { $0.id == id }
+        discoverPosts.removeAll { $0.id == id }
+        followingPosts.removeAll { $0.id == id }
     }
 
     func filterOutBlockedAuthors() {
         let blocked = FirestoreService.shared.blockedUIDs
-        posts.removeAll { blocked.contains($0.authorId) }
+        discoverPosts.removeAll { blocked.contains($0.authorId) }
+        followingPosts.removeAll { blocked.contains($0.authorId) }
         followingUIDs.removeAll { blocked.contains($0) }
     }
 
     /// Refresh the timeline (pull-to-refresh).
     func refresh() async {
         await loadTimeline()
+    }
+
+    // MARK: - Helpers
+
+    /// Groups discover posts by author, shuffles author order, and interleaves
+    /// one post per author in round-robin rounds so random readers surface first.
+    private static func interleaveAndShuffleDiscoverPosts(_ posts: [SharedPost]) -> [SharedPost] {
+        guard posts.count > 1 else { return posts }
+        var buckets: [String: [SharedPost]] = [:]
+        for post in posts {
+            buckets[post.authorId, default: []].append(post)
+        }
+        var authors = Array(buckets.keys).shuffled()
+        for author in authors {
+            buckets[author]?.shuffle()
+        }
+
+        var result: [SharedPost] = []
+        result.reserveCapacity(posts.count)
+        while !authors.isEmpty {
+            var remainingAuthors: [String] = []
+            for author in authors {
+                if var list = buckets[author], !list.isEmpty {
+                    result.append(list.removeFirst())
+                    if !list.isEmpty {
+                        buckets[author] = list
+                        remainingAuthors.append(author)
+                    }
+                }
+            }
+            authors = remainingAuthors.shuffled()
+        }
+        return result
     }
 }

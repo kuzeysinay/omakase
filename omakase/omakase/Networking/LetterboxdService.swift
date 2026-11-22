@@ -50,7 +50,7 @@ enum LetterboxdService {
     ///   - username: The Letterboxd username (e.g. "kuzeysinay").
     ///   - limit: Maximum number of films to return (default 50).
     /// - Returns: An array of `LetterboxdFilm`.
-    /// - Throws: `CancellationError` or a descriptive error string.
+    /// - Throws: `CancellationError` or `OmakaseError`.
     static func fetchFilms(
         username: String,
         limit: Int = 50
@@ -61,7 +61,7 @@ enum LetterboxdService {
             "limit": limit,
         ]
         guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else {
-            throw LetterboxdError.badRequest
+            throw OmakaseError.serviceUnavailable
         }
 
         var request = URLRequest(url: url, timeoutInterval: 15)
@@ -78,36 +78,18 @@ enum LetterboxdService {
         if Task.isCancelled { throw CancellationError() }
 
         guard let http = response as? HTTPURLResponse else {
-            throw LetterboxdError.invalidResponse
+            throw OmakaseError.serviceUnavailable
         }
 
         guard (200..<300).contains(http.statusCode) else {
-            // Try to extract FastAPI detail message.
-            if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let detail = obj["detail"] as? String {
-                throw LetterboxdError.serverError(detail)
-            }
-            throw LetterboxdError.serverError("HTTP \(http.statusCode)")
+            throw OmakaseError.fromHTTP(
+                status: http.statusCode,
+                data: data,
+                retryAfterHeader: http.value(forHTTPHeaderField: "Retry-After")
+            )
         }
 
         let decoded = try JSONDecoder().decode(LetterboxdFilmsResponse.self, from: data)
         return decoded.films
-    }
-}
-
-enum LetterboxdError: Error, LocalizedError {
-    case badRequest
-    case invalidResponse
-    case serverError(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .badRequest:
-            return "Could not build the Letterboxd request."
-        case .invalidResponse:
-            return "Invalid server response."
-        case .serverError(let detail):
-            return detail
-        }
     }
 }

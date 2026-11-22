@@ -43,6 +43,7 @@ enum CategoryExpansionService {
             "category": category,
             "existing_interests": existingInterests,
             "language": language.rawValue,
+            "timezone": TimeZone.current.identifier,
         ]
 
         if let bodyData = try? JSONSerialization.data(withJSONObject: body) {
@@ -80,6 +81,7 @@ enum CategoryExpansionService {
             "draft": category,
             "exclude_suggestions": existingInterests,
             "language": language.rawValue,
+            "timezone": TimeZone.current.identifier,
         ]
 
         if let fallbackData = try? JSONSerialization.data(withJSONObject: fallbackBody) {

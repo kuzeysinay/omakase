@@ -32,6 +32,28 @@ REQUIRE_AUTH: bool = os.getenv("OMAKASE_REQUIRE_AUTH", "true").strip().lower() n
     "no",
 )
 
+REVENUECAT_SECRET_API_KEY: Optional[str] = os.getenv("REVENUECAT_SECRET_API_KEY")
+REVENUECAT_WEBHOOK_SECRET: Optional[str] = os.getenv("REVENUECAT_WEBHOOK_SECRET")
+REVENUECAT_ENTITLEMENT_ID: str = os.getenv("REVENUECAT_ENTITLEMENT_ID", "pro")
+NOTIFICATION_CRON_SECRET: Optional[str] = os.getenv("NOTIFICATION_CRON_SECRET")
+
+# Push notification policy constants (v1.0 social notifications)
+COMMENT_COOLDOWN_MINUTES: int = 30
+QUIET_HOURS_START: int = 22
+QUIET_HOURS_END: int = 8
+QUIET_HOURS_DELIVER_HOUR: int = 8
+QUIET_HOURS_DELIVER_MINUTE: int = 30
+DAILY_DIGEST_HOUR: int = 19
+
+# Server-enforced daily quota limits ("Today's Menu" freemium model + fair-use Pro caps)
+FREE_DAILY_PLATES: int = 3
+PRO_DAILY_PLATES: int = 100
+FREE_DAILY_DEEP_DIVES: int = 1
+PRO_DAILY_DEEP_DIVES: int = 40
+SHARE_BONUS_DEEP_DIVES: int = 1
+FREE_DAILY_SUGGESTIONS: int = 10
+PRO_DAILY_SUGGESTIONS: int = 100
+
 ALLOWED_CORS_ORIGINS: list[str] = [
     "https://getomakase.app",
     "https://www.getomakase.app",

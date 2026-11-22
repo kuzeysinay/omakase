@@ -628,7 +628,30 @@ final class FirestoreService {
             try? await batch.commit()
         }
 
-        // 5. Delete the user profile document itself
+        // 5. Clean up registered devices and notification preferences
+        let devicesSnap = try? await db.collection("users").document(uid)
+            .collection("devices")
+            .getDocuments()
+        if let docs = devicesSnap?.documents, !docs.isEmpty {
+            let batch = db.batch()
+            for doc in docs {
+                batch.deleteDocument(doc.reference)
+            }
+            try? await batch.commit()
+        }
+
+        let prefsSnap = try? await db.collection("users").document(uid)
+            .collection("notification_prefs")
+            .getDocuments()
+        if let docs = prefsSnap?.documents, !docs.isEmpty {
+            let batch = db.batch()
+            for doc in docs {
+                batch.deleteDocument(doc.reference)
+            }
+            try? await batch.commit()
+        }
+
+        // 6. Delete the user profile document itself
         try await db.collection("users").document(uid).delete()
         clearBlockedCache()
     }

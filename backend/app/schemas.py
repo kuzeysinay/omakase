@@ -40,6 +40,11 @@ class FeedRequest(BaseModel):
             "Each dict has keys: title, year, rating (0-5), watched_date."
         ),
     )
+    timezone: Optional[str] = Field(
+        default=None,
+        max_length=64,
+        description="Caller's IANA timezone (e.g. Europe/Istanbul) for daily quota resets.",
+    )
 
     @field_validator("language")
     @classmethod
@@ -79,6 +84,7 @@ class SuggestRequest(BaseModel):
         default="en",
         description="BCP-47 language tag for suggestion strings (en or tr).",
     )
+    timezone: Optional[str] = Field(default=None, max_length=64)
 
     @field_validator("language")
     @classmethod
@@ -127,6 +133,7 @@ class ExpandCategoryRequest(BaseModel):
         default="en",
         description="BCP-47 language tag for suggestion strings (en or tr).",
     )
+    timezone: Optional[str] = Field(default=None, max_length=64)
 
     @field_validator("language")
     @classmethod
@@ -149,7 +156,12 @@ class ExpandCategoryRequest(BaseModel):
     @field_validator("existing_interests")
     @classmethod
     def _check_existing_interests(cls, v: list[str]) -> list[str]:
-        return _validate_interests(v)
+        cleaned: list[str] = []
+        for raw in v[:100]:
+            item = _sanitize_single_line(raw, _MAX_INTEREST_LEN)
+            if item and not _BLOCKLIST_RE.search(item):
+                cleaned.append(item)
+        return cleaned
 
 
 class DeepDiveRequest(BaseModel):
@@ -159,6 +171,7 @@ class DeepDiveRequest(BaseModel):
     original_text: str = Field(..., min_length=1, max_length=5000)
     interests: list[str] = Field(default_factory=list, max_length=30)
     language: str = "en"
+    timezone: Optional[str] = Field(default=None, max_length=64)
 
     @field_validator("original_title")
     @classmethod
@@ -209,3 +222,59 @@ class LetterboxdFilmsRequest(BaseModel):
                 "Invalid Letterboxd username. Only letters, numbers, underscores, and hyphens (max 40 chars) are allowed."
             )
         return cleaned
+
+
+class BillingSyncRequest(BaseModel):
+    """Payload for POST /billing/sync."""
+
+    timezone: Optional[str] = Field(default=None, max_length=64)
+
+
+class RewardShareRequest(BaseModel):
+    """Payload for POST /feed/reward-share."""
+
+    timezone: Optional[str] = Field(default=None, max_length=64)
+
+
+class SocialNotificationEventRequest(BaseModel):
+    """Payload for POST /notifications/events to dispatch or enqueue a social push."""
+
+    event_type: str = Field(..., description="One of: comment, follow, reaction.")
+    target_uid: Optional[str] = Field(default=None, max_length=128)
+    post_id: Optional[str] = Field(default=None, max_length=128)
+    actor_name: Optional[str] = Field(default=None, max_length=100)
+    comment_preview: Optional[str] = Field(default=None, max_length=160)
+
+    @field_validator("event_type")
+    @classmethod
+    def _validate_event_type(cls, v: str) -> str:
+        cleaned = (v or "").strip().lower()
+        if cleaned not in ("comment", "follow", "reaction"):
+            raise ValueError("Unsupported notification event_type.")
+        return cleaned
+
+    @field_validator("target_uid", "post_id")
+    @classmethod
+    def _clean_identifier(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        cleaned = _sanitize_single_line(v, 128)
+        return cleaned or None
+
+    @field_validator("actor_name")
+    @classmethod
+    def _clean_actor_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        cleaned = _sanitize_single_line(v, 100)
+        return cleaned or None
+
+    @field_validator("comment_preview")
+    @classmethod
+    def _clean_comment_preview(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        cleaned = _sanitize_single_line(v, 160)
+        if cleaned and _BLOCKLIST_RE.search(cleaned):
+            return ""
+        return cleaned or None

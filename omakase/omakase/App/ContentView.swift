@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("omakase.hasOnboarded") private var hasOnboarded: Bool = false
     @AppStorage("omakase.language") private var languageCode: String = AppLanguage.english.rawValue
     @AppStorage("omakase.appearance") private var appearanceCode: String = AppAppearance.system.rawValue
@@ -61,6 +62,29 @@ struct ContentView: View {
                 withAnimation(.easeOut(duration: 0.4)) {
                     showSplash = false
                 }
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && authService.isAuthenticated {
+                Task {
+                    await AccessManager.shared.refreshAccessStatus()
+                    let raw = UserDefaults.standard.string(forKey: "omakase.interests") ?? ""
+                    let parsed = raw
+                        .split(separator: ",")
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
+                    let completedToday = !AccessManager.shared.isPro && AccessManager.shared.snapshot.platesRemaining == 0
+                    await NotificationManager.shared.syncDailyReminderOnForeground(
+                        interests: parsed,
+                        language: resolvedLanguage,
+                        menuCompletedToday: completedToday
+                    )
+                }
+            }
+        }
+        .onChange(of: languageCode) { _, _ in
+            Task {
+                await NotificationManager.shared.updatePreferencesForLanguageChange(resolvedLanguage)
             }
         }
     }
