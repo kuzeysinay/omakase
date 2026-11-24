@@ -3,16 +3,27 @@
     "rules": "firestore.rules"
   },
   "hosting": {
-    "public": "web",
+    "public": "admin-web",
     "cleanUrls": true,
     "ignore": [
       "firebase.json",
       "**/.*"
     ],
+    "redirects": [
+      {
+        "source": "/",
+        "destination": "/admin",
+        "type": 302
+      }
+    ],
     "headers": [
       {
         "source": "**",
         "headers": [
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow"
+          },
           {
             "key": "X-Content-Type-Options",
             "value": "nosniff"
@@ -34,19 +45,6 @@
             "value": "max-age=31536000; includeSubDomains"
           },
           {
-            "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://omakase-backend-20235796246.us-central1.run.app; frame-ancestors 'none'; base-uri 'self'"
-          }
-        ]
-      },
-      {
-        "source": "/admin*",
-        "headers": [
-          {
-            "key": "X-Robots-Tag",
-            "value": "noindex, nofollow"
-          },
-          {
             "key": "Cross-Origin-Opener-Policy",
             "value": "same-origin-allow-popups"
           },
@@ -59,5 +57,3 @@
     ]
   }
 }
-
-

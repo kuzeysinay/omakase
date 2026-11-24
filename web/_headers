@@ -1,7 +1,0 @@
-/admin
-  X-Robots-Tag: noindex, nofollow
-  Cross-Origin-Opener-Policy: same-origin-allow-popups
-
-/admin.html
-  X-Robots-Tag: noindex, nofollow
-  Cross-Origin-Opener-Policy: same-origin-allow-popups
