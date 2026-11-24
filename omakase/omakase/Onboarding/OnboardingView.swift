@@ -324,22 +324,7 @@ struct OnboardingView: View {
     // MARK: - Actions
 
     private func completeOnboarding() {
-        let existing = FeedView.parse(interests: storedInterests)
-        let finalInterests: [String]
-        if existing.isEmpty {
-            finalInterests = InterestCategory.presets.prefix(3).map { $0.localizedName(for: appLanguage) }
-            storedInterests = finalInterests.joined(separator: ", ")
-        } else {
-            finalInterests = existing
-        }
-
         hasOnboarded = true
-
-        if let uid = authService?.uid {
-            Task {
-                try? await FirestoreService.shared.updateInterests(finalInterests, uid: uid)
-            }
-        }
     }
 }
 

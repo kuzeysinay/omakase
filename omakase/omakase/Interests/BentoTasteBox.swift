@@ -81,11 +81,13 @@ struct BentoTasteBox: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.vertical, 4)
 
-            // Scroll hint caption
-            scrollHintBar
-                .padding(.horizontal, 18)
-                .padding(.top, 6)
-                .padding(.bottom, 10)
+            // Scroll hint caption (sub-topics only)
+            if mode != .rootCategories {
+                scrollHintBar
+                    .padding(.horizontal, 18)
+                    .padding(.top, 6)
+                    .padding(.bottom, 10)
+            }
 
             // Bottom controls: Active interests ribbon
             if !allInterests.isEmpty || isLetterboxdActive {
