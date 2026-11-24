@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       "hero.badge": "iOS 17+ • 7 Dil • Kişisel Kültür Akışı",
       "hero.title": "Algoritmayı değil, zihnini besle.",
-      "hero.subtitle": "Tek dokunuşta fun-fact. Postu AI anlık üretir, kaynağını da verir. 12 kültür disiplini, okuma süresi molası ve Letterboxd günlüğün — günde 3 ücretsiz lokmayla başla.",
+      "hero.subtitle": "Tek dokunuşta fun-fact. Postu ai anlık üretir, kaynağını da verir. 12 kültür disiplini, okuma süresi molası ve Letterboxd günlüğün — günde 3 ücretsiz lokmayla başla.",
       "hero.appStoreLabel": "App Store",
       "hero.downloadCta": "iOS için İndir",
       "hero.tryDemo": "Canlı Tadımı Dene ↓",
