@@ -22,6 +22,7 @@ struct FeedView: View {
     @State private var pendingNotificationTopicAfterPaywall: (topic: String, categoryId: String?)?
     @State private var showNotificationDeniedAlert = false
     @State private var feedScrollPosition: AnyHashable?
+    @State private var isHydratingCache = false
 
     // Letterboxd
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
@@ -182,16 +183,17 @@ struct FeedView: View {
             viewModel.updateInterests(parsed)
             SubTopicDiscoveryStore.shared.prewarmAllCategories(language: appLanguage, userInterests: parsed)
             if viewModel.posts.isEmpty {
-                if viewModel.isOffline {
-                    await viewModel.loadCachedPosts()
-                    if let lastID = viewModel.posts.last?.id {
-                        feedScrollPosition = lastID
-                    } else {
-                        feedScrollPosition = "category-page"
-                    }
+                isHydratingCache = true
+                await viewModel.loadCachedPosts()
+                if viewModel.isOffline, let lastID = viewModel.posts.last?.id {
+                    feedScrollPosition = lastID
                 } else {
                     feedScrollPosition = "category-page"
                 }
+                // Allow SwiftUI's onChange for posts.last?.id to observe the hydrated state
+                // before re-enabling auto-scroll for newly generated posts.
+                try? await Task.sleep(for: .milliseconds(50))
+                isHydratingCache = false
             }
             await handlePendingNotificationTopicIfNeeded()
         }
@@ -529,6 +531,14 @@ struct FeedView: View {
                     .frame(width: geo.size.width, height: geo.size.height)
                     .clipped()
                     .onChange(of: viewModel.posts.last?.id) { _, newID in
+                        if isHydratingCache {
+                            let target: AnyHashable = (viewModel.isOffline && newID != nil) ? newID! : "category-page"
+                            feedScrollPosition = target
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(target, anchor: .top)
+                            }
+                            return
+                        }
                         guard let newID else {
                             feedScrollPosition = "category-page"
                             return
@@ -890,9 +900,20 @@ private struct ReelsPostCard: View {
                     .foregroundStyle(.red)
                 }
 
-                // Delete button
+                // More menu: Report AI content (Guideline 1.2) & Remove
                 if post.isComplete {
                     Menu {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showReportDialog = true
+                        } label: {
+                            Label(
+                                isReported ? l10n.actionReported : l10n.reportAIPostTitle,
+                                systemImage: isReported ? "flag.fill" : "flag"
+                            )
+                        }
+                        .disabled(isReportPending)
+
                         Button(role: .destructive) {
                             onDelete()
                         } label: {
@@ -905,6 +926,29 @@ private struct ReelsPostCard: View {
                             .frame(width: 32, height: 32)
                             .background(Color.primary.opacity(0.04), in: Circle())
                     }
+                    .confirmationDialog(
+                        l10n.reportAIPostTitle,
+                        isPresented: $showReportDialog,
+                        titleVisibility: .visible
+                    ) {
+                        Button(l10n.reportReasonInaccurate) {
+                            Task { await submitAIReport(reason: l10n.reportReasonInaccurate) }
+                        }
+                        Button(l10n.reportReasonInappropriate, role: .destructive) {
+                            Task { await submitAIReport(reason: l10n.reportReasonInappropriate) }
+                        }
+                        Button(l10n.reportReasonOther) {
+                            Task { await submitAIReport(reason: l10n.reportReasonOther) }
+                        }
+                        Button(l10n.cancel, role: .cancel) {}
+                    } message: {
+                        Text(l10n.reportAIPostMessage)
+                    }
+                    .alert(l10n.reportAIPostTitle, isPresented: $showReportConfirmation) {
+                        Button(l10n.ok, role: .cancel) {}
+                    } message: {
+                        Text(l10n.reportSubmittedToast)
+                    }
                 }
             }
         }
@@ -913,7 +957,7 @@ private struct ReelsPostCard: View {
     // MARK: - Action Bar (bottom, horizontal, like Reels)
 
     private var actionBar: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 24) {
             // Deep Dive button — opens sheet (re-read if already fetched)
             Button {
                 if post.deepDiveText == nil {
@@ -933,7 +977,7 @@ private struct ReelsPostCard: View {
                         .lineLimit(1)
                         .fixedSize()
                 }
-                .frame(width: 50)
+                .frame(width: 52)
                 .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
@@ -956,7 +1000,7 @@ private struct ReelsPostCard: View {
                         .lineLimit(1)
                         .fixedSize()
                 }
-                .frame(width: 50)
+                .frame(width: 52)
                 .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
@@ -982,61 +1026,13 @@ private struct ReelsPostCard: View {
                         .lineLimit(1)
                         .fixedSize()
                 }
-                .frame(width: 50)
+                .frame(width: 52)
                 .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(l10n.shareSheetA11y)
 
             Spacer()
-
-            // Report AI content button (App Store Guideline 1.2)
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                showReportDialog = true
-            } label: {
-                VStack(spacing: 4) {
-                    if isReportPending {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: isReported ? "flag.fill" : "flag")
-                            .font(.title3)
-                            .foregroundStyle(isReported ? OmakaseTheme.ink : .secondary)
-                    }
-                    Text(isReported ? l10n.actionReported : l10n.actionReport)
-                        .font(.caption2.weight(isReported ? .semibold : .regular))
-                        .foregroundStyle(isReported ? .primary : .secondary)
-                        .lineLimit(1)
-                        .fixedSize()
-                }
-                .frame(width: 48)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(l10n.reportAIPostTitle)
-            .disabled(isReportPending)
-            .confirmationDialog(
-                l10n.reportAIPostTitle,
-                isPresented: $showReportDialog,
-                titleVisibility: .visible
-            ) {
-                Button(l10n.reportReasonInaccurate) {
-                    Task { await submitAIReport(reason: l10n.reportReasonInaccurate) }
-                }
-                Button(l10n.reportReasonInappropriate, role: .destructive) {
-                    Task { await submitAIReport(reason: l10n.reportReasonInappropriate) }
-                }
-                Button(l10n.reportReasonOther) {
-                    Task { await submitAIReport(reason: l10n.reportReasonOther) }
-                }
-                Button(l10n.cancel, role: .cancel) {}
-            } message: {
-                Text(l10n.reportAIPostMessage)
-            }
-            .alert(l10n.reportAIPostTitle, isPresented: $showReportConfirmation) {
-                Button(l10n.ok, role: .cancel) {}
-            } message: {
-                Text(l10n.reportSubmittedToast)
-            }
 
             // Bookmark button
             Button {
@@ -1056,7 +1052,7 @@ private struct ReelsPostCard: View {
                         .lineLimit(1)
                         .fixedSize()
                 }
-                .frame(width: 50)
+                .frame(width: 52)
                 .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
