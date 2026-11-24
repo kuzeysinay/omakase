@@ -641,69 +641,176 @@ struct OmakasePaywallView: View {
     }
 }
 
-// MARK: - Gently Swaying Monochrome ASCII Backdrop
+// MARK: - Gently Swaying Monochrome ASCII Sushi Backdrop
 
-/// Calm, Hidden-Folks-inspired monochrome ASCII wave & koi field that sways
-/// slowly behind the paywall hero and frosted comparison card.
+/// Calm, Hidden-Folks-inspired monochrome ASCII sushi sprites (nigiri, maki,
+/// onigiri, temaki, ocha) drifting and swaying gently behind the paywall.
 private struct OmakaseASCIIBackdrop: View {
 
     let reduceMotion: Bool
     @Environment(\.colorScheme) private var colorScheme
 
-    private let waveRows: [(text: String, isMotif: Bool)] = [
-        ("  ~   ·   ≈   ~   ·   ∘   ~   ≈   ·   ~   ·   ≈   ~  ", false),
-        ("    ·   ~   ><((°>   ~   ·   ≈   ~   ·   ✦   ~   ·   ", true),
-        (" ~   ≈   ·   ~   ∘   ≈   ~   ·   ~   ≈   ·   ~   ≈   ", false),
-        ("   ·   ∘   ~   ·   ~   ≈   ·   <°))><   ~   ·   ∘   ~", true),
-        (" ≈   ~   ·   ✦   ~   ·   ≈   ~   ·   ~   ≈   ·   ~   ", false),
-        ("  ·   ~   ≈   ·   ~   ∘   ~   ·   ≈   ~   ·   ~   ·  ", false),
-        ("~   ·   ~   ><((°>   ·   ≈   ~   ·   ~   ∘   ~   ≈   ", true),
-        ("   ≈   ·   ~   ·   ≈   ~   ·   ✦   ~   ·   ≈   ~   · ", false),
-        (" ·   ~   ∘   ~   ≈   ·   ~   ·   ~   ≈   ·   <°))><  ", true),
-        ("~   ≈   ·   ~   ·   ~   ≈   ·   ∘   ~   ·   ≈   ~   ·", false),
-        ("  ·   ✦   ~   ≈   ·   ~   ><((°>   ·   ~   ≈   ·   ~ ", true),
-        (" ≈   ·   ~   ∘   ~   ·   ≈   ~   ·   ~   ≈   ·   ~   ", false),
-        ("   ~   ·   ≈   ~   ·   <°))><   ·   ~   ∘   ~   ·   ≈", true),
-        (" ·   ≈   ~   ·   ~   ≈   ·   ~   ✦   ~   ·   ≈   ~   ", false),
-        ("~   ·   ∘   ~   ≈   ·   ~   ·   ~   ≈   ·   ~   ·   ≈", false),
-        ("  ≈   ~   ·   ><((°>   ~   ·   ≈   ~   ·   ∘   ~   · ", true)
+    private struct SushiSprite: Identifiable {
+        let id: Int
+        let art: String
+        let xFraction: CGFloat
+        let yFraction: CGFloat
+        let speed: Double
+        let swayX: CGFloat
+        let swayY: CGFloat
+        let maxDegrees: Double
+        let phase: Double
+        let fontSize: CGFloat
+    }
+
+    private let sprites: [SushiSprite] = [
+        // Top-left Nigiri
+        SushiSprite(
+            id: 0,
+            art: """
+             _____
+            (~~~~~)
+            [=====]
+            """,
+            xFraction: 0.16, yFraction: 0.09,
+            speed: 0.55, swayX: 12, swayY: 5, maxDegrees: 3.5, phase: 0.0, fontSize: 12
+        ),
+        // Top-center Maki roll
+        SushiSprite(
+            id: 1,
+            art: """
+            .---.
+            |(o)|
+            '---'
+            """,
+            xFraction: 0.52, yFraction: 0.07,
+            speed: -0.48, swayX: 10, swayY: 6, maxDegrees: 4.0, phase: 1.4, fontSize: 12
+        ),
+        // Top-right Onigiri
+        SushiSprite(
+            id: 2,
+            art: """
+              /\\
+             /  \\
+            /_[]_\\
+            """,
+            xFraction: 0.84, yFraction: 0.11,
+            speed: 0.44, swayX: 11, swayY: 5, maxDegrees: 3.0, phase: 2.6, fontSize: 12
+        ),
+        // Upper-mid Chopsticks + Nigiri
+        SushiSprite(
+            id: 3,
+            art: """
+            ====\\  ____
+            ====/ (~~~~)
+                  [====]
+            """,
+            xFraction: 0.78, yFraction: 0.25,
+            speed: -0.52, swayX: 14, swayY: 6, maxDegrees: 2.8, phase: 0.9, fontSize: 11.5
+        ),
+        // Upper-mid Ocha teacup
+        SushiSprite(
+            id: 4,
+            art: """
+             ( )
+            |___|
+            '---'
+            """,
+            xFraction: 0.14, yFraction: 0.26,
+            speed: 0.46, swayX: 9, swayY: 5, maxDegrees: 2.5, phase: 3.1, fontSize: 11.5
+        ),
+        // Mid-center Maki duo
+        SushiSprite(
+            id: 5,
+            art: """
+            .---. .---.
+            |(o)| |(o)|
+            '---' '---'
+            """,
+            xFraction: 0.48, yFraction: 0.36,
+            speed: 0.40, swayX: 15, swayY: 5, maxDegrees: 2.5, phase: 4.2, fontSize: 11.5
+        ),
+        // Lower-mid Temaki hand roll
+        SushiSprite(
+            id: 6,
+            art: """
+            \\o~o/
+             \\ /
+              V
+            """,
+            xFraction: 0.18, yFraction: 0.48,
+            speed: -0.50, swayX: 11, swayY: 6, maxDegrees: 4.2, phase: 2.1, fontSize: 12
+        ),
+        // Lower-mid Nigiri
+        SushiSprite(
+            id: 7,
+            art: """
+             _____
+            (~~~~~)
+            [=====]
+            """,
+            xFraction: 0.84, yFraction: 0.47,
+            speed: 0.58, swayX: 13, swayY: 5, maxDegrees: 3.2, phase: 5.0, fontSize: 12
+        ),
+        // Mid-bottom Onigiri
+        SushiSprite(
+            id: 8,
+            art: """
+              /\\
+             /  \\
+            /_[]_\\
+            """,
+            xFraction: 0.46, yFraction: 0.58,
+            speed: -0.42, swayX: 12, swayY: 5, maxDegrees: 3.0, phase: 1.7, fontSize: 12
+        ),
+        // Gentle sparkle accents
+        SushiSprite(
+            id: 9,
+            art: "·  ✦  ·",
+            xFraction: 0.34, yFraction: 0.17,
+            speed: 0.65, swayX: 8, swayY: 4, maxDegrees: 0, phase: 0.5, fontSize: 12
+        ),
+        SushiSprite(
+            id: 10,
+            art: "~  ∘  ~",
+            xFraction: 0.66, yFraction: 0.42,
+            speed: -0.60, swayX: 9, swayY: 4, maxDegrees: 0, phase: 3.7, fontSize: 12
+        )
     ]
 
     var body: some View {
         SwiftUI.TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
             let t = reduceMotion ? 0.0 : context.date.timeIntervalSinceReferenceDate
             GeometryReader { geo in
-                VStack(spacing: 13) {
-                    ForEach(Array(waveRows.enumerated()), id: \.offset) { idx, row in
-                        let phase = Double(idx) * 0.75
-                        let speed = idx.isMultiple(of: 2) ? 0.55 : -0.45
-                        let swayX = sin(t * speed + phase) * 26.0
-                        let swayY = cos(t * 0.35 + phase) * 3.0
-                        let baseOpacity: Double = {
-                            if row.isMotif {
-                                return colorScheme == .dark ? 0.28 : 0.24
-                            }
-                            return colorScheme == .dark ? 0.18 : 0.15
-                        }()
-                        let pulse = 0.80 + 0.20 * sin(t * 0.65 + phase)
+                let baseOpacity = colorScheme == .dark ? 0.25 : 0.20
 
-                        Text(row.text + row.text)
-                            .font(.system(size: 14, weight: row.isMotif ? .semibold : .medium, design: .monospaced))
+                ZStack {
+                    ForEach(sprites) { sprite in
+                        let dx = CGFloat(sin(t * sprite.speed + sprite.phase)) * sprite.swayX
+                        let dy = CGFloat(cos(t * abs(sprite.speed) * 0.85 + sprite.phase)) * sprite.swayY
+                        let angle = sin(t * sprite.speed * 0.7 + sprite.phase) * sprite.maxDegrees
+                        let pulse = 0.82 + 0.18 * sin(t * 0.6 + sprite.phase)
+
+                        Text(sprite.art)
+                            .font(.system(size: sprite.fontSize, weight: .semibold, design: .monospaced))
+                            .lineSpacing(1)
+                            .multilineTextAlignment(.leading)
                             .foregroundStyle(OmakaseTheme.ink.opacity(baseOpacity * pulse))
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                            .offset(x: swayX, y: swayY)
+                            .rotationEffect(.degrees(angle))
+                            .position(
+                                x: geo.size.width * sprite.xFraction + dx,
+                                y: geo.size.height * sprite.yFraction + dy
+                            )
                     }
                 }
-                .frame(width: geo.size.width, alignment: .center)
-                .padding(.top, 8)
+                .frame(width: geo.size.width, height: geo.size.height)
                 .mask(
                     LinearGradient(
                         stops: [
                             .init(color: .black, location: 0.0),
-                            .init(color: .black.opacity(0.88), location: 0.45),
-                            .init(color: .black.opacity(0.35), location: 0.70),
-                            .init(color: .clear, location: 0.88)
+                            .init(color: .black.opacity(0.9), location: 0.48),
+                            .init(color: .black.opacity(0.35), location: 0.68),
+                            .init(color: .clear, location: 0.82)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
