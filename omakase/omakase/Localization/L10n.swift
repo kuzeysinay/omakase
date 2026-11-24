@@ -495,7 +495,7 @@ struct L10n {
     var editUsername: String { tr("editUsername", fallback: "Edit Username") }
     var dismissLabel: String { tr("dismissLabel", fallback: "Dismiss") }
     var errorOfflineMessage: String {
-        tr("errorOfflineMessage", fallback: "You're offline. You can still read saved plates.")
+        tr("errorOfflineMessage", fallback: "You're offline. You can still read saved posts.")
     }
     var errorTimeoutTitle: String { tr("errorTimeoutTitle", fallback: "Request Timed Out") }
     var errorTimeoutMessage: String {
@@ -519,12 +519,12 @@ struct L10n {
 
     var errorQuotaExceededTitle: String { tr("errorQuotaExceededTitle", fallback: "Today's Menu Is Complete") }
     var errorQuotaExceededMessage: String {
-        tr("errorQuotaExceededMessage", fallback: "You've reached today's tasting limit. New plates will be ready tomorrow.")
+        tr("errorQuotaExceededMessage", fallback: "You've reached today's reading limit. New posts will be ready tomorrow.")
     }
     var errorContentBlockedMessage: String {
-        tr("errorContentBlockedMessage", fallback: "We can't prepare a plate on this topic. Try another one.")
+        tr("errorContentBlockedMessage", fallback: "We can't prepare a post on this topic. Try another one.")
     }
-    var errorGenerationFailedTitle: String { tr("errorGenerationFailedTitle", fallback: "Couldn't Prepare Plate") }
+    var errorGenerationFailedTitle: String { tr("errorGenerationFailedTitle", fallback: "Couldn't Prepare Post") }
     var errorGenerationFailedMessage: String {
         tr("errorGenerationFailedMessage", fallback: "The chef couldn't finish this one. It didn't count toward your limit.")
     }
@@ -561,7 +561,7 @@ struct L10n {
     var authErrorSignOutFailed: String {
         tr("authErrorSignOutFailed", fallback: "Could not sign out right now. Please try again.")
     }
-    var errorShareFailed: String { tr("errorShareFailed", fallback: "Couldn't share this plate. Please try again.") }
+    var errorShareFailed: String { tr("errorShareFailed", fallback: "Couldn't share this post. Please try again.") }
     var errorUnshareFailed: String {
         tr("errorUnshareFailed", fallback: "Couldn't remove from community. Please try again.")
     }
@@ -593,12 +593,44 @@ struct L10n {
     // MARK: - Monetization, Omakase Pro & Daily Limit
 
     var proTitle: String { "Omakase Pro" }
-    var proHeadline: String { tr("proHeadline", fallback: "Unlimited tasting, zero noise.") }
+    var proHeadline: String { tr("proHeadline", fallback: "Unlimited posts, zero noise.") }
     var proSubtitle: String {
-        tr("proSubtitle", fallback: "3 free plates a day is just a taste. Unlock unlimited plates, primary-source Deep Dives, and full Letterboxd synthesis.")
+        tr("proSubtitle", fallback: "3 free posts a day is just a taste. Unlock unlimited posts, primary-source Deep Dives, and full Letterboxd synthesis.")
     }
     var proFeatureUnlimitedPlates: String {
-        tr("proFeatureUnlimitedPlates", fallback: "Unlimited daily plates & Letterboxd behind-the-scenes")
+        tr("proFeatureUnlimitedPlates", fallback: "Unlimited daily posts & Letterboxd behind-the-scenes")
+    }
+    var proEyebrowPlateLimit: String { tr("proEyebrowPlateLimit", fallback: "DAILY 3/3 POSTS REACHED") }
+    var proEyebrowDeepDiveLimit: String { tr("proEyebrowDeepDiveLimit", fallback: "DEEP DIVE LIMIT") }
+    var proHeadlinePlateLimit: String { tr("proHeadlinePlateLimit", fallback: "Keep your reading flow.") }
+    var proHeadlineDeepDiveLimit: String { tr("proHeadlineDeepDiveLimit", fallback: "Go deeper on every post.") }
+    var proCompareFreeHeader: String { tr("proCompareFreeHeader", fallback: "Free") }
+    var proCompareProHeader: String { tr("proCompareProHeader", fallback: "Pro") }
+    var proComparePostsLabel: String { tr("proComparePostsLabel", fallback: "Daily posts") }
+    var proComparePostsFree: String { tr("proComparePostsFree", fallback: "3 / day") }
+    var proCompareDeepDiveLabel: String { tr("proCompareDeepDiveLabel", fallback: "Deep Dive & sources") }
+    var proCompareDeepDiveFree: String { tr("proCompareDeepDiveFree", fallback: "1 / day") }
+    var proCompareSubtopicsLabel: String { tr("proCompareSubtopicsLabel", fallback: "Subtopics & Letterboxd") }
+    var proCompareSubtopicsFree: String { tr("proCompareSubtopicsFree", fallback: "Limited") }
+    var proCompareUnlimited: String { tr("proCompareUnlimited", fallback: "Unlimited") }
+    var proCompareFull: String { tr("proCompareFull", fallback: "Full") }
+    func proSavePercentBadge(_ percent: Int) -> String {
+        tr("proSavePercentBadge", fallback: "SAVE {percent}%", ("percent", "\(percent)"))
+    }
+    func proFreeTrialDaysLabel(_ days: Int) -> String {
+        tr("proFreeTrialDaysLabel", fallback: "{days} days free", ("days", "\(days)"))
+    }
+    func proPerMonthEquivalent(_ price: String) -> String {
+        tr("proPerMonthEquivalent", fallback: "{price}/mo", ("price", price))
+    }
+    var proBilledMonthly: String { tr("proBilledMonthly", fallback: "Billed monthly · Cancel anytime") }
+    var proTrialReassurance: String { tr("proTrialReassurance", fallback: "No charge today · Cancel anytime") }
+    var proMonthlyReassurance: String { tr("proMonthlyReassurance", fallback: "Instant access · Cancel anytime") }
+    func proYearlyDisclosure(_ price: String) -> String {
+        tr("proYearlyDisclosure", fallback: "7 days free, then {price}/year. Auto-renews unless canceled at least 24 hours before the period ends.", ("price", price))
+    }
+    func proMonthlyDisclosure(_ price: String) -> String {
+        tr("proMonthlyDisclosure", fallback: "Charged {price}/month at confirmation. Auto-renews unless canceled at least 24 hours before the period ends.", ("price", price))
     }
     var proFeatureUnlimitedDeepDive: String {
         tr("proFeatureUnlimitedDeepDive", fallback: "Unlimited Deep Dives with verified primary sources")
@@ -650,11 +682,11 @@ struct L10n {
         tr("proProductsUnavailable", fallback: "Subscription options are loading from the App Store. Try again shortly.")
     }
     var proShareForDeepDiveCTA: String {
-        tr("proShareForDeepDiveCTA", fallback: "Tip: Share any plate today to unlock +1 bonus Deep Dive for free.")
+        tr("proShareForDeepDiveCTA", fallback: "Tip: Share any post today to unlock +1 bonus Deep Dive for free.")
     }
     var limitCardTitle: String { tr("limitCardTitle", fallback: "Today's Menu Is Complete") }
     var limitCardSubtitle: String {
-        tr("limitCardSubtitle", fallback: "The chef has served all 3 free plates for today. Unlock Omakase Pro for unlimited reading or wait for tomorrow's menu.")
+        tr("limitCardSubtitle", fallback: "You've read all 3 free posts for today. Unlock Omakase Pro for unlimited reading or wait for tomorrow's menu.")
     }
 
     func limitCardNextMenuIn(_ countdown: String) -> String {
@@ -666,7 +698,7 @@ struct L10n {
     var limitCardRemindPendingToast: String {
         tr("limitCardRemindPendingToast", fallback: "Daily menu reminders are coming in the next step.")
     }
-    var limitCardBackToPlates: String { tr("limitCardBackToPlates", fallback: "Re-read today's plates") }
+    var limitCardBackToPlates: String { tr("limitCardBackToPlates", fallback: "Re-read today's posts") }
     var toastShareBonusGranted: String {
         tr("toastShareBonusGranted", fallback: "+1 bonus Deep Dive unlocked for today!")
     }
@@ -681,7 +713,7 @@ struct L10n {
     ) -> String {
         tr(
             "profileDailyQuotaSummary",
-            fallback: "Today: {platesRemaining}/{platesLimit} plates · {deepDivesRemaining}/{deepDivesLimit} deep dives left",
+            fallback: "Today: {platesRemaining}/{platesLimit} posts · {deepDivesRemaining}/{deepDivesLimit} deep dives left",
             ("platesRemaining", "\(platesRemaining)"),
             ("platesLimit", "\(platesLimit)"),
             ("deepDivesRemaining", "\(deepDivesRemaining)"),
@@ -709,7 +741,10 @@ struct L10n {
         tr("notificationsProvisionalHint", fallback: "Notifications are currently delivered quietly to Notification Center.")
     }
     var notificationsQuietHoursFooter: String {
-        tr("notificationsQuietHoursFooter", fallback: "Social updates pause between 22:00 and 08:00. Followers and reactions arrive once daily.")
+        tr(
+            "notificationsQuietHoursFooter",
+            fallback: "Unseen story headlines arrive 3× daily (morning, 15:30 break & 21:00 prime time). Social updates pause between 22:00 and 08:00."
+        )
     }
     var notificationsDeniedAlertTitle: String {
         tr("notificationsDeniedAlertTitle", fallback: "Notifications Disabled")
@@ -727,7 +762,7 @@ struct L10n {
         tr("notificationsNotGrantedToast", fallback: "Notifications weren't enabled. You can turn them on anytime in Profile.")
     }
     var commentNotificationPromptTitle: String {
-        tr("commentNotificationPromptTitle", fallback: "Get notified about new comments on your plates")
+        tr("commentNotificationPromptTitle", fallback: "Get notified about new comments on your posts")
     }
     var turnOnCTA: String { tr("turnOnCTA", fallback: "Turn On") }
     var dailyMenuNotificationTitle: String { tr("dailyMenuNotificationTitle", fallback: "Today's Menu") }
@@ -743,13 +778,219 @@ struct L10n {
         } else if let first = interests.first, !first.isEmpty {
             return tr("dailyMenuBodyOne", fallback: "{first} is featured on today's menu.", ("first", first))
         } else {
-            return tr("dailyMenuBodyEmpty", fallback: "Fresh plates curated for your taste are ready today.")
+            return tr("dailyMenuBodyEmpty", fallback: "Fresh posts curated for your taste are ready today.")
         }
     }
 
     var hiddenPreviewDailyMenu: String { tr("hiddenPreviewDailyMenu", fallback: "Today's Menu") }
     var hiddenPreviewComment: String { tr("hiddenPreviewComment", fallback: "New comment") }
     var hiddenPreviewDigest: String { tr("hiddenPreviewDigest", fallback: "Community summary") }
+
+    // MARK: - Immersive Daily Notification Archetypes
+
+    var dailyMenuDefaultTopic: String { tr("dailyMenuDefaultTopic", fallback: "Culture") }
+    var dailyMenuDefaultSecondTopic: String { tr("dailyMenuDefaultSecondTopic", fallback: "Philosophy") }
+
+    func dailyMenuDeepDiveTitle(title: String) -> String {
+        tr("dailyMenuDeepDiveTitle", fallback: "“{title}”", ("title", title))
+    }
+
+    func dailyMenuDeepDiveBody(platesCount: Int?) -> String {
+        guard let count = platesCount, count > 0 else {
+            return tr(
+                "dailyMenuDeepDiveBodyNoCount",
+                fallback: "The deeper story behind this post is still on the counter. Fresh chef curation and Deep Dive await."
+            )
+        }
+        if count == 1 {
+            return tr(
+                "dailyMenuDeepDiveBodyOne",
+                fallback: "The deeper story behind this post is still on the counter. Today's 1 fresh post and Deep Dive await."
+            )
+        }
+        return tr(
+            "dailyMenuDeepDiveBody",
+            fallback: "The deeper story behind this post is still on the counter. Today's {count} fresh posts and Deep Dive await.",
+            ("count", "\(count)")
+        )
+    }
+
+    var dailyMenuThreadTitle: String {
+        tr("dailyMenuThreadTitle", fallback: "A New Thread on the Chef's Counter")
+    }
+
+    func dailyMenuThreadBody(title: String, topic: String) -> String {
+        tr(
+            "dailyMenuThreadBody",
+            fallback: "After “{title}”, today's menu uncovers an unexpected story on {topic}.",
+            ("title", title),
+            ("topic", topic)
+        )
+    }
+
+    func dailyMenuPairingTitle(first: String, second: String) -> String {
+        tr(
+            "dailyMenuPairingTitle",
+            fallback: "Today's Tasting Pairing: {first} × {second}",
+            ("first", first),
+            ("second", second)
+        )
+    }
+
+    func dailyMenuPairingWithPostBody(title: String, second: String, platesCount: Int?) -> String {
+        guard let count = platesCount, count > 0 else {
+            return tr(
+                "dailyMenuPairingWithPostBodyNoCount",
+                fallback: "From “{title}” into the world of {second}: a fresh chef curation is ready to serve.",
+                ("title", title),
+                ("second", second)
+            )
+        }
+        if count == 1 {
+            return tr(
+                "dailyMenuPairingWithPostBodyOne",
+                fallback: "From “{title}” into the world of {second}: 1 fresh post is ready to serve.",
+                ("title", title),
+                ("second", second)
+            )
+        }
+        return tr(
+            "dailyMenuPairingWithPostBody",
+            fallback: "From “{title}” into the world of {second}: {count} fresh posts are ready to serve.",
+            ("title", title),
+            ("second", second),
+            ("count", "\(count)")
+        )
+    }
+
+    var dailyMenuPairingEditorialBody: String {
+        tr(
+            "dailyMenuPairingEditorialBody",
+            fallback: "Two distinct disciplines meet in a sharp 60-word micro-story today."
+        )
+    }
+
+    func dailyMenuEchoTitle(topic: String) -> String {
+        tr("dailyMenuEchoTitle", fallback: "A 60-Word Pause: {topic}", ("topic", topic))
+    }
+
+    func dailyMenuEchoBody(title: String, topic: String) -> String {
+        tr(
+            "dailyMenuEchoBody",
+            fallback: "If “{title}” sparked your curiosity, don't miss the chef's {topic} curation today.",
+            ("title", title),
+            ("topic", topic)
+        )
+    }
+
+    func dailyMenuRitualTitle(platesCount: Int?) -> String {
+        guard let count = platesCount, count > 0 else {
+            return tr("dailyMenuRitualTitleNoCount", fallback: "Algorithm-Free Chef's Pick Is Ready")
+        }
+        if count == 1 {
+            return tr("dailyMenuRitualTitleOne", fallback: "1 Algorithm-Free Post Is Ready")
+        }
+        return tr("dailyMenuRitualTitle", fallback: "{count} Algorithm-Free Posts Are Ready", ("count", "\(count)"))
+    }
+
+    func dailyMenuRitualWithPostBody(title: String, topic: String) -> String {
+        tr(
+            "dailyMenuRitualWithPostBody",
+            fallback: "Last on your counter: “{title}”. Today opens a fresh post around {topic}.",
+            ("title", title),
+            ("topic", topic)
+        )
+    }
+
+    func dailyMenuRitualEditorialBody(topic: String, platesCount: Int?) -> String {
+        guard let count = platesCount, count > 0 else {
+            return tr(
+                "dailyMenuRitualEditorialBodyNoCount",
+                fallback: "Step away from the algorithmic noise. Today's counter serves a fresh curation on {topic}.",
+                ("topic", topic)
+            )
+        }
+        if count == 1 {
+            return tr(
+                "dailyMenuRitualEditorialBodyOne",
+                fallback: "Step away from the algorithmic noise. Today's counter serves 1 fresh post on {topic}.",
+                ("topic", topic)
+            )
+        }
+        return tr(
+            "dailyMenuRitualEditorialBody",
+            fallback: "Step away from the algorithmic noise. Today's counter serves {count} fresh posts on {topic}.",
+            ("topic", topic),
+            ("count", "\(count)")
+        )
+    }
+
+    // MARK: - Unseen Post Teaser Notification Variants (Tap-to-Generate)
+
+    func dailyUnseenSpotlightTitle(category: String, title: String) -> String {
+        tr(
+            "dailyUnseenSpotlightTitle",
+            fallback: "{category} · “{title}”",
+            ("category", category),
+            ("title", title)
+        )
+    }
+
+    var dailyUnseenSpotlightBody: String {
+        tr(
+            "dailyUnseenSpotlightBody",
+            fallback: "You haven't opened this story yet. Tap and the chef will write it for you in 60 words."
+        )
+    }
+
+    var dailyUnseenCounterTitle: String {
+        tr("dailyUnseenCounterTitle", fallback: "A Fresh Headline on the Chef's Counter")
+    }
+
+    func dailyUnseenCounterBody(title: String, category: String) -> String {
+        tr(
+            "dailyUnseenCounterBody",
+            fallback: "“{title}” ({category}) is on the counter today. Tap to have this post written live.",
+            ("title", title),
+            ("category", category)
+        )
+    }
+
+    func dailyUnseenBackstageTitle(title: String) -> String {
+        tr("dailyUnseenBackstageTitle", fallback: "“{title}”", ("title", title))
+    }
+
+    func dailyUnseenBackstageBody(category: String) -> String {
+        tr(
+            "dailyUnseenBackstageBody",
+            fallback: "An unseen backstage story from {category}. Tap to generate it fresh off the counter.",
+            ("category", category)
+        )
+    }
+
+    func dailyUnseenDiscoveryTitle(category: String) -> String {
+        tr("dailyUnseenDiscoveryTitle", fallback: "A 60-Word Discovery: {category}", ("category", category))
+    }
+
+    func dailyUnseenDiscoveryBody(title: String) -> String {
+        tr(
+            "dailyUnseenDiscoveryBody",
+            fallback: "Today's unopened post: “{title}”. The chef starts writing the moment you tap.",
+            ("title", title)
+        )
+    }
+
+    func dailyUnseenRitualTitle(category: String) -> String {
+        tr("dailyUnseenRitualTitle", fallback: "Algorithm-Free Pick · {category}", ("category", category))
+    }
+
+    func dailyUnseenRitualBody(title: String) -> String {
+        tr(
+            "dailyUnseenRitualBody",
+            fallback: "“{title}” — let the chef serve this unseen story right now. Tap to open.",
+            ("title", title)
+        )
+    }
 
     // MARK: - Daily Plate Quota Stress Pill & Social Discover Mode
 

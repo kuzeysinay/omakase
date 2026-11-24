@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       "hero.badge": "iOS 17+ • Kişisel Kültür Akışı",
       "hero.title": "Kaydırmayı bırak. Gerçek kültür, sıfır gürültü.",
-      "hero.subtitle": "Sinema, tarih, bilim ve mimaride 12 kategori, birincil kaynakçalı mikro-hikayeler ve Letterboxd günlüğün. Günde 3 ücretsiz tabakla başla, Pro ile sınırları kaldır.",
+      "hero.subtitle": "Sinema, tarih, bilim ve mimaride 12 kategori, birincil kaynakçalı mikro-hikayeler ve Letterboxd günlüğün. Günde 3 ücretsiz postla başla, Pro ile sınırları kaldır.",
       "hero.appStoreLabel": "App Store",
       "hero.downloadCta": "iOS için İndir",
       "hero.tryDemo": "Canlı Tadımı Dene ↓",
@@ -99,11 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
       "features.f1Title": "2×6 Bento & Anında Keşif",
       "features.f1Desc": "Film, Müzik, Bilim, Tarih ve Mimari dahil 12 kategori. Her başlıkta tekrar etmeyen 12 alt konu karosu ve kendi konunu yazma alanı.",
       "features.f2Title": "Okuma Süresi & Doomscrolling Kilidi",
-      "features.f2Desc": "Metin uzunluğuna göre 15–25 saniye sindirme süresi uygular. Üstteki ince sayaç bitene kadar yeni tabak açılmaz; hızlı kaydırmayı keser.",
+      "features.f2Desc": "Metin uzunluğuna göre 15–25 saniye sindirme süresi uygular. Üstteki ince sayaç bitene kadar yeni post açılmaz; hızlı kaydırmayı keser.",
       "features.f3Title": "12 Editoryal Açı, Kaynakça & Deep Dive",
       "features.f3Desc": "Dolgu cümlesi olmayan, altında gerçek birincil kaynakçası (Kaynak:) bulunan 40–90 kelimelik net hikayeler. Merak ettiğinde tek dokunuşla 200 kelimelik Deep Dive açılır.",
       "features.f4Title": "@kullanıcı_adı Keşfet Akışı",
-      "features.f4Desc": "Sevdiğin tabakları Topluluk sekmesinde paylaş, Keşfet akışında farklı okurlarla karşılaş, takip et ve yorumlarla tartış.",
+      "features.f4Desc": "Sevdiğin postları Topluluk sekmesinde paylaş, Keşfet akışında farklı okurlarla karşılaş, takip et ve yorumlarla tartış.",
       "features.f5Title": "Letterboxd Günlüğü Bağlantısı",
       "features.f5Desc": "Şifre vermeden kullanıcı adını yaz, son 50 filmin bağlansın. İzlediğin filmlerin kamera arkası yapım hikayelerini oku.",
       "features.f6Title": "Kağıt Paylaşım Kartı & Arşiv",
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
       "faq.a6": "Omakase reklam göstermez, uygulamalar arası takip (IDFA) yapmaz ve verilerinizi üçüncü taraflara satmaz. Sign in with Apple desteği sunar ve dilediğiniz an Profil sekmesinden hesabınızı ve tüm verilerinizi tek dokunuşla kalıcı olarak silmenize olanak tanır.",
 
       "cta.title": "Günün Menüsü Hazır",
-      "cta.desc": "iOS 17+ için ücretsiz indir. Günde 3 ücretsiz tabakla başla, dilediğinde Pro ile sınırları kaldır.",
+      "cta.desc": "iOS 17+ için ücretsiz indir. Günde 3 ücretsiz postla başla, dilediğinde Pro ile sınırları kaldır.",
       "cta.joinBtn": "TestFlight'a Katıl",
 
       "footer.privacy": "Gizlilik Politikası",
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       "hero.badge": "iOS 17+ • Personal Culture Feed",
       "hero.title": "Stop scrolling. Real culture, zero noise.",
-      "hero.subtitle": "12 categories across film, history, science, and architecture—with primary-source citations and your Letterboxd diary. Start with 3 free plates a day.",
+      "hero.subtitle": "12 categories across film, history, science, and architecture—with primary-source citations and your Letterboxd diary. Start with 3 free posts a day.",
       "hero.appStoreLabel": "App Store",
       "hero.downloadCta": "Download for iOS",
       "hero.tryDemo": "Try Live Tasting ↓",
@@ -234,11 +234,11 @@ document.addEventListener('DOMContentLoaded', () => {
       "features.f1Title": "2×6 Bento & Instant Discovery",
       "features.f1Desc": "12 disciplines including Film, Music, Science, History, and Architecture. Each category opens 12 subtopics plus a custom topic bar.",
       "features.f2Title": "Reading Cooldown & Doomscroll Lock",
-      "features.f2Desc": "Applies a 15–25s pause scaled to story length. A thin top bar locks the next plate until you finish reading.",
+      "features.f2Desc": "Applies a 15–25s pause scaled to story length. A thin top bar locks the next post until you finish reading.",
       "features.f3Title": "12 Editorial Angles, Citations & Deep Dive",
       "features.f3Desc": "Tight 40–90 word stories grounded with a real primary source line (Source:). Tap once when something hooks you to open a 200-word Deep Dive.",
       "features.f4Title": "@username Discover Feed",
-      "features.f4Desc": "Share your favorite plates to Community, browse readers across the Discover tab, follow tastes you like, and discuss in comments.",
+      "features.f4Desc": "Share your favorite posts to Community, browse readers across the Discover tab, follow tastes you like, and discuss in comments.",
       "features.f5Title": "Letterboxd Diary Synthesis",
       "features.f5Desc": "Enter your handle with zero passwords to pull your last 50 watched films and read verified behind-the-scenes stories.",
       "features.f6Title": "Paper Share Card & Offline Archive",
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       "phil.tag": "Our Philosophy",
       "phil.title": "Trust the Chef",
-      "phil.desc": "In Japanese dining, 'Omakase' means leaving the menu to the chef. We replaced the endless scroll with focused, thoughtful daily plates.",
+      "phil.desc": "In Japanese dining, 'Omakase' means leaving the menu to the chef. We replaced the endless scroll with focused, thoughtful daily posts.",
       "phil.badTitle": "Algorithmic Endless Stream",
       "phil.bad1": "Addictive, insatiable scrolling loops (doomscrolling)",
       "phil.bad2": "Outrage-driven, engagement-baiting headlines",
@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
       "faq.a6": "Omakase displays zero ads, performs zero cross-app tracking (IDFA), and never sells your data. It supports Sign in with Apple and includes one-tap permanent Account Deletion directly in the Profile tab.",
 
       "cta.title": "Today's Menu Is Ready",
-      "cta.desc": "Download free for iOS 17+. Start with 3 free daily plates, upgrade to Pro anytime for unlimited reading.",
+      "cta.desc": "Download free for iOS 17+. Start with 3 free daily posts, upgrade to Pro anytime for unlimited reading.",
       "cta.joinBtn": "Join TestFlight",
 
       "footer.privacy": "Privacy Policy",
