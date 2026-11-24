@@ -2799,3 +2799,6 @@ button {
 
 /* all lowercase */
 *, *::before, *::after { text-transform: lowercase !important; }
+/* app mockups keep original casing */
+.iphone-screen, .iphone-screen *, .iphone-screen *::before, .iphone-screen *::after,
+.sim-viewport, .sim-viewport *, .sim-viewport *::before, .sim-viewport *::after { text-transform: none !important; }
