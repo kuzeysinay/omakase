@@ -393,15 +393,11 @@ struct FeedView: View {
                         Rectangle()
                             .fill(OmakaseTheme.ink)
                             .frame(width: max(0, barGeo.size.width * progress))
-                    } else {
-                        Rectangle()
-                            .fill(Color.primary.opacity(0.12))
-                            .frame(height: 0.5)
                     }
                 }
             }
         }
-        .frame(height: viewModel.isCooldownActive ? 3.0 : 0.5)
+        .frame(height: viewModel.isCooldownActive ? 3.0 : 0)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isCooldownActive)
     }
 

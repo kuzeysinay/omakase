@@ -386,7 +386,7 @@ struct MyProfileSheet: View {
                         }
                         .background(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(OmakaseTheme.wash)
+                                .fill(Color(uiColor: .systemBackground))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -455,19 +455,20 @@ struct MyProfileSheet: View {
 
                         if !accessManager.isPro {
                             Button {
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                 isShowingPaywall = true
                             } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: "sparkles")
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.system(size: 16, weight: .bold))
                                         .foregroundStyle(OmakaseTheme.chipActiveText)
                                         .frame(width: 34, height: 34)
-                                        .background(OmakaseTheme.chipActiveFill, in: Circle())
+                                        .background(OmakaseTheme.chipActiveText.opacity(0.14), in: Circle())
 
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(l10n.profileUpgradeToPro)
                                             .font(.subheadline.weight(.bold))
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(OmakaseTheme.chipActiveText)
                                         Text(
                                             l10n.profileDailyQuotaSummary(
                                                 platesRemaining: accessManager.snapshot.platesRemaining,
@@ -477,27 +478,23 @@ struct MyProfileSheet: View {
                                             )
                                         )
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(OmakaseTheme.chipActiveText.opacity(0.75))
                                     }
 
                                     Spacer()
 
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.tertiary)
+                                    Image(systemName: "arrow.right")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(OmakaseTheme.chipActiveText)
                                 }
                                 .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
+                                .padding(.vertical, 13)
                                 .background(
                                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(OmakaseTheme.wash)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+                                        .fill(OmakaseTheme.chipActiveFill)
                                 )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(OmakaseChipButtonStyle())
                         }
                     }
 
@@ -523,7 +520,11 @@ struct MyProfileSheet: View {
                             .padding(.vertical, 28)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(OmakaseTheme.wash)
+                                    .fill(Color(uiColor: .systemBackground))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
                             )
                         } else {
                             LazyVStack(spacing: 12) {
@@ -673,7 +674,7 @@ struct MyProfileSheet: View {
                 }
                 .disabled(accessManager.isRestoring)
             }
-            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+            .listRowBackground(Color(uiColor: .systemBackground))
 
             // Preferences
             Section(l10n.profilePreferences) {
@@ -727,7 +728,7 @@ struct MyProfileSheet: View {
                     }
                 }
             }
-            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+            .listRowBackground(Color(uiColor: .systemBackground))
 
             // Notifications
             Section {
@@ -862,7 +863,7 @@ struct MyProfileSheet: View {
                     Text(l10n.notificationsQuietHoursFooter)
                 }
             }
-            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+            .listRowBackground(Color(uiColor: .systemBackground))
 
             // Support & Legal
             Section(l10n.profileSupportAndLegal) {
@@ -923,7 +924,7 @@ struct MyProfileSheet: View {
                     }
                 }
             }
-            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+            .listRowBackground(Color(uiColor: .systemBackground))
 
             // Account
             Section(l10n.profileAccount) {
@@ -964,7 +965,7 @@ struct MyProfileSheet: View {
                 }
                 .disabled(isDeletingAccount)
             }
-            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+            .listRowBackground(Color(uiColor: .systemBackground))
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
