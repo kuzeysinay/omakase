@@ -13,11 +13,13 @@ struct FeedView: View {
     @State private var viewModel: FeedViewModel
     @State private var bookmarkStore = BookmarkStore.shared
     @State private var accessManager = AccessManager.shared
+    @State private var notificationManager = NotificationManager.shared
     @State private var activeInterests: Set<String> = []
     @State private var pendingDeletePostID: UUID?
     @State private var showDeletePostConfirmation = false
     @State private var toastMessage: String?
     @State private var paywallSource: PaywallSource?
+    @State private var pendingNotificationTopicAfterPaywall: (topic: String, categoryId: String?)?
     @State private var showNotificationDeniedAlert = false
     @State private var feedScrollPosition: AnyHashable?
 
@@ -191,6 +193,27 @@ struct FeedView: View {
                     feedScrollPosition = "category-page"
                 }
             }
+            await handlePendingNotificationTopicIfNeeded()
+        }
+        .onChange(of: notificationManager.pendingTopicRequest) { _, request in
+            guard request != nil else { return }
+            Task {
+                await handlePendingNotificationTopicIfNeeded()
+            }
+        }
+        .onChange(of: accessManager.isPro) { _, isPro in
+            guard isPro, let pending = pendingNotificationTopicAfterPaywall else { return }
+            pendingNotificationTopicAfterPaywall = nil
+            paywallSource = nil
+            viewModel.requestDedicatedPostFromNotification(
+                topic: pending.topic,
+                categoryId: pending.categoryId
+            )
+        }
+        .onChange(of: paywallSource) { _, newSource in
+            if newSource == nil && !accessManager.isPro {
+                pendingNotificationTopicAfterPaywall = nil
+            }
         }
         .onChange(of: viewModel.isOffline) { _, isOffline in
             if isOffline && viewModel.posts.isEmpty {
@@ -311,12 +334,26 @@ struct FeedView: View {
             paywallSource = .plateLimit
         } label: {
             HStack(spacing: 6) {
-                HStack(spacing: 3) {
-                    ForEach(0..<limit, id: \.self) { index in
-                        Circle()
-                            .fill(index < remaining ? accentColor : Color.primary.opacity(0.16))
-                            .frame(width: 5, height: 5)
+                if limit <= 5 {
+                    HStack(spacing: 3) {
+                        ForEach(0..<limit, id: \.self) { index in
+                            Circle()
+                                .fill(index < remaining ? accentColor : Color.primary.opacity(0.16))
+                                .frame(width: 5, height: 5)
+                        }
                     }
+                } else {
+                    let progressWidth: CGFloat = 28
+                    let ratio = CGFloat(remaining) / CGFloat(limit)
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.primary.opacity(0.16))
+                        Capsule()
+                            .fill(accentColor)
+                            .frame(width: max(0, progressWidth * ratio))
+                    }
+                    .frame(width: progressWidth, height: 5)
+                    .clipShape(Capsule())
                 }
 
                 if isCritical {
@@ -585,6 +622,39 @@ struct FeedView: View {
 
     // MARK: - Helpers
 
+    @MainActor
+    private func handlePendingNotificationTopicIfNeeded() async {
+        guard let req = notificationManager.consumePendingTopicRequest() else { return }
+
+        guard let rawTopic = req.topic?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !rawTopic.isEmpty else {
+            await accessManager.refreshAccessStatus()
+            if accessManager.isPlateLimitReached {
+                pendingNotificationTopicAfterPaywall = nil
+                paywallSource = .plateLimit
+            }
+            return
+        }
+
+        let cleanCategoryId = req.categoryId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedCategoryId = cleanCategoryId.isEmpty
+            ? InterestCategory.resolveMainCategory(tags: [rawTopic], title: rawTopic).id
+            : cleanCategoryId
+
+        SubTopicDiscoveryStore.shared.recordSeen([rawTopic], for: resolvedCategoryId, language: appLanguage)
+        await accessManager.refreshAccessStatus()
+
+        if accessManager.isPlateLimitReached {
+            pendingNotificationTopicAfterPaywall = (topic: rawTopic, categoryId: resolvedCategoryId)
+            paywallSource = .plateLimit
+        } else {
+            viewModel.requestDedicatedPostFromNotification(
+                topic: rawTopic,
+                categoryId: resolvedCategoryId
+            )
+        }
+    }
+
     static func parse(interests raw: String) -> [String] {
         raw
             .split(whereSeparator: { $0 == "," || $0 == "\n" })
@@ -614,6 +684,10 @@ private struct ReelsPostCard: View {
     @State private var isSharePending: Bool = false
     @State private var isDeepDiveExpanded: Bool = false
     @State private var swipeOffset: CGFloat = 0
+    @State private var showReportDialog: Bool = false
+    @State private var showReportConfirmation: Bool = false
+    @State private var isReported: Bool = false
+    @State private var isReportPending: Bool = false
 
     private var isBookmarked: Bool {
         bookmarkStore.contains(postId: post.id)
@@ -839,7 +913,7 @@ private struct ReelsPostCard: View {
     // MARK: - Action Bar (bottom, horizontal, like Reels)
 
     private var actionBar: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 14) {
             // Deep Dive button — opens sheet (re-read if already fetched)
             Button {
                 if post.deepDiveText == nil {
@@ -859,7 +933,7 @@ private struct ReelsPostCard: View {
                         .lineLimit(1)
                         .fixedSize()
                 }
-                .frame(width: 52)
+                .frame(width: 50)
                 .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
@@ -882,7 +956,7 @@ private struct ReelsPostCard: View {
                         .lineLimit(1)
                         .fixedSize()
                 }
-                .frame(width: 52)
+                .frame(width: 50)
                 .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
@@ -908,13 +982,61 @@ private struct ReelsPostCard: View {
                         .lineLimit(1)
                         .fixedSize()
                 }
-                .frame(width: 52)
+                .frame(width: 50)
                 .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(l10n.shareSheetA11y)
 
             Spacer()
+
+            // Report AI content button (App Store Guideline 1.2)
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                showReportDialog = true
+            } label: {
+                VStack(spacing: 4) {
+                    if isReportPending {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: isReported ? "flag.fill" : "flag")
+                            .font(.title3)
+                            .foregroundStyle(isReported ? OmakaseTheme.ink : .secondary)
+                    }
+                    Text(isReported ? l10n.actionReported : l10n.actionReport)
+                        .font(.caption2.weight(isReported ? .semibold : .regular))
+                        .foregroundStyle(isReported ? .primary : .secondary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                .frame(width: 48)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(l10n.reportAIPostTitle)
+            .disabled(isReportPending)
+            .confirmationDialog(
+                l10n.reportAIPostTitle,
+                isPresented: $showReportDialog,
+                titleVisibility: .visible
+            ) {
+                Button(l10n.reportReasonInaccurate) {
+                    Task { await submitAIReport(reason: l10n.reportReasonInaccurate) }
+                }
+                Button(l10n.reportReasonInappropriate, role: .destructive) {
+                    Task { await submitAIReport(reason: l10n.reportReasonInappropriate) }
+                }
+                Button(l10n.reportReasonOther) {
+                    Task { await submitAIReport(reason: l10n.reportReasonOther) }
+                }
+                Button(l10n.cancel, role: .cancel) {}
+            } message: {
+                Text(l10n.reportAIPostMessage)
+            }
+            .alert(l10n.reportAIPostTitle, isPresented: $showReportConfirmation) {
+                Button(l10n.ok, role: .cancel) {}
+            } message: {
+                Text(l10n.reportSubmittedToast)
+            }
 
             // Bookmark button
             Button {
@@ -934,7 +1056,7 @@ private struct ReelsPostCard: View {
                         .lineLimit(1)
                         .fixedSize()
                 }
-                .frame(width: 52)
+                .frame(width: 50)
                 .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
@@ -1118,6 +1240,31 @@ private struct ReelsPostCard: View {
             toastMessage.wrappedValue = mapped.message(l10n: l10n)
         }
         isSharePending = false
+    }
+
+    // MARK: - Report AI Content (Guideline 1.2)
+
+    private func submitAIReport(reason: String) async {
+        guard let uid = authService.currentUser?.uid else { return }
+        isReportPending = true
+        defer { isReportPending = false }
+
+        let snippet = String(post.text.replacingOccurrences(of: "\n", with: " ").prefix(220))
+        do {
+            try await FirestoreService.shared.reportAIPost(
+                postId: post.id.uuidString,
+                reporterUid: uid,
+                reason: reason,
+                postSnippet: snippet
+            )
+            isReported = true
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            showReportConfirmation = true
+        } catch {
+            let mapped = OmakaseError.from(error, context: .report)
+            ErrorReporter.record(error, mapped: mapped, area: "feed_report_ai_post")
+            toastMessage.wrappedValue = mapped.message(l10n: l10n)
+        }
     }
 }
 

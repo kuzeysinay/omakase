@@ -68,15 +68,16 @@ final class FirestoreService {
                 displayName: resolvedName,
                 username: resolvedUsername,
                 email: "",
-                photoURL: user.photoURL?.absoluteString,
+                photoURL: nil,
                 interests: [],
                 createdAt: .now
             )
             try ref.setData(from: profile)
         } else {
             var updates: [String: Any] = [
-                // Scrub any legacy `email` field from public user profile document
-                "email": FieldValue.delete()
+                // Scrub legacy PII and third-party avatar URLs from public user documents.
+                "email": FieldValue.delete(),
+                "photoURL": FieldValue.delete()
             ]
             if let custom = customDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines), !custom.isEmpty {
                 updates["displayName"] = custom
@@ -317,7 +318,7 @@ final class FirestoreService {
             authorId: author.uid,
             authorName: resolvedName,
             authorUsername: resolvedUsername,
-            authorPhotoURL: author.photoURL?.absoluteString,
+            authorPhotoURL: nil,
             title: post.title,
             text: post.text,
             tags: post.tags,
@@ -562,6 +563,19 @@ final class FirestoreService {
             "targetId": reportedUid,
             "reportedAuthorUid": reportedUid,
             "reason": String(reason.prefix(1000)),
+            "createdAt": FieldValue.serverTimestamp()
+        ])
+    }
+
+    func reportAIPost(postId: String, reporterUid: String, reason: String, postSnippet: String) async throws {
+        let reportRef = db.collection("moderation_reports").document()
+        let combinedReason = postSnippet.isEmpty ? reason : "\(reason) | \(postSnippet)"
+        try await reportRef.setData([
+            "reporterUid": reporterUid,
+            "targetType": "ai_post",
+            "targetId": String(postId.prefix(256)),
+            "postId": String(postId.prefix(256)),
+            "reason": String(combinedReason.prefix(1000)),
             "createdAt": FieldValue.serverTimestamp()
         ])
     }

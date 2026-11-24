@@ -402,3 +402,10 @@
 "proMonthlyReassurance" = "Instant access · Cancel anytime";
 "proYearlyDisclosure" = "7 days free, then {price}/year. Auto-renews unless canceled at least 24 hours before the period ends.";
 "proMonthlyDisclosure" = "Charged {price}/month at confirmation. Auto-renews unless canceled at least 24 hours before the period ends.";
+"actionReport" = "Report";
+"actionReported" = "Reported";
+"reportAIPostTitle" = "Report Content";
+"reportAIPostMessage" = "What's wrong with this AI-generated post?";
+"reportReasonInaccurate" = "Inaccurate info or source";
+"reportReasonInappropriate" = "Inappropriate or offensive content";
+"reportReasonOther" = "Other";

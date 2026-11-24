@@ -632,6 +632,13 @@ struct L10n {
     func proMonthlyDisclosure(_ price: String) -> String {
         tr("proMonthlyDisclosure", fallback: "Charged {price}/month at confirmation. Auto-renews unless canceled at least 24 hours before the period ends.", ("price", price))
     }
+    var actionReport: String { tr("actionReport", fallback: "Report") }
+    var actionReported: String { tr("actionReported", fallback: "Reported") }
+    var reportAIPostTitle: String { tr("reportAIPostTitle", fallback: "Report Content") }
+    var reportAIPostMessage: String { tr("reportAIPostMessage", fallback: "What's wrong with this AI-generated post?") }
+    var reportReasonInaccurate: String { tr("reportReasonInaccurate", fallback: "Inaccurate info or source") }
+    var reportReasonInappropriate: String { tr("reportReasonInappropriate", fallback: "Inappropriate or offensive content") }
+    var reportReasonOther: String { tr("reportReasonOther", fallback: "Other") }
     var proFeatureUnlimitedDeepDive: String {
         tr("proFeatureUnlimitedDeepDive", fallback: "Unlimited Deep Dives with verified primary sources")
     }

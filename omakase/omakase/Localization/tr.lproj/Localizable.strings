@@ -402,3 +402,10 @@
 "proMonthlyReassurance" = "Anında erişim · İstediğin zaman iptal et";
 "proYearlyDisclosure" = "7 gün ücretsiz, ardından {price}/yıl. Dönem bitiminden en az 24 saat önce iptal edilmedikçe otomatik yenilenir.";
 "proMonthlyDisclosure" = "Onay anında {price}/ay tahsil edilir. Dönem bitiminden en az 24 saat önce iptal edilmedikçe otomatik yenilenir.";
+"actionReport" = "Bildir";
+"actionReported" = "Bildirildi";
+"reportAIPostTitle" = "İçeriği Bildir";
+"reportAIPostMessage" = "Bu yapay zeka içeriğinde ne sorun var?";
+"reportReasonInaccurate" = "Hatalı bilgi veya yanlış kaynak";
+"reportReasonInappropriate" = "Uygunsuz veya rahatsız edici içerik";
+"reportReasonOther" = "Diğer";
