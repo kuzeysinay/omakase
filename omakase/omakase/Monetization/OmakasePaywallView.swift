@@ -143,28 +143,30 @@ struct OmakasePaywallView: View {
             Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
 
-            // Gently swaying monochrome ASCII ocean / omakase counter backdrop
+            // Full-screen gently swaying monochrome ASCII sushi backdrop
             OmakaseASCIIBackdrop(reduceMotion: reduceMotion)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 topBar
                     .padding(.horizontal, 20)
-                    .padding(.top, 14)
-                    .padding(.bottom, 6)
+                    .padding(.top, 12)
 
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        heroSection
-                            .padding(.top, 26)
-                        comparisonCard
-                    }
+                Spacer(minLength: 8)
+
+                heroSection
                     .padding(.horizontal, 22)
-                    .padding(.bottom, 20)
-                }
+
+                Spacer(minLength: 10)
+
+                comparisonCard
+                    .padding(.horizontal, 20)
+
+                Spacer(minLength: 12)
 
                 bottomDock
             }
+            .padding(.bottom, 6)
         }
         .task {
             if accessManager.currentOffering == nil {
@@ -219,19 +221,22 @@ struct OmakasePaywallView: View {
     // MARK: - Hero
 
     private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(headlineText)
-                .font(.system(size: 32, weight: .heavy, design: .default))
-                .tracking(-0.6)
+                .font(.system(size: 27, weight: .heavy, design: .default))
+                .tracking(-0.5)
                 .foregroundStyle(.primary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.88)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(l10n.proSubtitle)
-                .font(.system(size: 15, weight: .regular))
-                .lineSpacing(3.5)
+                .font(.system(size: 13.5, weight: .regular))
+                .lineSpacing(2.5)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Free vs. Pro Comparison Card
@@ -250,17 +255,17 @@ struct OmakasePaywallView: View {
                 Text(l10n.proCompareFreeHeader)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 64, alignment: .center)
+                    .frame(width: 60, alignment: .center)
 
                 Text(l10n.proCompareProHeader)
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(OmakaseTheme.chipActiveText)
-                    .frame(width: 74, height: 22)
+                    .frame(width: 70, height: 20)
                     .background(OmakaseTheme.chipActiveFill, in: Capsule())
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
 
             Divider()
                 .overlay(OmakaseTheme.stroke)
@@ -273,7 +278,7 @@ struct OmakasePaywallView: View {
             )
             Divider()
                 .overlay(OmakaseTheme.stroke.opacity(0.6))
-                .padding(.leading, 44)
+                .padding(.leading, 42)
 
             comparisonRow(
                 icon: "fish",
@@ -283,7 +288,7 @@ struct OmakasePaywallView: View {
             )
             Divider()
                 .overlay(OmakaseTheme.stroke.opacity(0.6))
-                .padding(.leading, 44)
+                .padding(.leading, 42)
 
             comparisonRow(
                 icon: "sparkles",
@@ -293,7 +298,7 @@ struct OmakasePaywallView: View {
             )
             Divider()
                 .overlay(OmakaseTheme.stroke.opacity(0.6))
-                .padding(.leading, 44)
+                .padding(.leading, 42)
 
             comparisonRow(
                 icon: "checkmark.seal",
@@ -303,11 +308,11 @@ struct OmakasePaywallView: View {
             )
         }
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
         )
     }
@@ -320,53 +325,52 @@ struct OmakasePaywallView: View {
     ) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(OmakaseTheme.ink)
-                .frame(width: 22, alignment: .center)
+                .frame(width: 20, alignment: .center)
 
             Text(title)
-                .font(.system(size: 13.5, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.primary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1)
+                .minimumScaleFactor(0.88)
 
             Spacer(minLength: 4)
 
             Text(freeValue)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 11.5, weight: .medium))
                 .foregroundStyle(.secondary)
-                .frame(width: 64, alignment: .center)
+                .frame(width: 60, alignment: .center)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
 
             Text(proValue)
-                .font(.system(size: 12.5, weight: .bold))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(.primary)
-                .frame(width: 74, alignment: .center)
+                .frame(width: 70, alignment: .center)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8.5)
     }
 
-    // MARK: - Sticky Bottom Pricing & CTA Dock
+    // MARK: - Bottom Pricing & CTA Dock
 
     private var bottomDock: some View {
-        VStack(spacing: 12) {
-            VStack(spacing: 10) {
+        VStack(spacing: 9) {
+            VStack(spacing: 8) {
                 yearlyPlanCard
                 monthlyPlanCard
             }
 
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Image(systemName: "shield.checkered")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10.5, weight: .semibold))
                 Text(reassuranceText)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 11.5, weight: .medium))
             }
             .foregroundStyle(.secondary)
-            .padding(.top, 2)
 
             Button {
                 Task { await handlePurchaseTap() }
@@ -378,16 +382,16 @@ struct OmakasePaywallView: View {
                     } else {
                         HStack(spacing: 8) {
                             Text(ctaTitle)
-                                .font(.system(size: 16.5, weight: .bold))
+                                .font(.system(size: 16, weight: .bold))
                             Image(systemName: "arrow.right")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 13.5, weight: .bold))
                         }
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 54)
+                .frame(height: 50)
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
                         .fill(OmakaseTheme.chipActiveFill)
                 )
                 .foregroundStyle(OmakaseTheme.chipActiveText)
@@ -396,7 +400,7 @@ struct OmakasePaywallView: View {
             .disabled(accessManager.isPurchasing || accessManager.isRestoring)
 
             Text(disclosureText)
-                .font(.system(size: 10.5))
+                .font(.system(size: 10))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -405,13 +409,7 @@ struct OmakasePaywallView: View {
             footerLinks
         }
         .padding(.horizontal, 20)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
-        .background(
-            Color(uiColor: .systemBackground)
-                .shadow(color: Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.06), radius: 14, y: -6)
-                .ignoresSafeArea(edges: .bottom)
-        )
+        .padding(.bottom, 6)
     }
 
     private var yearlyPlanCard: some View {
@@ -469,14 +467,18 @@ struct OmakasePaywallView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(isSelected ? OmakaseTheme.wash : Color(uiColor: .secondarySystemBackground).opacity(0.55))
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                .fill(isSelected ? OmakaseTheme.wash : Color.clear)
+                        )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
                         .strokeBorder(
                             isSelected ? OmakaseTheme.ink : OmakaseTheme.stroke,
                             lineWidth: isSelected ? 2 : 1
@@ -532,14 +534,18 @@ struct OmakasePaywallView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? OmakaseTheme.wash : Color(uiColor: .secondarySystemBackground).opacity(0.55))
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            .fill(isSelected ? OmakaseTheme.wash : Color.clear)
+                    )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
                     .strokeBorder(
                         isSelected ? OmakaseTheme.ink : OmakaseTheme.stroke,
                         lineWidth: isSelected ? 2 : 1
@@ -672,7 +678,7 @@ private struct OmakaseASCIIBackdrop: View {
             (~~~~~)
             [=====]
             """,
-            xFraction: 0.16, yFraction: 0.09,
+            xFraction: 0.14, yFraction: 0.08,
             speed: 0.55, swayX: 12, swayY: 5, maxDegrees: 3.5, phase: 0.0, fontSize: 12
         ),
         // Top-center Maki roll
@@ -683,7 +689,7 @@ private struct OmakaseASCIIBackdrop: View {
             |(o)|
             '---'
             """,
-            xFraction: 0.52, yFraction: 0.07,
+            xFraction: 0.52, yFraction: 0.06,
             speed: -0.48, swayX: 10, swayY: 6, maxDegrees: 4.0, phase: 1.4, fontSize: 12
         ),
         // Top-right Onigiri
@@ -694,10 +700,10 @@ private struct OmakaseASCIIBackdrop: View {
              /  \\
             /_[]_\\
             """,
-            xFraction: 0.84, yFraction: 0.11,
+            xFraction: 0.85, yFraction: 0.10,
             speed: 0.44, swayX: 11, swayY: 5, maxDegrees: 3.0, phase: 2.6, fontSize: 12
         ),
-        // Upper-mid Chopsticks + Nigiri
+        // Upper-right Chopsticks + Nigiri
         SushiSprite(
             id: 3,
             art: """
@@ -705,10 +711,10 @@ private struct OmakaseASCIIBackdrop: View {
             ====/ (~~~~)
                   [====]
             """,
-            xFraction: 0.78, yFraction: 0.25,
+            xFraction: 0.80, yFraction: 0.24,
             speed: -0.52, swayX: 14, swayY: 6, maxDegrees: 2.8, phase: 0.9, fontSize: 11.5
         ),
-        // Upper-mid Ocha teacup
+        // Upper-left Ocha teacup
         SushiSprite(
             id: 4,
             art: """
@@ -716,32 +722,32 @@ private struct OmakaseASCIIBackdrop: View {
             |___|
             '---'
             """,
-            xFraction: 0.14, yFraction: 0.26,
+            xFraction: 0.12, yFraction: 0.25,
             speed: 0.46, swayX: 9, swayY: 5, maxDegrees: 2.5, phase: 3.1, fontSize: 11.5
         ),
-        // Mid-center Maki duo
+        // Mid-left Temaki
         SushiSprite(
             id: 5,
-            art: """
-            .---. .---.
-            |(o)| |(o)|
-            '---' '---'
-            """,
-            xFraction: 0.48, yFraction: 0.36,
-            speed: 0.40, swayX: 15, swayY: 5, maxDegrees: 2.5, phase: 4.2, fontSize: 11.5
-        ),
-        // Lower-mid Temaki hand roll
-        SushiSprite(
-            id: 6,
             art: """
             \\o~o/
              \\ /
               V
             """,
-            xFraction: 0.18, yFraction: 0.48,
+            xFraction: 0.10, yFraction: 0.45,
             speed: -0.50, swayX: 11, swayY: 6, maxDegrees: 4.2, phase: 2.1, fontSize: 12
         ),
-        // Lower-mid Nigiri
+        // Mid-right Maki duo
+        SushiSprite(
+            id: 6,
+            art: """
+            .---. .---.
+            |(o)| |(o)|
+            '---' '---'
+            """,
+            xFraction: 0.86, yFraction: 0.43,
+            speed: 0.40, swayX: 13, swayY: 5, maxDegrees: 2.5, phase: 4.2, fontSize: 11.5
+        ),
+        // Between table and plans — center-left Nigiri
         SushiSprite(
             id: 7,
             art: """
@@ -749,10 +755,10 @@ private struct OmakaseASCIIBackdrop: View {
             (~~~~~)
             [=====]
             """,
-            xFraction: 0.84, yFraction: 0.47,
-            speed: 0.58, swayX: 13, swayY: 5, maxDegrees: 3.2, phase: 5.0, fontSize: 12
+            xFraction: 0.22, yFraction: 0.60,
+            speed: 0.54, swayX: 14, swayY: 5, maxDegrees: 3.2, phase: 5.0, fontSize: 12
         ),
-        // Mid-bottom Onigiri
+        // Behind/around plans — right Onigiri
         SushiSprite(
             id: 8,
             art: """
@@ -760,20 +766,64 @@ private struct OmakaseASCIIBackdrop: View {
              /  \\
             /_[]_\\
             """,
-            xFraction: 0.46, yFraction: 0.58,
-            speed: -0.42, swayX: 12, swayY: 5, maxDegrees: 3.0, phase: 1.7, fontSize: 12
+            xFraction: 0.84, yFraction: 0.64,
+            speed: -0.45, swayX: 12, swayY: 5, maxDegrees: 3.5, phase: 1.7, fontSize: 12
         ),
-        // Gentle sparkle accents
+        // Behind Monthly plan — left Maki
         SushiSprite(
             id: 9,
+            art: """
+            .---.
+            |(o)|
+            '---'
+            """,
+            xFraction: 0.14, yFraction: 0.77,
+            speed: 0.48, swayX: 11, swayY: 5, maxDegrees: 3.8, phase: 3.3, fontSize: 12
+        ),
+        // Behind Monthly/CTA — right Chopsticks + Nigiri
+        SushiSprite(
+            id: 10,
+            art: """
+            ====\\  ____
+            ====/ (~~~~)
+                  [====]
+            """,
+            xFraction: 0.78, yFraction: 0.80,
+            speed: -0.42, swayX: 13, swayY: 5, maxDegrees: 2.6, phase: 0.4, fontSize: 11.5
+        ),
+        // Bottom-left Ocha
+        SushiSprite(
+            id: 11,
+            art: """
+             ( )
+            |___|
+            '---'
+            """,
+            xFraction: 0.20, yFraction: 0.92,
+            speed: -0.52, swayX: 10, swayY: 4, maxDegrees: 2.4, phase: 2.8, fontSize: 11.5
+        ),
+        // Bottom-right Temaki
+        SushiSprite(
+            id: 12,
+            art: """
+            \\o~o/
+             \\ /
+              V
+            """,
+            xFraction: 0.82, yFraction: 0.93,
+            speed: 0.50, swayX: 10, swayY: 4, maxDegrees: 3.6, phase: 4.6, fontSize: 12
+        ),
+        // Subtle accents
+        SushiSprite(
+            id: 13,
             art: "·  ✦  ·",
-            xFraction: 0.34, yFraction: 0.17,
+            xFraction: 0.36, yFraction: 0.16,
             speed: 0.65, swayX: 8, swayY: 4, maxDegrees: 0, phase: 0.5, fontSize: 12
         ),
         SushiSprite(
-            id: 10,
+            id: 14,
             art: "~  ∘  ~",
-            xFraction: 0.66, yFraction: 0.42,
+            xFraction: 0.52, yFraction: 0.70,
             speed: -0.60, swayX: 9, swayY: 4, maxDegrees: 0, phase: 3.7, fontSize: 12
         )
     ]
@@ -782,7 +832,7 @@ private struct OmakaseASCIIBackdrop: View {
         SwiftUI.TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
             let t = reduceMotion ? 0.0 : context.date.timeIntervalSinceReferenceDate
             GeometryReader { geo in
-                let baseOpacity = colorScheme == .dark ? 0.25 : 0.20
+                let baseOpacity = colorScheme == .dark ? 0.26 : 0.21
 
                 ZStack {
                     ForEach(sprites) { sprite in
@@ -804,18 +854,6 @@ private struct OmakaseASCIIBackdrop: View {
                     }
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
-                .mask(
-                    LinearGradient(
-                        stops: [
-                            .init(color: .black, location: 0.0),
-                            .init(color: .black.opacity(0.9), location: 0.48),
-                            .init(color: .black.opacity(0.35), location: 0.68),
-                            .init(color: .clear, location: 0.82)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
             }
         }
         .allowsHitTesting(false)
