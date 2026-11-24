@@ -25,6 +25,7 @@ struct AuthView: View {
     }
 
     @Environment(\.appLanguage) private var appLanguage
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let authService: AuthService
 
     @State private var step: AuthStep = .welcome
@@ -95,49 +96,60 @@ struct AuthView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                topBar
+            ZStack {
+                Color(uiColor: .systemBackground)
+                    .ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        switch step {
-                        case .welcome:
-                            welcomeContent
-                                .transition(.asymmetric(
-                                    insertion: .opacity.combined(with: .scale(scale: 0.98)),
-                                    removal: .opacity
-                                ))
-                        case .signUpCredentials:
-                            signUpStep1Credentials
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
-                        case .signUpDisplayName:
-                            signUpStep2DisplayName
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
-                        case .signUpUsername:
-                            signUpStep3Username
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
-                        case .signIn:
-                            signInContent
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
+                OmakaseASCIIBackdrop(
+                    reduceMotion: reduceMotion,
+                    opacityMultiplier: step == .welcome ? 0.92 : 0.55
+                )
+                .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    topBar
+
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            switch step {
+                            case .welcome:
+                                welcomeContent
+                                    .transition(.asymmetric(
+                                        insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                                        removal: .opacity
+                                    ))
+                            case .signUpCredentials:
+                                signUpStep1Credentials
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            case .signUpDisplayName:
+                                signUpStep2DisplayName
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            case .signUpUsername:
+                                signUpStep3Username
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            case .signIn:
+                                signInContent
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
                         }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 12)
+                        .padding(.bottom, 32)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 12)
-                    .padding(.bottom, 32)
+                    .scrollDismissesKeyboard(.interactively)
                 }
-                .scrollDismissesKeyboard(.interactively)
             }
             .toolbar(.hidden, for: .navigationBar)
         }

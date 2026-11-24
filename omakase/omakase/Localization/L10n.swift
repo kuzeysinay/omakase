@@ -221,7 +221,7 @@ struct L10n {
     // MARK: - Auth
 
     var authTagline: String {
-        tr("authTagline", fallback: "Sign in to discover and share curated bites with people who get it.")
+        tr("authTagline", fallback: "Noise-free culture feed. Read and share short, sourced posts on topics you love.")
     }
     var signInWithGoogle: String { tr("signInWithGoogle", fallback: "Continue with Google") }
     var signInWithApple: String { tr("signInWithApple", fallback: "Continue with Apple") }
@@ -639,6 +639,26 @@ struct L10n {
     var reportReasonInaccurate: String { tr("reportReasonInaccurate", fallback: "Inaccurate info or source") }
     var reportReasonInappropriate: String { tr("reportReasonInappropriate", fallback: "Inappropriate or offensive content") }
     var reportReasonOther: String { tr("reportReasonOther", fallback: "Other") }
+    var introSkip: String { tr("introSkip", fallback: "Skip") }
+    var introNext: String { tr("introNext", fallback: "Continue") }
+    var introPickInterestsCTA: String { tr("introPickInterestsCTA", fallback: "Choose Your Topics") }
+    var introSlide1Eyebrow: String { tr("introSlide1Eyebrow", fallback: "NOISE-FREE FEED") }
+    var introSlide1Title: String { tr("introSlide1Title", fallback: "Stop scrolling, actually read.") }
+    var introSlide1Body: String { tr("introSlide1Body", fallback: "Sharp 60-word posts across film, history, science, and architecture—each backed by a real primary source.") }
+    var introSlide1SampleTag: String { tr("introSlide1SampleTag", fallback: "HISTORY · 60 WORDS") }
+    var introSlide1SampleText: String { tr("introSlide1SampleText", fallback: "When jazz was banned in 1950s Leningrad, underground bootleggers etched Miles Davis records directly onto discarded hospital X-ray films.") }
+    var introSlide1SampleSource: String { tr("introSlide1SampleSource", fallback: "Source: Stephen Coates, X-Ray Audio (2015)") }
+    var introSlide2Eyebrow: String { tr("introSlide2Eyebrow", fallback: "DEEP DIVE") }
+    var introSlide2Title: String { tr("introSlide2Title", fallback: "Mindful pace, deeper stories.") }
+    var introSlide2Body: String { tr("introSlide2Body", fallback: "A brief reading pause sits between every post. Tap once whenever curiosity strikes to open a 200-word Deep Dive.") }
+    var introSlide2Metric1: String { tr("introSlide2Metric1", fallback: "15–25s mindful reading pause") }
+    var introSlide2Metric2: String { tr("introSlide2Metric2", fallback: "One-tap 200-word Deep Dive") }
+    var introSlide3Eyebrow: String { tr("introSlide3Eyebrow", fallback: "COMMUNITY & LETTERBOXD") }
+    var introSlide3Title: String { tr("introSlide3Title", fallback: "Share, save, connect your diary.") }
+    var introSlide3Body: String { tr("introSlide3Body", fallback: "Share favorite posts to the community, save offline, or link your Letterboxd diary for behind-the-scenes stories on films you watch.") }
+    var introSlide3Pill1: String { tr("introSlide3Pill1", fallback: "Community Feed") }
+    var introSlide3Pill2: String { tr("introSlide3Pill2", fallback: "Offline Bookmarks") }
+    var introSlide3Pill3: String { tr("introSlide3Pill3", fallback: "Letterboxd") }
     var proFeatureUnlimitedDeepDive: String {
         tr("proFeatureUnlimitedDeepDive", fallback: "Unlimited Deep Dives with verified primary sources")
     }

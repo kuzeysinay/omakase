@@ -397,9 +397,68 @@ button {
    ========================================================================== */
 
 .hero {
+  position: relative;
   padding-top: 132px;
   padding-bottom: 84px;
   overflow: hidden;
+}
+
+.hero .container {
+  position: relative;
+  z-index: 1;
+}
+
+.ascii-sushi-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+.ascii-sushi {
+  position: absolute;
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--ink);
+  opacity: 0.14;
+  white-space: pre;
+  will-change: transform;
+  animation: sushi-sway 9s ease-in-out infinite;
+}
+
+[data-theme="dark"] .ascii-sushi {
+  opacity: 0.18;
+}
+
+.ascii-sushi.s1 { top: 8%; left: 4%; animation-duration: 9.5s; animation-delay: 0s; }
+.ascii-sushi.s2 { top: 12%; left: 46%; animation-duration: 11s; animation-delay: -2.2s; }
+.ascii-sushi.s3 { top: 10%; right: 6%; animation-duration: 10.2s; animation-delay: -4.1s; }
+.ascii-sushi.s4 { top: 44%; left: 3%; animation-duration: 12s; animation-delay: -1.5s; }
+.ascii-sushi.s5 { top: 52%; left: 44%; animation-duration: 9.8s; animation-delay: -5.0s; }
+.ascii-sushi.s6 { top: 38%; right: 4%; animation-duration: 10.8s; animation-delay: -3.2s; }
+.ascii-sushi.s7 { bottom: 12%; left: 10%; animation-duration: 11.4s; animation-delay: -6.0s; }
+.ascii-sushi.s8 { bottom: 10%; right: 12%; animation-duration: 9.2s; animation-delay: -2.8s; }
+.ascii-sushi.s9 { top: 26%; left: 26%; animation-duration: 8.5s; animation-delay: -1.0s; }
+.ascii-sushi.s10 { bottom: 24%; left: 54%; animation-duration: 8.8s; animation-delay: -3.8s; }
+
+@keyframes sushi-sway {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(-2.5deg);
+  }
+  50% {
+    transform: translate3d(16px, -8px, 0) rotate(2.5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ascii-sushi {
+    animation: none;
+  }
 }
 
 .hero-grid {
