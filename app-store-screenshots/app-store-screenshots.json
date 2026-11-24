@@ -13,7 +13,7 @@
     "es",
     "ko"
   ],
-  "locale": "tr",
+  "locale": "en",
   "device": "iphone",
   "orientation": "portrait",
   "appIcon": "/app-icon.png",
@@ -115,13 +115,13 @@
           "ko": "12가지 교양"
         },
         "headline": {
-          "tr": "\n\nTek dokunuşta kültür.\n\nPostu AI anlık üretir.\n\nKaynağını da verir.",
-          "en": "\n\nCulture in one tap.\n\nAI crafts each post live.\n\nAlways with its source.",
-          "ja": "\n\nひと触れで教養を。\n\nAIがその場で紡ぎ、\n\n一次出典まで添える。",
-          "de": "\n\nKultur mit einem Tipp.\n\nKI erstellt ihn sofort.\n\nImmer mit Quelle.",
-          "fr": "\n\nLa culture en un geste.\n\nL'IA rédige à l'instant.\n\nToujours avec sa source.",
-          "es": "\n\nCultura en un toque.\n\nLa IA lo crea al instante.\n\nSiempre con su fuente.",
-          "ko": "\n\n한 번의 터치로 교양을.\n\nAI가 즉시 글을 짓고,\n\n출처까지 함께 전해요."
+          "tr": "\n\nTek dokunuşta fun-fact.\n\nPostu AI anlık üretir.\n\nKaynağını da verir.",
+          "en": "\n\nFun-facts in one tap.\n\nAI crafts each post live.\n\nAlways with its source.",
+          "ja": "\n\nひと触れでfun-fact。\n\nAIがその場で紡ぎ、\n\n一次出典まで添える。",
+          "de": "\n\nFun-Facts mit einem Tipp.\n\nKI erstellt ihn sofort.\n\nImmer mit Quelle.",
+          "fr": "\n\nDes fun-facts en un geste.\n\nL'IA rédige à l'instant.\n\nToujours avec sa source.",
+          "es": "\n\nFun-facts en un toque.\n\nLa IA lo crea al instante.\n\nSiempre con su fuente.",
+          "ko": "\n\n한 번의 터치로 fun-fact.\n\nAI가 즉시 글을 짓고,\n\n출처까지 함께 전해요."
         },
         "screenshot": "/screenshots/apple/iphone/{locale}/02.png",
         "transforms": {
@@ -137,6 +137,51 @@
             "x": 146.0624223776224,
             "y": 1174.8772027972009,
             "width": 1011.8303999999999,
+            "height": 2064.96,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        },
+        "hideLabel": true,
+        "typography": {
+          "headlineScale": 0.9
+        }
+      },
+      {
+        "id": "omakase_slide_06",
+        "layout": "device-bottom",
+        "label": {
+          "en": "SUBTOPICS",
+          "tr": "ALT KONULAR",
+          "ja": "小テーマ",
+          "de": "UNTERTHEMEN",
+          "fr": "SOUS-THÈMES",
+          "es": "SUBTEMAS",
+          "ko": "세부 주제"
+        },
+        "headline": {
+          "tr": "Kategorini aç.\n\nİlginç bir alt konuya dokun.",
+          "en": "Open any discipline.\n\nTap the subtopic that sparks you.",
+          "ja": "分野を開く。\n\n惹かれる小テーマをタップ。",
+          "de": "Öffne eine Disziplin.\n\nTippe auf dein Unterthema.",
+          "fr": "Ouvre une discipline.\n\nTouche le sous-thème qui t'attire.",
+          "es": "Abre una disciplina.\n\nToca el subtema que te atrape.",
+          "ko": "분야를 여세요.\n\n끌리는 세부 주제를 탭하세요."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/06.png",
+        "transforms": {
+          "caption": {
+            "x": 13.6,
+            "y": 165,
+            "width": 1293,
+            "height": 800,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 154.0848000000001,
+            "y": 745.68,
+            "width": 1011.8304,
             "height": 2064.96,
             "rotation": 0,
             "zIndex": 3
@@ -222,15 +267,15 @@
             "zIndex": 3
           },
           "callout": {
-            "x": 818.7692307692269,
-            "y": 1669.7295440559449,
-            "width": 580.8,
-            "height": 580.8,
+            "x": 818.7693998741306,
+            "y": 1669.7296228315886,
+            "width": 461,
+            "height": 461,
             "rotation": 0,
             "zIndex": 5
           },
           "caption": {
-            "x": 13.599889914218693,
+            "x": 13.599889914217783,
             "y": 97.44001032254832,
             "width": 1305,
             "height": 935,
@@ -239,9 +284,9 @@
           }
         },
         "callout": {
-          "focusX": 0.579,
-          "focusY": 0.228,
-          "zoom": 1.8,
+          "focusX": 0.607,
+          "focusY": 0.139,
+          "zoom": 2.2,
           "shape": "circle"
         },
         "typography": {

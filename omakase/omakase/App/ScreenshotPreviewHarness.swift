@@ -12,6 +12,7 @@ import SwiftUI
 enum ScreenshotScene: String {
     case feed
     case bento
+    case subtopics
     case deepdive
     case cooldown
     case community
@@ -135,7 +136,7 @@ struct ScreenshotPreviewHarness: View {
                         cooldownTotal: 0,
                         hasExistingPosts: true
                     )
-                case .cooldown:
+                case .subtopics:
                     BentoTasteBox(
                         allInterests: content.allChips,
                         activeInterests: $activeInterests,
@@ -144,12 +145,23 @@ struct ScreenshotPreviewHarness: View {
                         isLetterboxdActive: $isLetterboxdActive,
                         isGenerating: false,
                         isOffline: false,
-                        isCooldownActive: true,
-                        cooldownRemaining: 16,
-                        cooldownTotal: 20,
+                        isCooldownActive: false,
+                        cooldownRemaining: 0,
+                        cooldownTotal: 0,
                         hasExistingPosts: true,
-                        initialSubtopicCategory: InterestCategory.category(forId: "science") ?? InterestCategory.presets.first,
-                        initialSubtopics: content.scienceSubtopics
+                        initialSubtopicCategory: InterestCategory.category(forId: "history") ?? InterestCategory.presets.first,
+                        initialSubtopics: content.historySubtopics
+                    )
+                case .cooldown:
+                    ReelsPostCard(
+                        post: content.cooldownPost,
+                        isLastPost: true,
+                        bookmarkStore: bookmarkStore,
+                        authService: authService,
+                        viewModel: feedViewModel,
+                        toastMessage: $toastMessage,
+                        onDelete: {},
+                        onScrollToCategories: {}
                     )
                 case .community:
                     Color(.systemBackground)
@@ -205,10 +217,10 @@ struct ScreenshotPreviewHarness: View {
                             .fill(Color.primary.opacity(0.08))
                         Rectangle()
                             .fill(OmakaseTheme.ink)
-                            .frame(width: geo.size.width * 0.78)
+                            .frame(width: geo.size.width * 0.62)
                     }
                 }
-                .frame(height: 3.0)
+                .frame(height: 3.5)
             }
         }
         .background(Color(uiColor: .systemBackground))
@@ -285,8 +297,8 @@ struct ScreenshotPreviewHarness: View {
                 Divider().opacity(0.12)
 
                 ScrollView {
-                    LazyVStack(spacing: 14) {
-                        ForEach(content.communityPosts) { post in
+                    LazyVStack(spacing: 12) {
+                        ForEach(Array(content.communityPosts.enumerated()), id: \.offset) { _, post in
                             TimelinePostCard(
                                 post: post,
                                 authService: authService,
@@ -297,7 +309,7 @@ struct ScreenshotPreviewHarness: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 10)
                 }
             }
             .navigationTitle(l10n.tabTimeline)
@@ -317,10 +329,11 @@ struct ScreenshotPreviewHarness: View {
 
 private struct LocalizedScreenshotContent {
     let heroPost: Post
+    let cooldownPost: Post
     let deepDiveBody: String
     let allChips: [String]
     let activeChips: [String]
-    let scienceSubtopics: [String]
+    let historySubtopics: [String]
     let communityPosts: [SharedPost]
 
     static func forLanguage(_ lang: AppLanguage) -> LocalizedScreenshotContent {
@@ -328,34 +341,49 @@ private struct LocalizedScreenshotContent {
         case .english:
             return LocalizedScreenshotContent(
                 heroPost: Post(
-                    title: "Why Gothic Cathedrals Can Whisper Across 30 Meters",
+                    title: "Oxford University Is Older Than the Aztec Empire",
                     text: """
-                    Walk into the dome of St. Paul's Cathedral in London, press your ear to the stone wall, and someone whispering *thirty meters away* will sound as clear as if they stood beside you.
+                    Lectures were already echoing through Oxford by **1096**, and the university had formal colleges by 1249—more than *two centuries before* the Aztecs founded Tenochtitlan in 1325.
 
-                    Architects didn't discover this by accident—they stumbled onto **acoustic creeping waves**. Sound refuses to bounce straight across a smooth concave wall; instead, it hugs the masonry curve, losing almost no energy along the circumference. Lord Rayleigh proved the physics in 1878, centuries after masons built the stone curves by eye.
+                    By the time the Aztec Empire formed in **1428**, Oxford had been graduating scholars for over 300 years. History's timelines overlap in ways school textbooks rarely make feel real.
 
-                    Source: John William Strutt (Lord Rayleigh), The Theory of Sound, Vol. II (1878)
+                    Source: L. W. B. Brockliss, The University of Oxford: A History (2016)
                     """,
                     isComplete: true,
-                    tags: ["Architecture", "Acoustics", "History"],
-                    categoryId: "art",
-                    postFormat: "UNLIKELY CONNECTION",
+                    tags: ["History", "Timelines", "Culture"],
+                    categoryId: "history",
+                    postFormat: "TIMELINE",
                     createdAt: Date().addingTimeInterval(-420)
                 ),
+                cooldownPost: Post(
+                    title: "How a Mini Ice Age Built the Stradivarius Sound",
+                    text: """
+                    Between 1645 and 1715, sunspots nearly vanished and Europe froze through the **Maunder Minimum**. Alpine spruce trees grew agonizingly slowly, packing razor-thin, hyper-dense growth rings into every centimeter of timber.
+
+                    Antonio Stradivari carved his golden-period violins from that exact *climate-compressed wood*. Dendrochronologists proved in 2003 that the legendary resonance wasn't a secret varnish—it was winter itself frozen into the grain.
+
+                    Source: Henri Grissino-Mayer & Lloyd Burckle, Dendrochronologia (2003)
+                    """,
+                    isComplete: true,
+                    tags: ["Music", "Climate", "Craft"],
+                    categoryId: "music",
+                    postFormat: "UNLIKELY CONNECTION",
+                    createdAt: Date().addingTimeInterval(-180)
+                ),
                 deepDiveBody: """
-                When Christopher Wren raised St. Paul's dome above London in 1708, he angled its interior masonry ring slightly inward by seven degrees. That subtle tilt prevents sound from leaking upward, trapping spoken syllables in a circular acoustic rail.
+                When the Aztec Triple Alliance united the Valley of Mexico in 1428, Oxford's oldest library was already expanding—and Machu Picchu wouldn't even be built for another twenty years.
 
-                Two centuries later, physicists realized the exact same geometry governs optical microresonators—bouncing laser light inside glass spheres to build atomic clocks.
+                Even earlier, the University of al-Qarawiyyin in Fez (859) and Bologna (1088) were already teaching students across continents, proving how compressed modern historical memory really is.
 
-                Source: Lord Rayleigh, Philosophical Magazine (1910)
+                Source: Michael E. Smith, The Aztecs (2012)
                 """,
-                allChips: ["Bauhaus", "Japanese Cinema", "Stoicism", "Acoustics"],
-                activeChips: ["Bauhaus", "Acoustics"],
-                scienceSubtopics: [
-                    "Whispering Galleries", "Bioluminescence", "Rogue Waves",
-                    "Antikythera Gear", "Mycelium Networks", "Chronobiology",
-                    "Glass Acoustics", "Orbital Resonance", "Cryogenic Ice",
-                    "Fermat's Optics", "Fermentation Math", "Deep Sea Vents"
+                allChips: ["Bauhaus", "Japanese Cinema", "Stoicism", "History"],
+                activeChips: ["Bauhaus", "History"],
+                historySubtopics: [
+                    "1518 Dancing Plague", "Great Emu War", "38-Minute War",
+                    "WWII Ghost Army", "Napoleon's Rabbits", "1904 Marathon Chaos",
+                    "Roman Street Food", "Samurai & Fax Era", "Viking Runes in Istanbul",
+                    "Ottoman Coffee Spies", "Tulip Mania Crash", "Lost Library Myths"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -364,7 +392,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "mira",
                         title: "Kurosawa's Ink-Dyed Rain",
                         text: """
-                        In Rashomon (1950), Akira Kurosawa poured black ink into the artificial rain because clear water vanished against monochrome film stock.
+                        In Rashomon (1950), Kurosawa poured black ink into the rain so it would show on monochrome film.
 
                         Source: Donald Richie, The Films of Akira Kurosawa (1965)
                         """,
@@ -380,9 +408,9 @@ private struct LocalizedScreenshotContent {
                         authorId: "u_kenji",
                         authorName: "Kenji",
                         authorUsername: "kenji",
-                        title: "Why Tokyo Stations Play Original Melodies",
+                        title: "Tokyo's Calm 7-Second Station Melodies",
                         text: """
-                        Each Yamanote platform plays a 7-second hassha melody composed to lower commuter cortisol and reduce platform rushes.
+                        Each Yamanote platform plays an original melody composed to lower commuter cortisol and stop platform rushes.
 
                         Source: Minoru Mukaiya, Ongakukan Archives (2012)
                         """,
@@ -392,6 +420,23 @@ private struct LocalizedScreenshotContent {
                         reactionCounts: ["like": 19],
                         totalReactions: 19,
                         commentCount: 3
+                    ),
+                    SharedPost(
+                        authorId: "u_elena",
+                        authorName: "Elena",
+                        authorUsername: "elena",
+                        title: "Why Roman Concrete Heals Its Own Cracks",
+                        text: """
+                        Quicklime clasts react with seawater to crystallize fresh calcite inside fractures over millennia.
+
+                        Source: Admir Masic et al., Science Advances (2023)
+                        """,
+                        tags: ["Architecture", "Science"],
+                        originalCreatedAt: Date().addingTimeInterval(-9800),
+                        sharedAt: Date().addingTimeInterval(-8100),
+                        reactionCounts: ["like": 42],
+                        totalReactions: 42,
+                        commentCount: 8
                     )
                 ]
             )
@@ -399,43 +444,58 @@ private struct LocalizedScreenshotContent {
         case .turkish:
             return LocalizedScreenshotContent(
                 heroPost: Post(
-                    title: "Gotik Katedraller 30 Metreden Nasıl Fısıldar?",
+                    title: "Ayasofya'nın Mermerindeki 1100 Yıllık Viking İmzası",
                     text: """
-                    Londra'daki St. Paul Katedrali'nin kubbe duvarına kulağınızı dayadığınızda, *otuz metre ötedeki* bir fısıltıyı tam yanınızdaymış gibi net duyarsınız.
+                    İstanbul'da Ayasofya'nın üst mermer galerisine çıkıp korkuluğa yakından baktığınızda, 6. yüzyıl taşının üzerine kazınmış **İskandinav rünleri** görürsünüz.
 
-                    Ortaçağ taş ustalarının göz kararı ördüğü bu içbükey eğri, ses dalgalarını **sürünen akustik dalgalara** dönüştürür. Ses boşlukta dağılmak yerine duvarın kavisine tutunarak neredeyse hiç enerji kaybetmeden çevreyi dolaşır. Lord Rayleigh bu etkiyi ancak 1878'de matematiksel olarak kanıtlayabildi.
+                    1964'te çözülen yazıt tek bir cümle söylüyor: *"Halfdan buradaydı."* Halfdan, Bizans İmparatoru'nun seçkin **Vareg Muhafızları** arasında görev yapan ve uzun bir ayin sırasında sıkılıp mermeri kazıyan 9. yüzyıl bir Viking askeriydi.
 
-                    Kaynak: John William Strutt (Lord Rayleigh), The Theory of Sound, Cilt II (1878)
+                    Kaynak: Elisabeth Svärdström, Fornvännen — İsveç Eski Eserler Dergisi (1970)
                     """,
                     isComplete: true,
-                    tags: ["Mimari", "Akustik", "Tarih"],
-                    categoryId: "art",
-                    postFormat: "UNLIKELY CONNECTION",
+                    tags: ["Tarih", "Vikingler", "İstanbul"],
+                    categoryId: "history",
+                    postFormat: "CURSED TRIVIA",
                     createdAt: Date().addingTimeInterval(-420)
                 ),
+                cooldownPost: Post(
+                    title: "Küçük Buzul Çağı Stradivarius Sesini Nasıl Yarattı?",
+                    text: """
+                    1645 ile 1715 arasında güneş lekeleri neredeyse yok oldu ve Avrupa **Maunder Minimumu** soğuğuna gömüldü. Alpler'deki ladin ağaçları çok yavaş büyüyerek her santimetreye olağanüstü sıkı yaş halkaları sıkıştırdı.
+
+                    Antonio Stradivari altın dönem kemanlarını tam da bu *iklimle yoğunlaşmış ahşaptan* oydu. 2003'teki dendrokronoloji analizi, efsanevi tınının gizli bir cila değil, ağacın dokusuna hapsolmuş kış olduğunu kanıtladı.
+
+                    Kaynak: Henri Grissino-Mayer & Lloyd Burckle, Dendrochronologia (2003)
+                    """,
+                    isComplete: true,
+                    tags: ["Müzik", "İklim", "Zanaat"],
+                    categoryId: "music",
+                    postFormat: "UNLIKELY CONNECTION",
+                    createdAt: Date().addingTimeInterval(-180)
+                ),
                 deepDiveBody: """
-                Christopher Wren 1708'de St. Paul kubbesini inşa ederken iç taş halkayı yukarıya doğru yedi derece eğimli tasarladı. Bu küçük açı, sesin kaçmasını engelleyip fısıltıyı dairesel bir raya hapseder.
+                Bizans imparatorları yaklaşık üç yüzyıl boyunca kişisel korumalarını özellikle İskandinav savaşçılardan seçti; çünkü Konstantinopolis'te yerel siyasi bağları olmadığı için saray entrikalarına karışmıyorlardı.
 
-                İki yüzyıl sonra fizikçiler aynı geometrinin optik mikro-rezonatörler için de geçerli olduğunu ve lazer ışığını atom saatlerinde hapsedebildiğini keşfetti.
+                Doğu Avrupa nehirlerinden inip şehre Miklagarðr ("Büyük Şehir") adını veren Varegler, Ayasofya'dan bugün Venedik'te duran Pire Aslanı'na kadar mermerlere rünik izler bıraktı.
 
-                Kaynak: Lord Rayleigh, Philosophical Magazine (1910)
+                Kaynak: Sigfús Blöndal, The Varangians of Byzantium (1978)
                 """,
-                allChips: ["Bauhaus", "Japon Sineması", "Stoacılık", "Akustik"],
-                activeChips: ["Bauhaus", "Akustik"],
-                scienceSubtopics: [
-                    "Fısıltı Galerileri", "Biyolüminesans", "Dev Dalgalar",
-                    "Antikythera Çarkı", "Misel Ağları", "Kronobiyoloji",
-                    "Cam Akustiği", "Yörünge Rezonansı", "Kriyojenik Buz",
-                    "Fermat Optiği", "Fermentasyon", "Derin Deniz Bacaları"
+                allChips: ["Bauhaus", "Japon Sineması", "Stoacılık", "Tarih"],
+                activeChips: ["Bauhaus", "Tarih"],
+                historySubtopics: [
+                    "1518 Dans Vebası", "Büyük Emu Savaşı", "38 Dakikalık Savaş",
+                    "Şişme Hayalet Ordu", "Napolyon'un Tavşanları", "1904 Maraton Kaosu",
+                    "Roma Sokak Yemekleri", "Samuray & Faks Çağı", "Ayasofya Viking Yazısı",
+                    "Osmanlı Kahve Casusları", "Lale Çılgınlığı", "İskenderiye Mitleri"
                 ],
                 communityPosts: [
                     SharedPost(
                         authorId: "u_mira",
-                        authorName: "Defne",
-                        authorUsername: "defne",
+                        authorName: "Sude",
+                        authorUsername: "sude",
                         title: "Kurosawa'nın Yağmuruna Karışan Mürekkep",
                         text: """
-                        Akira Kurosawa Rashomon (1950) filminde şeffaf su siyah-beyaz filmde görünmediği için yapay yağmura siyah mürekkep karıştırdı.
+                        Kurosawa, Rashomon (1950) filminde su siyah-beyaz filmde görünmediği için yağmura mürekkep karıştırdı.
 
                         Kaynak: Donald Richie, The Films of Akira Kurosawa (1965)
                         """,
@@ -451,9 +511,9 @@ private struct LocalizedScreenshotContent {
                         authorId: "u_kenji",
                         authorName: "Emre",
                         authorUsername: "emre",
-                        title: "Tokyo İstasyonlarının Özgün Kalkış Melodileri",
+                        title: "Tokyo İstasyonlarının 7 Saniyelik Melodileri",
                         text: """
-                        Yamanote hattındaki her peron, yolcu stresini azaltmak için bestelenmiş 7 saniyelik özgün bir hassha melodisi çalar.
+                        Yamanote hattındaki her peron, yolcu stresini azaltmak için bestelenmiş özgün bir hassha melodisi çalar.
 
                         Kaynak: Minoru Mukaiya, Ongakukan Arşivi (2012)
                         """,
@@ -463,6 +523,23 @@ private struct LocalizedScreenshotContent {
                         reactionCounts: ["like": 19],
                         totalReactions: 19,
                         commentCount: 3
+                    ),
+                    SharedPost(
+                        authorId: "u_elena",
+                        authorName: "Selin",
+                        authorUsername: "selin",
+                        title: "Roma Betonu Çatlaklarını Nasıl Onarır?",
+                        text: """
+                        Sönmemiş kireç parçacıkları deniz suyuyla tepkimeye girerek çatlakları binlerce yıl içinde kendi kendine doldurur.
+
+                        Kaynak: Admir Masic et al., Science Advances (2023)
+                        """,
+                        tags: ["Mimari", "Bilim"],
+                        originalCreatedAt: Date().addingTimeInterval(-9800),
+                        sharedAt: Date().addingTimeInterval(-8100),
+                        reactionCounts: ["like": 42],
+                        totalReactions: 42,
+                        commentCount: 8
                     )
                 ]
             )
@@ -470,34 +547,49 @@ private struct LocalizedScreenshotContent {
         case .japanese:
             return LocalizedScreenshotContent(
                 heroPost: Post(
-                    title: "30メートル先の囁きが届く大聖堂の秘密",
+                    title: "オックスフォード大学はアステカ帝国より古い",
                     text: """
-                    ロンドンのセント・ポール大聖堂の回廊で壁に耳を当てると、*30メートル離れた*場所の小さな囁きが、すぐ隣にいるかのように鮮明に聞こえます。
+                    オックスフォードで講義が始まったのは**1096年**ごろ。アステカ人がテノチティトランを建都した1325年より*2世紀以上も前*のことでした。
 
-                    石工が経験則で築いた滑らかな凹面は、音波を空間に拡散させず**回廊の壁沿いに這わせる**現象を生みます。エネルギーをほとんど失わずに進むこの物理法則は、完成から約2世紀後の1878年にレイリー卿によって解明されました。
+                    アステカ帝国が成立した**1428年**には、オックスフォードはすでに300年以上の歴史を誇っていたのです。年表を並べてみると、歴史の感覚は一気に塗り替わります。
 
-                    出典: John William Strutt (Lord Rayleigh), The Theory of Sound, Vol. II (1878)
+                    出典: L. W. B. Brockliss, The University of Oxford: A History (2016)
                     """,
                     isComplete: true,
-                    tags: ["建築", "音響", "歴史"],
-                    categoryId: "art",
-                    postFormat: "UNLIKELY CONNECTION",
+                    tags: ["歴史", "年表", "教養"],
+                    categoryId: "history",
+                    postFormat: "TIMELINE",
                     createdAt: Date().addingTimeInterval(-420)
                 ),
+                cooldownPost: Post(
+                    title: "小氷期が生んだストラディバリウスの響き",
+                    text: """
+                    1645年から1715年にかけて太陽黒点が激減し、欧州は**マウンダー極小期**の厳冬に包まれました。アルプスのトウヒは極端にゆっくり育ち、年輪が緻密に詰まった高密度な木材になったのです。
+
+                    ストラディバリが黄金期の名器を削り出したのは、まさにその*厳冬が圧縮した木*でした。伝説の響きの正体は秘伝のニスではなく、木目に封じ込められた気候でした。
+
+                    出典: Henri Grissino-Mayer & Lloyd Burckle, Dendrochronologia (2003)
+                    """,
+                    isComplete: true,
+                    tags: ["音楽", "気候", "工芸"],
+                    categoryId: "music",
+                    postFormat: "UNLIKELY CONNECTION",
+                    createdAt: Date().addingTimeInterval(-180)
+                ),
                 deepDiveBody: """
-                1708年、建築家クリストファー・レンはドーム内壁をわずかに7度内傾させました。この繊細な傾きが音の上方への拡散を防ぎ、囁きを円形の軌道に閉じ込めます。
+                1428年にアステカ三国同盟が誕生した頃、オックスフォードではすでに図書館の拡張が進んでおり、マチュピチュはまだ着工すらされていませんでした。
 
-                二世紀後、物理学者たちは同じ幾何学が光マイクロ共振器や原子時計にも応用できることに気づきました。
+                さらに遡れば、フェズのカラウィーイーン大学（859年）やボローニャ大学（1088年）もそれ以前から学問を紡いでいました。
 
-                出典: Lord Rayleigh, Philosophical Magazine (1910)
+                出典: Michael E. Smith, The Aztecs (2012)
                 """,
-                allChips: ["バウハウス", "日本映画", "ストア派", "音響学"],
-                activeChips: ["バウハウス", "音響学"],
-                scienceSubtopics: [
-                    "囁きの回廊", "生物発光", "三角波",
-                    "アンティキティラ", "菌糸ネットワーク", "時間生物学",
-                    "ガラス音響", "軌道共鳴", "極低温氷",
-                    "フェルマーの原理", "発酵の数理", "熱水噴出孔"
+                allChips: ["バウハウス", "日本映画", "ストア派", "歴史"],
+                activeChips: ["バウハウス", "歴史"],
+                historySubtopics: [
+                    "1518年踊るペスト", "エミュー戦争", "38分間戦争",
+                    "空気注入の幽霊軍", "ナポレオンと兎", "1904年マラソン騒動",
+                    "ローマの屋台飯", "侍とFAXの時代", "大聖堂のルーン文字",
+                    "オスマン珈琲諜報", "チューリップバブル", "アレクサンドリア謎"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -506,7 +598,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "misaki",
                         title: "黒澤明『羅生門』の墨を混ぜた雨",
                         text: """
-                        1950年の映画『羅生門』で、黒澤明は透明な水がモノクロフィルムに映らないため、放水に墨汁を混ぜて雨を撮りました。
+                        黒澤明は白黒フィルムに雨を映すため、放水に墨汁を混ぜて撮影しました。
 
                         出典: Donald Richie, The Films of Akira Kurosawa (1965)
                         """,
@@ -524,7 +616,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "kenji",
                         title: "東京の発車メロディが急かさない理由",
                         text: """
-                        山手線の各ホームで流れる7秒間の発車メロディは、乗客の焦りを和らげる音響心理学から設計されています。
+                        山手線の各ホームで流れる7秒間のメロディは、乗客の焦りを和らげる音響心理学から設計されています。
 
                         出典: 向谷実 音楽館サウンドアーカイブ (2012)
                         """,
@@ -534,6 +626,23 @@ private struct LocalizedScreenshotContent {
                         reactionCounts: ["like": 19],
                         totalReactions: 19,
                         commentCount: 3
+                    ),
+                    SharedPost(
+                        authorId: "u_elena",
+                        authorName: "陽菜",
+                        authorUsername: "hina",
+                        title: "自己修復する古代ローマコンクリート",
+                        text: """
+                        生石灰の粒が海水と反応し、ひび割れを数千年かけて自ら塞ぎ続けます。
+
+                        出典: Admir Masic et al., Science Advances (2023)
+                        """,
+                        tags: ["建築", "科学"],
+                        originalCreatedAt: Date().addingTimeInterval(-9800),
+                        sharedAt: Date().addingTimeInterval(-8100),
+                        reactionCounts: ["like": 42],
+                        totalReactions: 42,
+                        commentCount: 8
                     )
                 ]
             )
@@ -541,34 +650,49 @@ private struct LocalizedScreenshotContent {
         case .german:
             return LocalizedScreenshotContent(
                 heroPost: Post(
-                    title: "Wie Kathedralen über 30 Meter flüstern",
+                    title: "Die Universität Oxford ist älter als das Aztekenreich",
                     text: """
-                    Lehnt man das Ohr an die Innenwand der Londoner St. Paul's Cathedral, klingt ein Flüstern aus *dreißig Metern Entfernung* so klar, als stünde jemand direkt daneben.
+                    In Oxford wurde bereits um **1096** gelehrt – mehr als *zwei Jahrhunderte bevor* die Azteken 1325 ihre Hauptstadt Tenochtitlán gründeten.
 
-                    Die glatte Rundung lenkt Schall als **Flüstergalerie-Welle** entlang des Mauerwerks, statt ihn im Raum zu verlieren. Lord Rayleigh bewies die Physik dahinter 1878 – Jahrhunderte nach den Steinmetzen.
+                    Als das Aztekenreich **1428** entstand, blickte Oxford schon auf über 300 Jahre Universitätsgeschichte zurück. Zeitachsen überlappen sich oft ganz anders, als unser Gefühl es vermutet.
 
-                    Quelle: John William Strutt (Lord Rayleigh), The Theory of Sound, Bd. II (1878)
+                    Quelle: L. W. B. Brockliss, The University of Oxford: A History (2016)
                     """,
                     isComplete: true,
-                    tags: ["Architektur", "Akustik", "Geschichte"],
-                    categoryId: "art",
-                    postFormat: "UNLIKELY CONNECTION",
+                    tags: ["Geschichte", "Zeitleiste", "Kultur"],
+                    categoryId: "history",
+                    postFormat: "TIMELINE",
                     createdAt: Date().addingTimeInterval(-420)
                 ),
+                cooldownPost: Post(
+                    title: "Wie eine Kleine Eiszeit den Stradivari-Klang schuf",
+                    text: """
+                    Zwischen 1645 und 1715 erlebte Europa das eiskalte **Maunder-Minimum**. Alpenfichten wuchsen extrem langsam und bildeten ungewöhnlich dichte, feine Jahresringe.
+
+                    Antonio Stradivari schnitzte seine berühmtesten Geigen aus genau diesem *klimaverdichteten Holz*. 2003 zeigten Baumringforscher: Das Geheimnis war kein Lack, sondern der Winter im Holz.
+
+                    Quelle: Henri Grissino-Mayer & Lloyd Burckle, Dendrochronologia (2003)
+                    """,
+                    isComplete: true,
+                    tags: ["Musik", "Klima", "Handwerk"],
+                    categoryId: "music",
+                    postFormat: "UNLIKELY CONNECTION",
+                    createdAt: Date().addingTimeInterval(-180)
+                ),
                 deepDiveBody: """
-                Als Christopher Wren 1708 die Kuppel vollendete, neigte er den inneren Steinring um exakt sieben Grad nach innen. Diese Neigung hält Schallwellen auf einer kreisförmigen Bahn.
+                Als sich 1428 der aztekische Dreibund formte, wuchs Oxfords älteste Bibliothek bereits rasant – und Machu Picchu sollte erst zwanzig Jahre später erbaut werden.
 
-                Zwei Jahrhunderte später nutzte die Photonik dieselbe Geometrie für optische Mikroresonatoren in Atomuhren.
+                Noch früher lehrten bereits al-Qarawiyyin in Fès (859) und Bologna (1088) Generationen von Gelehrten.
 
-                Quelle: Lord Rayleigh, Philosophical Magazine (1910)
+                Quelle: Michael E. Smith, The Aztecs (2012)
                 """,
-                allChips: ["Bauhaus", "Japanisches Kino", "Stoizismus", "Akustik"],
-                activeChips: ["Bauhaus", "Akustik"],
-                scienceSubtopics: [
-                    "Flüstergalerien", "Biolumineszenz", "Monsterwellen",
-                    "Antikythera", "Myzel-Netze", "Chronobiologie",
-                    "Glasakustik", "Bahnresonanz", "Kryo-Eis",
-                    "Fermat-Optik", "Fermentation", "Tiefseeschlote"
+                allChips: ["Bauhaus", "Japanisches Kino", "Stoizismus", "Geschichte"],
+                activeChips: ["Bauhaus", "Geschichte"],
+                historySubtopics: [
+                    "Tanzwut von 1518", "Großer Emukrieg", "38-Minuten-Krieg",
+                    "Aufblasbare Geisterarmee", "Napoleons Hasenjagd", "Marathon-Chaos 1904",
+                    "Römisches Streetfood", "Samurai & Faxgerät", "Wikinger-Runen",
+                    "Osmanische Kaffee-Spione", "Tulpenmanie", "Bibliothek-Mythen"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -577,7 +701,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "clara",
                         title: "Kurosawas Regen mit schwarzer Tinte",
                         text: """
-                        Für Rashomon (1950) mischte Akira Kurosawa schwarze Tinte ins Wasser, weil klarer Regen auf Schwarzweißfilm unsichtbar blieb.
+                        Für Rashomon (1950) mischte Kurosawa schwarze Tinte ins Wasser, damit der Regen sichtbar blieb.
 
                         Quelle: Donald Richie, The Films of Akira Kurosawa (1965)
                         """,
@@ -595,7 +719,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "lukas",
                         title: "Warum Tokios Bahnhöfe komponiert klingen",
                         text: """
-                        Jeder Bahnsteig der Yamanote-Linie spielt eine eigene 7-Sekunden-Melodie, die Stress abbaut und Gedränge reduziert.
+                        Jeder Bahnsteig der Yamanote-Linie spielt eine eigene 7-Sekunden-Melodie gegen Stress und Gedränge.
 
                         Quelle: Minoru Mukaiya, Ongakukan Archives (2012)
                         """,
@@ -605,6 +729,23 @@ private struct LocalizedScreenshotContent {
                         reactionCounts: ["like": 19],
                         totalReactions: 19,
                         commentCount: 3
+                    ),
+                    SharedPost(
+                        authorId: "u_elena",
+                        authorName: "Hannah",
+                        authorUsername: "hannah",
+                        title: "Warum römischer Beton sich selbst heilt",
+                        text: """
+                        Branntkalk-Einschlüsse reagieren mit Meerwasser und schließen Risse über Jahrtausende selbstständig.
+
+                        Quelle: Admir Masic et al., Science Advances (2023)
+                        """,
+                        tags: ["Architektur", "Wissenschaft"],
+                        originalCreatedAt: Date().addingTimeInterval(-9800),
+                        sharedAt: Date().addingTimeInterval(-8100),
+                        reactionCounts: ["like": 42],
+                        totalReactions: 42,
+                        commentCount: 8
                     )
                 ]
             )
@@ -612,34 +753,49 @@ private struct LocalizedScreenshotContent {
         case .french:
             return LocalizedScreenshotContent(
                 heroPost: Post(
-                    title: "Le secret des voûtes qui chuchotent à 30 mètres",
+                    title: "L'université d'Oxford est plus ancienne que l'Empire aztèque",
                     text: """
-                    Dans la coupole de Saint-Paul à Londres, collez votre oreille contre la pierre : un murmure prononcé à *trente mètres* vous parvient avec une netteté saisissante.
+                    On enseignait déjà à Oxford dès **1096**, plus de *deux siècles avant* que les Aztèques ne fondent Tenochtitlan en 1325.
 
-                    La courbe concave piège le son en **ondes rampantes** qui longent la maçonnerie sans se dissiper. Lord Rayleigh en démontra la physique en 1878, bien après les bâtisseurs.
+                    Lorsque l'Empire aztèque se forma en **1428**, Oxford comptait déjà plus de 300 ans d'histoire académique. Les chronologies de l'histoire réservent des télescopages vertigineux.
 
-                    Source : John William Strutt (Lord Rayleigh), The Theory of Sound, Vol. II (1878)
+                    Source : L. W. B. Brockliss, The University of Oxford: A History (2016)
                     """,
                     isComplete: true,
-                    tags: ["Architecture", "Acoustique", "Histoire"],
-                    categoryId: "art",
-                    postFormat: "UNLIKELY CONNECTION",
+                    tags: ["Histoire", "Chronologie", "Culture"],
+                    categoryId: "history",
+                    postFormat: "TIMELINE",
                     createdAt: Date().addingTimeInterval(-420)
                 ),
+                cooldownPost: Post(
+                    title: "Comment un petit âge glaciaire a forgé le son Stradivarius",
+                    text: """
+                    Entre 1645 et 1715, l'Europe traverse le **minimum de Maunder**. Les épicéas alpins poussent si lentement que leurs cernes deviennent d'une densité exceptionnelle.
+
+                    Antonio Stradivari façonna ses violons d'or dans ce *bois comprimé par le gel*. En 2003, la dendrochronologie prouva que la résonance venait de l'hiver lui-même, pas d'un vernis secret.
+
+                    Source : Henri Grissino-Mayer & Lloyd Burckle, Dendrochronologia (2003)
+                    """,
+                    isComplete: true,
+                    tags: ["Musique", "Climat", "Artisanat"],
+                    categoryId: "music",
+                    postFormat: "UNLIKELY CONNECTION",
+                    createdAt: Date().addingTimeInterval(-180)
+                ),
                 deepDiveBody: """
-                En 1708, Christopher Wren inclina l'anneau intérieur de la coupole de sept degrés vers l'intérieur. Cette inclinaison maintient les voix sur un rail circulaire.
+                En 1428, quand la Triple-Alliance aztèque vit le jour, Oxford agrandissait déjà sa bibliothèque — et le Machu Picchu ne serait bâti que vingt ans plus tard.
 
-                Deux siècles plus tard, la photonique reprit la même géométrie pour piéger la lumière laser dans des microrésonateurs optiques.
+                Plus tôt encore, Al Quaraouiyine à Fès (859) et Bologne (1088) formaient déjà des savants depuis des siècles.
 
-                Source : Lord Rayleigh, Philosophical Magazine (1910)
+                Source : Michael E. Smith, The Aztecs (2012)
                 """,
-                allChips: ["Bauhaus", "Cinéma japonais", "Stoïcisme", "Acoustique"],
-                activeChips: ["Bauhaus", "Acoustique"],
-                scienceSubtopics: [
-                    "Galeries d'écho", "Bioluminescence", "Vagues scélérates",
-                    "Anticythère", "Mycélium", "Chronobiologie",
-                    "Acoustique du verre", "Résonance", "Glace cryogénique",
-                    "Optique de Fermat", "Fermentation", "Sources abyssales"
+                allChips: ["Bauhaus", "Cinéma japonais", "Stoïcisme", "Histoire"],
+                activeChips: ["Bauhaus", "Histoire"],
+                historySubtopics: [
+                    "Peste dansante 1518", "Guerre des émeus", "Guerre de 38 min",
+                    "Armée fantôme 1944", "Lapins de Napoléon", "Marathon fou 1904",
+                    "Street-food romaine", "Samouraïs & fax", "Runes à Istanbul",
+                    "Espions des cafés", "Crise des tulipes", "Mythes d'Alexandrie"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -648,7 +804,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "camille",
                         title: "L'encre noire dans la pluie de Kurosawa",
                         text: """
-                        Dans Rashomon (1950), Akira Kurosawa teinta l'eau de pluie à l'encre noire pour qu'elle reste visible sur la pellicule monochrome.
+                        Dans Rashomon (1950), Kurosawa teinta la pluie à l'encre noire pour la rendre visible à l'écran.
 
                         Source : Donald Richie, The Films of Akira Kurosawa (1965)
                         """,
@@ -666,7 +822,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "theo",
                         title: "Les mélodies apaisantes des quais de Tokyo",
                         text: """
-                        Chaque quai de la ligne Yamanote diffuse un motif de 7 secondes conçu pour réduire l'anxiété des voyageurs sans hausser le volume.
+                        Chaque quai de la ligne Yamanote diffuse un motif de 7 secondes pensé pour réduire le stress des voyageurs.
 
                         Source : Minoru Mukaiya, Archives Ongakukan (2012)
                         """,
@@ -676,6 +832,23 @@ private struct LocalizedScreenshotContent {
                         reactionCounts: ["like": 19],
                         totalReactions: 19,
                         commentCount: 3
+                    ),
+                    SharedPost(
+                        authorId: "u_elena",
+                        authorName: "Inès",
+                        authorUsername: "ines",
+                        title: "Le béton romain qui répare ses fissures",
+                        text: """
+                        Des éclats de chaux vive réagissent avec l'eau de mer pour sceller les fissures au fil des siècles.
+
+                        Source : Admir Masic et al., Science Advances (2023)
+                        """,
+                        tags: ["Architecture", "Science"],
+                        originalCreatedAt: Date().addingTimeInterval(-9800),
+                        sharedAt: Date().addingTimeInterval(-8100),
+                        reactionCounts: ["like": 42],
+                        totalReactions: 42,
+                        commentCount: 8
                     )
                 ]
             )
@@ -683,34 +856,49 @@ private struct LocalizedScreenshotContent {
         case .spanish:
             return LocalizedScreenshotContent(
                 heroPost: Post(
-                    title: "Por qué las catedrales susurran a 30 metros",
+                    title: "La Universidad de Oxford es más antigua que el Imperio azteca",
                     text: """
-                    Pega el oído al muro de la cúpula de San Pablo en Londres: un susurro emitido a *treinta metros* llega con la claridad de quien habla justo a tu lado.
+                    En Oxford ya se impartían clases hacia **1096**, más de *dos siglos antes* de que los mexicas fundaran Tenochtitlan en 1325.
 
-                    La curva de piedra guía el sonido como **ondas acústicas rasantes** que abrazan la pared sin perder energía. Lord Rayleigh demostró la física en 1878, siglos después de sus constructores.
+                    Cuando nació el Imperio azteca en **1428**, Oxford llevaba más de 300 años graduando estudiantes. Las líneas del tiempo históricas se cruzan de formas sorprendentes.
 
-                    Fuente: John William Strutt (Lord Rayleigh), The Theory of Sound, Vol. II (1878)
+                    Fuente: L. W. B. Brockliss, The University of Oxford: A History (2016)
                     """,
                     isComplete: true,
-                    tags: ["Arquitectura", "Acústica", "Historia"],
-                    categoryId: "art",
-                    postFormat: "UNLIKELY CONNECTION",
+                    tags: ["Historia", "Cronología", "Cultura"],
+                    categoryId: "history",
+                    postFormat: "TIMELINE",
                     createdAt: Date().addingTimeInterval(-420)
                 ),
+                cooldownPost: Post(
+                    title: "Cómo una pequeña edad de hielo creó el sonido Stradivarius",
+                    text: """
+                    Entre 1645 y 1715, Europa vivió el gélido **mínimo de Maunder**. Los abetos alpinos crecieron tan lento que sus anillos formaron una madera extraordinariamente densa.
+
+                    Antonio Stradivari talló sus violines de oro con esa *madera comprimida por el frío*. En 2003, la dendrocronología probó que el secreto no era un barniz, sino el invierno atrapado en la veta.
+
+                    Fuente: Henri Grissino-Mayer & Lloyd Burckle, Dendrochronologia (2003)
+                    """,
+                    isComplete: true,
+                    tags: ["Música", "Clima", "Oficio"],
+                    categoryId: "music",
+                    postFormat: "UNLIKELY CONNECTION",
+                    createdAt: Date().addingTimeInterval(-180)
+                ),
                 deepDiveBody: """
-                En 1708, Christopher Wren inclinó siete grados hacia adentro el anillo de piedra de la cúpula. Ese giro sutil evita que el sonido escape y lo mantiene girando en un riel circular.
+                En 1428, cuando surgió la Triple Alianza azteca, Oxford ya ampliaba su biblioteca y Machu Picchu todavía tardaría veinte años en construirse.
 
-                Dos siglos después, la fotónica aplicó la misma geometría en microrresonadores ópticos para construir relojes atómicos.
+                Aún antes, Al-Qarawiyyin en Fez (859) y Bolonia (1088) ya llevaban siglos formando eruditos.
 
-                Fuente: Lord Rayleigh, Philosophical Magazine (1910)
+                Fuente: Michael E. Smith, The Aztecs (2012)
                 """,
-                allChips: ["Bauhaus", "Cine japonés", "Estoicismo", "Acústica"],
-                activeChips: ["Bauhaus", "Acústica"],
-                scienceSubtopics: [
-                    "Galerías de eco", "Bioluminiscencia", "Olas gigantes",
-                    "Anticitera", "Redes de micelio", "Cronobiología",
-                    "Acústica vítrea", "Resonancia orbital", "Hielo criogénico",
-                    "Óptica de Fermat", "Fermentación", "Fumarolas abisales"
+                allChips: ["Bauhaus", "Cine japonés", "Estoicismo", "Historia"],
+                activeChips: ["Bauhaus", "Historia"],
+                historySubtopics: [
+                    "Plaga del baile 1518", "Guerra del Emú", "Guerra de 38 min",
+                    "Ejército inflable", "Conejos de Napoleón", "Maratón caótico 1904",
+                    "Comida callejera romana", "Samuráis y el fax", "Runas en Estambul",
+                    "Espías del café otomano", "Fiebre de tulipanes", "Mitos de Alejandría"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -719,7 +907,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "lucia",
                         title: "Tinta negra en la lluvia de Kurosawa",
                         text: """
-                        En Rashomon (1950), Akira Kurosawa tiñó la lluvia artificial con tinta china porque el agua limpia desaparecía en el blanco y negro.
+                        En Rashomon (1950), Kurosawa tiñó la lluvia con tinta china para que resaltara en blanco y negro.
 
                         Fuente: Donald Richie, The Films of Akira Kurosawa (1965)
                         """,
@@ -737,7 +925,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "mateo",
                         title: "Las melodías únicas del metro de Tokio",
                         text: """
-                        Cada andén de la línea Yamanote reproduce un motivo de 7 segundos diseñado para reducir el estrés sin aumentar el ruido.
+                        Cada andén de la línea Yamanote reproduce un motivo de 7 segundos diseñado para reducir el estrés.
 
                         Fuente: Minoru Mukaiya, Archivos Ongakukan (2012)
                         """,
@@ -747,6 +935,23 @@ private struct LocalizedScreenshotContent {
                         reactionCounts: ["like": 19],
                         totalReactions: 19,
                         commentCount: 3
+                    ),
+                    SharedPost(
+                        authorId: "u_elena",
+                        authorName: "Sofía",
+                        authorUsername: "sofia",
+                        title: "Por qué el hormigón romano se autorrepara",
+                        text: """
+                        Pequeños fragmentos de cal viva reaccionan con el agua marina y sellan las grietas durante milenios.
+
+                        Fuente: Admir Masic et al., Science Advances (2023)
+                        """,
+                        tags: ["Arquitectura", "Ciencia"],
+                        originalCreatedAt: Date().addingTimeInterval(-9800),
+                        sharedAt: Date().addingTimeInterval(-8100),
+                        reactionCounts: ["like": 42],
+                        totalReactions: 42,
+                        commentCount: 8
                     )
                 ]
             )
@@ -754,34 +959,49 @@ private struct LocalizedScreenshotContent {
         case .korean:
             return LocalizedScreenshotContent(
                 heroPost: Post(
-                    title: "30미터 밖 속삭임이 들리는 대성당의 비밀",
+                    title: "옥스퍼드 대학교는 아즈텍 제국보다 오래됐다",
                     text: """
-                    런던 세인트폴 대성당 돔 벽에 귀를 대면 *30미터 떨어진* 곳의 작은 속삭임도 바로 옆에서 말하듯 선명하게 들립니다.
+                    옥스퍼드에서 강의가 시작된 것은 **1096년** 무렵입니다. 아즈텍인이 테노치티틀란을 세운 1325년보다 *200년 이상* 앞선 시기였죠.
 
-                    매끄러운 오목 곡면이 소리를 공간으로 흩어뜨리지 않고 **벽을 따라 기어가는 음파**로 바꾸기 때문입니다. 1878년 레일리 경이 물리 법칙으로 증명하기 수세기 전, 석공들은 이미 감각으로 이 곡선을 쌓아 올렸습니다.
+                    **1428년** 아즈텍 제국이 성립했을 때, 옥스퍼드는 이미 300년 넘게 학자를 배출해 온 대학이었습니다. 연표를 나란히 놓고 보면 역사의 시간 감각이 완전히 달라집니다.
 
-                    출처: John William Strutt (Lord Rayleigh), The Theory of Sound, Vol. II (1878)
+                    출처: L. W. B. Brockliss, The University of Oxford: A History (2016)
                     """,
                     isComplete: true,
-                    tags: ["건축", "음향학", "역사"],
-                    categoryId: "art",
-                    postFormat: "UNLIKELY CONNECTION",
+                    tags: ["역사", "연대기", "교양"],
+                    categoryId: "history",
+                    postFormat: "TIMELINE",
                     createdAt: Date().addingTimeInterval(-420)
                 ),
+                cooldownPost: Post(
+                    title: "소빙하기가 빚어낸 스트라디바리우스의 울림",
+                    text: """
+                    1645년부터 1715년 사이 유럽은 **마운더 극소기**의 혹한을 겪었습니다. 알프스 가문비나무가 극도로 느리게 자라며 나이테가 촘촘히 압축된 고밀도 목재가 탄생했습니다.
+
+                    스트라디바리는 바로 그 *기후가 압축한 나무*로 황금기 바이올린을 깎았습니다. 전설의 음색은 비밀 바니시가 아니라 나무결에 새겨진 겨울이었습니다.
+
+                    출처: Henri Grissino-Mayer & Lloyd Burckle, Dendrochronologia (2003)
+                    """,
+                    isComplete: true,
+                    tags: ["음악", "기후", "공예"],
+                    categoryId: "music",
+                    postFormat: "UNLIKELY CONNECTION",
+                    createdAt: Date().addingTimeInterval(-180)
+                ),
                 deepDiveBody: """
-                1708년 크리스토퍼 렌은 돔 내벽을 안쪽으로 7도 기울여 설계했습니다. 이 미세한 기울기가 소리가 위로 새어 나가는 것을 막고 원형 궤도에 가둡니다.
+                1428년 아즈텍 삼국 동맹이 출범했을 때 옥스퍼드는 이미 도서관을 확장 중이었고, 마추픽추는 아직 지어지지도 않은 상태였습니다.
 
-                200년 뒤 물리학자들은 같은 기하학이 원자시계용 광 마이크로 공진기에도 적용됨을 발견했습니다.
+                그보다 앞서 모로코 페스의 알카라위인(859년)과 볼로냐 대학교(1088년)도 이미 수세기째 학문을 이어오고 있었습니다.
 
-                출처: Lord Rayleigh, Philosophical Magazine (1910)
+                출처: Michael E. Smith, The Aztecs (2012)
                 """,
-                allChips: ["바우하우스", "일본 영화", "스토아 철학", "음향학"],
-                activeChips: ["바우하우스", "음향학"],
-                scienceSubtopics: [
-                    "속삭임의 회랑", "생물 발광", "괴물 파도",
-                    "안티키테라", "균사체 네트워크", "시간생물학",
-                    "유리 음향", "궤도 공명", "극저온 얼음",
-                    "페르마 광학", "발효의 수학", "심해 열수구"
+                allChips: ["바우하우스", "일본 영화", "스토아 철학", "역사"],
+                activeChips: ["바우하우스", "역사"],
+                historySubtopics: [
+                    "1518년 춤추는 역병", "호주 에뮤 전쟁", "38분 전쟁",
+                    "풍선 유령 군대", "나폴레옹과 토끼", "1904 마라톤 대혼란",
+                    "고대 로마 길거리 음식", "사무라이와 팩스", "아야 소피아 룬 문자",
+                    "오스만 커피하우스 첩보", "튤립 광풍", "알렉산드리아 미스터리"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -790,7 +1010,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "seoyeon",
                         title: "구로사와 아키라가 비에 먹물을 섞은 이유",
                         text: """
-                        1950년 영화 <라쇼몽>에서 구로사와 아키라는 맑은 물이 흑백 필름에 찍히지 않자 인공 비에 검은 먹물을 섞었습니다.
+                        영화 <라쇼몽>에서 맑은 물이 흑백 필름에 찍히지 않자 인공 비에 먹물을 섞었습니다.
 
                         출처: Donald Richie, The Films of Akira Kurosawa (1965)
                         """,
@@ -808,7 +1028,7 @@ private struct LocalizedScreenshotContent {
                         authorUsername: "minjun",
                         title: "도쿄 지하철 승강장의 7초 멜로디",
                         text: """
-                        야마노테선 각 승강장은 승객의 스트레스를 낮추기 위해 음향 심리학으로 작곡된 고유의 출발 멜로디를 들려줍니다.
+                        야마노테선 각 승강장은 승객의 스트레스를 낮추기 위해 작곡된 고유의 출발 멜로디를 들려줍니다.
 
                         출처: 무카이야 미노루 온가쿠칸 아카이브 (2012)
                         """,
@@ -818,6 +1038,23 @@ private struct LocalizedScreenshotContent {
                         reactionCounts: ["like": 19],
                         totalReactions: 19,
                         commentCount: 3
+                    ),
+                    SharedPost(
+                        authorId: "u_elena",
+                        authorName: "지우",
+                        authorUsername: "jiwoo",
+                        title: "스스로 균열을 치유하는 로마 콘크리트",
+                        text: """
+                        생석회 입자가 바닷물과 반응해 수천 년 동안 균열을 스스로 메워 나갑니다.
+
+                        출처: Admir Masic et al., Science Advances (2023)
+                        """,
+                        tags: ["건축", "과학"],
+                        originalCreatedAt: Date().addingTimeInterval(-9800),
+                        sharedAt: Date().addingTimeInterval(-8100),
+                        reactionCounts: ["like": 42],
+                        totalReactions: 42,
+                        commentCount: 8
                     )
                 ]
             )

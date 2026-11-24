@@ -14,32 +14,51 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================================================
   const translations = {
     tr: {
+      "nav.screenshots": "Ekran Görüntüleri",
+      "shots.tag": "Uygulamadan Kareler",
+      "shots.title": "Tek dokunuşta fun-fact. Postu AI anlık üretir.",
+      "shots.desc": "Kaynağını da verir. Kategorini aç, ilgini çeken alt konuya dokun, derine in.",
+      "shots.l1": "Algoritmayı değil, zihnini besle",
+      "shots.l2": "Fun-fact + kaynak",
+      "shots.l3": "Alt konular",
+      "shots.l4": "Derin İnceleme",
+      "shots.l5": "Okuma molası",
+      "shots.l6": "Topluluk",
+      "device.feedSource": "Kaynak: Elisabeth Svärdström, Fornvännen — İsveç Eski Eserler Dergisi",
+      "device.tag1": "Tarih",
+      "device.tag2": "Vikingler",
+      "device.tag3": "İstanbul",
+      "device.segDiscover": "Keşfet",
+      "device.segFollowing": "Takip Edilenler",
+      "device.followBtn": "+ Takip et",
+      "device.langVal": "7 Dil",
+      "demo.sourcePrefix": "Kaynak:",
       "nav.demo": "Canlı Tadım",
-      "nav.features": "Mimari",
+      "nav.features": "Özellikler",
       "nav.philosophy": "Felsefe",
       "nav.faq": "SSS",
       "nav.getApp": "İndir",
       "nav.getAppFull": "Uygulamayı İndir",
 
-      "hero.badge": "iOS 17+ • Kişisel Kültür Akışı",
-      "hero.title": "Kaydırmayı bırak. Gerçek kültür, sıfır gürültü.",
-      "hero.subtitle": "Sinema, tarih, bilim ve mimaride 12 kategori, birincil kaynakçalı mikro-hikayeler ve Letterboxd günlüğün. Günde 3 ücretsiz postla başla, Pro ile sınırları kaldır.",
+      "hero.badge": "iOS 17+ • 7 Dil • Kişisel Kültür Akışı",
+      "hero.title": "Algoritmayı değil, zihnini besle.",
+      "hero.subtitle": "Tek dokunuşta fun-fact. Postu AI anlık üretir, kaynağını da verir. 12 kültür disiplini, okuma süresi molası ve Letterboxd günlüğün — günde 3 ücretsiz lokmayla başla.",
       "hero.appStoreLabel": "App Store",
       "hero.downloadCta": "iOS için İndir",
       "hero.tryDemo": "Canlı Tadımı Dene ↓",
-      "hero.meta1": "2×6 Bento & 12 Disiplin",
-      "hero.meta2": "15–25 sn Sindirme Molası",
-      "hero.meta3": "Letterboxd & Topluluk",
+      "hero.meta1": "Tek Dokunuşta Fun-Fact & Kaynak",
+      "hero.meta2": "15–25 sn Okuma Molası",
+      "hero.meta3": "7 Dil • Letterboxd & Topluluk",
 
       "device.tabFeed": "Akışım",
       "device.tabBento": "Bento Keşif",
       "device.tabCommunity": "Topluluk",
       "device.tabProfile": "Profil",
-      "device.quotaPill": "Kalan: 1/3",
+      "device.quotaPill": "••• Kalan: 3/3",
       "device.actDive": "İncele",
       "device.feedDate": "Bugün • 09:41",
-      "device.feedTitle": "Tadao Ando ve Işığın Betondaki Tapınağı",
-      "device.feedBody": "Osaka'daki Işık Kilisesi'nde Tadao Ando, haçı altın ya da mermerle değil; çıplak beton duvara açtığı yarıklardan içeri sızan gün ışığıyla inşa etti. Güneş hareket ettikçe kilisenin içindeki ışık kesişimi yer değiştirir. Ando için mimarlık bir form değil, doğanın mekana bıraktığı gölgedir.",
+      "device.feedTitle": "Ayasofya'nın Mermerindeki 1100 Yıllık Viking İmzası",
+      "device.feedBody": "İstanbul'da Ayasofya'nın üst mermer galerisine çıkıp korkuluğa yakından baktığınızda, 6. yüzyıl taşının üzerine kazınmış İskandinav rünleri görürsünüz. 1964'te çözülen yazıt tek bir cümle söylüyor: \"Halfdan buradaydı.\" Halfdan, Bizans İmparatoru'nun seçkin Vareg Muhafızları arasında görev yapan bir Viking askeriydi.",
       "device.swipeForBento": "Yeni post için aşağı kaydır",
       "device.backToPost": "Son gönderiye dönmek için dokun",
       "device.bentoHeading": "Kategoriler",
@@ -94,16 +113,16 @@ document.addEventListener('DOMContentLoaded', () => {
       "shareModal.heading": "Paylaşım Kartı Önizlemesi (1080 × 1350)",
 
       "features.tag": "Sistem Mimarisi",
-      "features.title": "Okumak İçin Tasarlanan 6 Parça",
-      "features.desc": "Ne soracağını bilmediğin sohbet botları ve bitmeyen sosyal akışlar arasında sıkışmayan, okuma odaklı yerli iOS deneyimi.",
-      "features.f1Title": "2×6 Bento & Anında Keşif",
-      "features.f1Desc": "Film, Müzik, Bilim, Tarih ve Mimari dahil 12 kategori. Her başlıkta tekrar etmeyen 12 alt konu karosu ve sürpriz keşifler.",
-      "features.f2Title": "Okuma Süresi & Doomscrolling Kilidi",
-      "features.f2Desc": "Metin uzunluğuna göre 15–25 saniye sindirme süresi uygular. Üstteki ince sayaç bitene kadar yeni post açılmaz; hızlı kaydırmayı keser.",
-      "features.f3Title": "12 Editoryal Açı, Kaynakça & Deep Dive",
-      "features.f3Desc": "Dolgu cümlesi olmayan, altında gerçek birincil kaynakçası (Kaynak:) bulunan 40–90 kelimelik net hikayeler. Merak ettiğinde tek dokunuşla 200 kelimelik Deep Dive açılır.",
-      "features.f4Title": "@kullanıcı_adı Keşfet Akışı",
-      "features.f4Desc": "Sevdiğin postları Topluluk sekmesinde paylaş, Keşfet akışında farklı okurlarla karşılaş, takip et ve yorumlarla tartış.",
+      "features.title": "Tek Dokunuş, Altı Güzel Detay",
+      "features.desc": "Algoritmayı değil, zihnini besleyen; sonsuz akış ve boş sohbet kutusu arasında kalmayan okuma deneyimi.",
+      "features.f1Title": "Kategorini aç, alt konuya dokun",
+      "features.f1Desc": "12 disiplin; her birinde yenilenebilen ilgi çekici alt konular. Kategorini aç, seni heyecanlandıran konuya dokun.",
+      "features.f2Title": "Okuma süresi kadar beklenir",
+      "features.f2Desc": "Post'u okurken üstteki ince çubuk kayar; 15–25 sn'lik mola okuyup sindirmen içindir.",
+      "features.f3Title": "Fun-fact, kaynak ve Derin İnceleme",
+      "features.f3Desc": "Postu AI anlık üretir ve birincil kaynağını (Kaynak:) verir. İlgini çektiyse tek dokunuşla derine inebilirsin.",
+      "features.f4Title": "Kültürel lokmaları paylaş",
+      "features.f4Desc": "Tattığın kültürel lokmayı arkadaşlarınla paylaş. Başkalarının denk geldiği lokmaları da tat: Keşfet, takip et, beğen, yorumla.",
       "features.f5Title": "Letterboxd Günlüğü Bağlantısı",
       "features.f5Desc": "Şifre vermeden kullanıcı adını yaz, son 50 filmin bağlansın. İzlediğin filmlerin kamera arkası yapım hikayelerini oku.",
       "features.f6Title": "Kağıt Paylaşım Kartı & Arşiv",
@@ -139,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
       "faq.a6": "Omakase reklam göstermez, uygulamalar arası takip (IDFA) yapmaz ve verilerinizi üçüncü taraflara satmaz. Sign in with Apple desteği sunar ve dilediğiniz an Profil sekmesinden hesabınızı ve tüm verilerinizi tek dokunuşla kalıcı olarak silmenize olanak tanır.",
 
       "cta.title": "Günün Menüsü Hazır",
-      "cta.desc": "iOS 17+ için ücretsiz indir. Günde 3 ücretsiz postla başla, dilediğinde Pro ile sınırları kaldır.",
+      "cta.desc": "iOS 17+ için ücretsiz indir. Günde 3 ücretsiz post + 1 Derin İnceleme; dilediğinde Pro ile sınırları kaldır.",
       "cta.joinBtn": "TestFlight'a Katıl",
 
       "footer.privacy": "Gizlilik Politikası",
@@ -149,32 +168,51 @@ document.addEventListener('DOMContentLoaded', () => {
     },
 
     en: {
+      "nav.screenshots": "Screenshots",
+      "shots.tag": "From the App",
+      "shots.title": "Fun-facts in one tap. AI crafts each post live.",
+      "shots.desc": "Always with its source. Open any discipline, tap the subtopic that sparks you, dive deeper.",
+      "shots.l1": "Feed your mind, not the algorithm",
+      "shots.l2": "Fun-fact + source",
+      "shots.l3": "Subtopics",
+      "shots.l4": "Deep Dive",
+      "shots.l5": "Reading pause",
+      "shots.l6": "Community",
+      "device.feedSource": "Source: L. W. B. Brockliss, The University of Oxford: A History",
+      "device.tag1": "History",
+      "device.tag2": "Timelines",
+      "device.tag3": "Culture",
+      "device.segDiscover": "Discover",
+      "device.segFollowing": "Following",
+      "device.followBtn": "+ Follow",
+      "device.langVal": "7 Languages",
+      "demo.sourcePrefix": "Source:",
       "nav.demo": "Live Tasting",
-      "nav.features": "Architecture",
+      "nav.features": "Features",
       "nav.philosophy": "Philosophy",
       "nav.faq": "FAQ",
       "nav.getApp": "Get App",
       "nav.getAppFull": "Download the App",
 
-      "hero.badge": "iOS 17+ • Personal Culture Feed",
-      "hero.title": "Stop scrolling. Real culture, zero noise.",
-      "hero.subtitle": "12 categories across film, history, science, and architecture—with primary-source citations and your Letterboxd diary. Start with 3 free posts a day.",
+      "hero.badge": "iOS 17+ • 7 Languages • Personal Culture Feed",
+      "hero.title": "Feed your mind, not the algorithm.",
+      "hero.subtitle": "Fun-facts in one tap. AI crafts each post live, always with its source. 12 disciplines, a reading pause and your Letterboxd diary — start with 3 free bites a day.",
       "hero.appStoreLabel": "App Store",
       "hero.downloadCta": "Download for iOS",
       "hero.tryDemo": "Try Live Tasting ↓",
-      "hero.meta1": "2×6 Bento & 12 Disciplines",
+      "hero.meta1": "One-Tap Fun-Facts & Sources",
       "hero.meta2": "15–25s Reading Pause",
-      "hero.meta3": "Letterboxd & Community",
+      "hero.meta3": "7 Languages • Letterboxd & Community",
 
       "device.tabFeed": "My Feed",
       "device.tabBento": "Bento Box",
       "device.tabCommunity": "Community",
       "device.tabProfile": "Profile",
-      "device.quotaPill": "1/3 Left",
+      "device.quotaPill": "••• 3/3 Left",
       "device.actDive": "Dive",
       "device.feedDate": "Today • 09:41",
-      "device.feedTitle": "Tadao Ando and the Sanctuary of Concrete Light",
-      "device.feedBody": "At the Church of the Light in Osaka, Tadao Ando constructed the central cross not from gilded marble, but from cruciform slits cut into raw concrete. As the sun moves across the sky, the intersection of light glides across the dark interior. For Ando, architecture is the canvas that makes light tangible.",
+      "device.feedTitle": "Oxford University Is Older Than the Aztec Empire",
+      "device.feedBody": "Lectures were already echoing through Oxford by 1096, and the university had formal colleges by 1249—more than two centuries before the Aztecs founded Tenochtitlan in 1325. History's timelines overlap in ways school textbooks rarely make feel real.",
       "device.swipeForBento": "Scroll down for a new post",
       "device.backToPost": "Tap to return to last post",
       "device.bentoHeading": "Categories",
@@ -229,16 +267,16 @@ document.addEventListener('DOMContentLoaded', () => {
       "shareModal.heading": "Share Card Preview (1080 × 1350)",
 
       "features.tag": "System Architecture",
-      "features.title": "Six Parts Built for Real Reading",
-      "features.desc": "A native iOS reading rhythm built without endless social feeds or blank chatbot prompts.",
-      "features.f1Title": "2×6 Bento & Instant Discovery",
-      "features.f1Desc": "12 disciplines including Film, Music, Science, History, and Architecture. Each category opens 12 rotating subtopics.",
-      "features.f2Title": "Reading Cooldown & Doomscroll Lock",
-      "features.f2Desc": "Applies a 15–25s pause scaled to story length. A thin top bar locks the next post until you finish reading.",
-      "features.f3Title": "12 Editorial Angles, Citations & Deep Dive",
-      "features.f3Desc": "Tight 40–90 word stories grounded with a real primary source line (Source:). Tap once when something hooks you to open a 200-word Deep Dive.",
-      "features.f4Title": "@username Discover Feed",
-      "features.f4Desc": "Share your favorite posts to Community, browse readers across the Discover tab, follow tastes you like, and discuss in comments.",
+      "features.title": "One Tap, Six Lovely Details",
+      "features.desc": "Feed your mind, not the algorithm — a reading rhythm without endless feeds or blank chatbot prompts.",
+      "features.f1Title": "Open a discipline, tap a subtopic",
+      "features.f1Desc": "12 disciplines, each with refreshable subtopics. Open any one and tap what sparks you.",
+      "features.f2Title": "A brief pause to read",
+      "features.f2Desc": "A thin bar slides across the top while you read the current post. A 15–25s pause so every bite sinks in.",
+      "features.f3Title": "Fun-facts, sources & Deep Dive",
+      "features.f3Desc": "AI crafts each post live and always cites its primary source. Caught your interest? Dive deeper in one tap.",
+      "features.f4Title": "Share the cultural bites",
+      "features.f4Desc": "Share the cultural bites you loved with friends. Taste what others discovered too: Discover, follow, like, comment.",
       "features.f5Title": "Letterboxd Diary Synthesis",
       "features.f5Desc": "Enter your handle with zero passwords to pull your last 50 watched films and read verified behind-the-scenes stories.",
       "features.f6Title": "Paper Share Card & Offline Archive",
@@ -274,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
       "faq.a6": "Omakase displays zero ads, performs zero cross-app tracking (IDFA), and never sells your data. It supports Sign in with Apple and includes one-tap permanent Account Deletion directly in the Profile tab.",
 
       "cta.title": "Today's Menu Is Ready",
-      "cta.desc": "Download free for iOS 17+. Start with 3 free daily posts, upgrade to Pro anytime for unlimited reading.",
+      "cta.desc": "Download free for iOS 17+. 3 free posts + 1 Deep Dive a day; go Pro anytime to remove the limits.",
       "cta.joinBtn": "Join TestFlight",
 
       "footer.privacy": "Privacy Policy",
@@ -744,6 +782,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderSubtopicsPills();
     renderSimulatorPost(currentTopic, false);
+    renderScreenshots();
   }
 
   if (langToggleBtn) {
@@ -823,6 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modalTitle.textContent = data.deepDiveTitle;
     modalBody.textContent = data.deepDiveBody;
+    updateSource(topicKey);
 
     if (!animate) {
       simPostBody.textContent = data.body;
@@ -1065,6 +1105,82 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+
+  // ==========================================================================
+  // 8b. SOURCES + APP STORE SCREENSHOTS GALLERY + LIGHTBOX
+  // ==========================================================================
+  const topicSources = {
+    film: "Kodak Motion Picture Film Archives; Hoyte van Hoytema interviews",
+    science: "Physical Review; Francis Perrin, CEA Oklo report (1972)",
+    philosophy: "Seneca, De Brevitate Vitae (Loeb Classical Library)",
+    music: "Alexei Yurchak; Stephen Coates, Bone Music archive",
+    art: "Tadao Ando, Light & Concrete; Church of the Light monograph",
+    history: "Tony Freeth et al., Nature (2006); Antikythera Research Project",
+    tech: "MIT Instrumentation Lab; NASA AGC Documentation",
+    food: "Harold McGee, On Food and Cooking; Edo-period culinary records",
+    nature: "Suzanne Simard, Nature (1997)",
+    travel: "Saiho-ji Temple Records; Kyoto Prefecture Heritage Office",
+    sports: "Rinus Michels, Teambuilding; Ajax Archives",
+    gaming: "Fumito Ueda interviews, Edge Magazine; GDC Archives"
+  };
+
+  function updateSource(topicKey) {
+    const el = document.getElementById('sim-post-source');
+    if (!el) return;
+    const prefix = translations[currentLang]['demo.sourcePrefix'] || 'Source:';
+    el.textContent = `${prefix} ${topicSources[topicKey] || topicSources.film}`;
+  }
+
+  let lightboxIndex = 0;
+  const shotLabels = ['shots.l1','shots.l2','shots.l3','shots.l4','shots.l5','shots.l6'];
+  const shotsGrid = document.getElementById('screenshots-grid');
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightbox-img');
+
+  function shotPath(i) {
+    const lang = currentLang === 'en' ? 'en' : 'tr';
+    return `assets/screenshots/${lang}/0${i + 1}.png`;
+  }
+
+  function renderScreenshots() {
+    if (!shotsGrid) return;
+    shotsGrid.innerHTML = '';
+    shotLabels.forEach((key, i) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'screenshot-card';
+      const label = translations[currentLang][key];
+      card.innerHTML = `<div class="screenshot-img-wrap"><img class="screenshot-img" loading="lazy" src="${shotPath(i)}" alt="${label}"></div>` +
+        `<div class="screenshot-caption"><span class="screenshot-step">0${i + 1}</span><span class="screenshot-label">${label}</span></div>`;
+      card.addEventListener('click', () => openLightbox(i));
+      shotsGrid.appendChild(card);
+    });
+    if (lightbox && lightbox.classList.contains('open')) lightboxImg.src = shotPath(lightboxIndex);
+  }
+
+  function openLightbox(i) {
+    lightboxIndex = (i + 6) % 6;
+    lightboxImg.src = shotPath(lightboxIndex);
+    lightboxImg.alt = translations[currentLang][shotLabels[lightboxIndex]];
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  if (lightbox) {
+    document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+    document.getElementById('lightbox-prev').addEventListener('click', () => openLightbox(lightboxIndex - 1));
+    document.getElementById('lightbox-next').addEventListener('click', () => openLightbox(lightboxIndex + 1));
+    lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') openLightbox(lightboxIndex - 1);
+      if (e.key === 'ArrowRight') openLightbox(lightboxIndex + 1);
+    });
+  }
 
   // ==========================================================================
   // 9. FAQ ACCORDION
