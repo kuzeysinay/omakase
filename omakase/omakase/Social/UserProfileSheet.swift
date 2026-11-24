@@ -136,14 +136,7 @@ struct UserProfileSheet: View {
             Spacer().frame(height: 20)
 
             // Avatar
-            if let urlStr = user.photoURL, let url = URL(string: urlStr) {
-                AsyncImage(url: url) { phase in
-                    if let img = phase.image {
-                        img.resizable().scaledToFill()
-                            .frame(width: 80, height: 80).clipShape(Circle())
-                    } else { defaultAvatar }
-                }
-            } else { defaultAvatar }
+            MonogramAvatarView(name: user.displayName, size: 80)
 
             VStack(spacing: 4) {
                 Text(user.displayName)
@@ -239,11 +232,6 @@ struct UserProfileSheet: View {
 
             Spacer()
         }
-    }
-
-    private var defaultAvatar: some View {
-        Image(systemName: "person.circle.fill")
-            .font(.system(size: 72)).symbolRenderingMode(.hierarchical).foregroundStyle(.secondary)
     }
 
     private func loadProfile() async {
@@ -362,13 +350,10 @@ struct MyProfileSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
-
-                // MARK: - Profile Header
-                Section {
-                    VStack(spacing: 16) {
-                        Spacer().frame(height: 8)
-
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // MARK: - Profile Header
+                    VStack(spacing: 14) {
                         avatarView
 
                         VStack(spacing: 4) {
@@ -391,22 +376,22 @@ struct MyProfileSheet: View {
                                     .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
-                            if let email = authService.email, !email.isEmpty {
-                                Text(email)
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                                    .multilineTextAlignment(.center)
-                            }
                         }
 
                         // Stats pill
                         HStack(spacing: 0) {
                             statCell(value: followerCount, label: l10n.followers)
-                            Divider().frame(height: 32)
+                            Divider().frame(height: 30)
                             statCell(value: followingCount, label: l10n.followingLabel)
                         }
-                        .background(Color(.tertiarySystemGroupedBackground),
-                                    in: RoundedRectangle(cornerRadius: 12))
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(OmakaseTheme.wash)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+                        )
 
                         if let interests = profile?.interests, !interests.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
@@ -416,127 +401,72 @@ struct MyProfileSheet: View {
                                 FlowLayoutShared(spacing: 6) {
                                     ForEach(interests, id: \.self) { tag in
                                         Text(tag)
-                                            .font(.caption).fontWeight(.medium)
-                                            .padding(.horizontal, 10).padding(.vertical, 4)
-                                            .background(Color.primary.opacity(0.08), in: Capsule())
+                                            .font(.caption.weight(.medium))
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(OmakaseTheme.wash, in: Capsule())
                                             .foregroundStyle(.primary)
                                     }
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 4)
+                            .padding(.top, 2)
                         }
-
-                        Spacer().frame(height: 8)
                     }
                     .frame(maxWidth: .infinity)
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
+                    .padding(.top, 8)
 
-                // MARK: - Saved Posts
-                Section(l10n.savedTitle) {
-                    NavigationLink(value: BookmarksNavigationRoute.collections) {
-                        HStack(spacing: 10) {
-                            Label {
-                                Text(l10n.savedPostsLabel)
-                                    .foregroundStyle(.primary)
-                            } icon: {
+                    // MARK: - Quick Cards (Saved Posts & Pro Upgrade)
+                    VStack(spacing: 10) {
+                        NavigationLink(value: BookmarksNavigationRoute.collections) {
+                            HStack(spacing: 12) {
                                 Image(systemName: "bookmark.fill")
+                                    .font(.system(size: 16, weight: .semibold))
                                     .foregroundStyle(OmakaseTheme.ink)
-                            }
-                            Spacer()
-                            Text("\(bookmarkStore.entryCount(in: "All"))")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
+                                    .frame(width: 34, height: 34)
+                                    .background(OmakaseTheme.wash, in: Circle())
 
-                // MARK: - Posts
-                Section(userPosts.isEmpty ? l10n.profilePosts : "\(l10n.profilePosts) (\(userPosts.count))") {
-                    if isLoadingPosts {
-                        HStack { Spacer(); ProgressView(); Spacer() }
-                            .padding(.vertical, 8)
-                    } else if userPosts.isEmpty {
-                        HStack(spacing: 10) {
-                            Image(systemName: "rectangle.stack")
-                                .foregroundStyle(.secondary)
-                            Text(l10n.noPostsYet)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 12)
-                    } else {
-                        ForEach(userPosts) { post in
-                            TimelinePostCard(
-                                post: post,
-                                authService: authService,
-                                onAuthorTap: { },
-                                onDelete: {
-                                    Task {
-                                        if let postId = post.id {
-                                            try? await FirestoreService.shared.deleteSharedPost(postId: postId)
-                                            withAnimation {
-                                                userPosts.removeAll { $0.id == post.id }
-                                            }
-                                        }
-                                    }
-                                }
-                            )
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
-                            .listRowSeparator(.hidden)
-                        }
-                    }
-                }
-
-                // MARK: - Membership (Omakase Pro)
-                Section(l10n.profileMembershipSection) {
-                    if accessManager.isPro {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Label(l10n.proTitle, systemImage: "checkmark.seal.fill")
+                                Text(l10n.savedPostsLabel)
                                     .font(.body.weight(.semibold))
                                     .foregroundStyle(.primary)
-                                Spacer()
-                                Text(proStatusLabel)
-                                    .font(.caption.weight(.semibold))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color.primary.opacity(0.08), in: Capsule())
-                                    .foregroundStyle(.primary)
-                            }
-                            if let expDate = accessManager.effectiveExpirationDate {
-                                let dateText = expDate.formatted(date: .abbreviated, time: .omitted)
-                                Text(accessManager.effectiveWillRenew ? l10n.proRenewsOn(dateText) : l10n.proExpiresOn(dateText))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 2)
 
-                        Button {
-                            Task { await accessManager.openManageSubscriptions() }
-                        } label: {
-                            HStack {
-                                Label(l10n.proManageSubscription, systemImage: "creditcard")
-                                    .foregroundStyle(.primary)
                                 Spacer()
-                                Image(systemName: "arrow.up.right")
-                                    .font(.caption2.bold())
+
+                                Text("\(bookmarkStore.entryCount(in: "All"))")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(.tertiary)
                             }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color(uiColor: .systemBackground))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+                            )
                         }
-                    } else {
-                        Button {
-                            isShowingPaywall = true
-                        } label: {
-                            HStack {
-                                Label {
+                        .buttonStyle(.plain)
+
+                        if !accessManager.isPro {
+                            Button {
+                                isShowingPaywall = true
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(OmakaseTheme.chipActiveText)
+                                        .frame(width: 34, height: 34)
+                                        .background(OmakaseTheme.chipActiveFill, in: Circle())
+
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(l10n.profileUpgradeToPro)
-                                            .font(.body.weight(.semibold))
+                                            .font(.subheadline.weight(.bold))
                                             .foregroundStyle(.primary)
                                         Text(
                                             l10n.profileDailyQuotaSummary(
@@ -549,317 +479,79 @@ struct MyProfileSheet: View {
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                     }
-                                } icon: {
-                                    Image(systemName: "sparkles")
-                                        .foregroundStyle(OmakaseTheme.ink)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
 
-                    Button {
-                        Task { await handleProfileRestore() }
-                    } label: {
-                        HStack {
-                            Label(l10n.proRestorePurchases, systemImage: "arrow.clockwise")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if accessManager.isRestoring {
-                                ProgressView().controlSize(.small)
-                            }
-                        }
-                    }
-                    .disabled(accessManager.isRestoring)
-                }
+                                    Spacer()
 
-                // MARK: - Preferences
-                Section(l10n.profilePreferences) {
-
-                    // Language — native Picker renders as a menu row automatically
-                    Picker(selection: $languageCode) {
-                        ForEach(AppLanguage.allCases) { lang in
-                            Text(lang.pickerLabel).tag(lang.rawValue)
-                        }
-                    } label: {
-                        Label {
-                            Text(l10n.languageMenuAccessibility)
-                        } icon: {
-                            Image(systemName: "globe")
-                                .foregroundStyle(.primary)
-                        }
-                    }
-
-                    // Appearance mode
-                    Picker(selection: $appearanceCode) {
-                        ForEach(AppAppearance.allCases) { mode in
-                            Text(l10n.appearanceName(mode)).tag(mode.rawValue)
-                        }
-                    } label: {
-                        let current = AppAppearance(rawValue: appearanceCode) ?? .system
-                        Label {
-                            Text(l10n.appearanceLabel)
-                        } icon: {
-                            Image(systemName: current.iconName)
-                                .foregroundStyle(.primary)
-                        }
-                    }
-
-                    // Letterboxd integration
-                    Button {
-                        tempLetterboxdUsername = storedLetterboxdUsername
-                        isShowingLetterboxdPrompt = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Label {
-                                Text("Letterboxd")
-                                    .foregroundStyle(.primary)
-                            } icon: {
-                                Image(systemName: "film")
-                                    .foregroundStyle(.primary)
-                            }
-                            Spacer()
-                            Text(storedLetterboxdUsername.isEmpty ? l10n.letterboxdConnectDiary : "@\(storedLetterboxdUsername)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                            Image(systemName: "chevron.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-
-                // MARK: - Notifications (Phase 3)
-                Section {
-                    if notificationManager.authorizationStatus == .denied {
-                        Button {
-                            notificationManager.openSystemNotificationSettings()
-                        } label: {
-                            HStack(spacing: 10) {
-                                Label {
-                                    Text(l10n.notificationsDeniedBanner)
-                                        .foregroundStyle(.primary)
-                                } icon: {
-                                    Image(systemName: "bell.slash")
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Image(systemName: "arrow.up.right")
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    } else {
-                        if notificationManager.authorizationStatus == .provisional {
-                            Button {
-                                notificationManager.openSystemNotificationSettings()
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Text(l10n.notificationsProvisionalHint)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                    Spacer(minLength: 4)
-                                    Image(systemName: "arrow.up.right")
-                                        .font(.caption2.bold())
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
                                         .foregroundStyle(.tertiary)
                                 }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(OmakaseTheme.wash)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+                                )
                             }
+                            .buttonStyle(.plain)
                         }
-
-                        Toggle(
-                            isOn: Binding(
-                                get: { notificationManager.dailyReminderEnabled },
-                                set: { newValue in
-                                    Task {
-                                        await notificationManager.setDailyReminderEnabled(
-                                            newValue,
-                                            interests: parsedStoredInterests,
-                                            language: appLanguage,
-                                            menuCompletedToday: !accessManager.isPro && accessManager.snapshot.platesRemaining == 0
-                                        )
-                                    }
-                                }
-                            )
-                        ) {
-                            Label {
-                                Text(l10n.notificationsDailyMenuToggle)
-                            } icon: {
-                                Image(systemName: "bell.badge")
-                                    .foregroundStyle(.primary)
-                            }
-                        }
-                        .tint(OmakaseTheme.ink)
-
-                        if notificationManager.dailyReminderEnabled {
-                            DatePicker(
-                                selection: Binding(
-                                    get: { notificationManager.reminderDateBinding },
-                                    set: { newDate in
-                                        Task {
-                                            await notificationManager.updateReminderTime(
-                                                newDate,
-                                                interests: parsedStoredInterests,
-                                                language: appLanguage,
-                                                menuCompletedToday: !accessManager.isPro && accessManager.snapshot.platesRemaining == 0
-                                            )
-                                        }
-                                    }
-                                ),
-                                displayedComponents: .hourAndMinute
-                            ) {
-                                Label {
-                                    Text(l10n.notificationsReminderTime)
-                                } icon: {
-                                    Image(systemName: "clock")
-                                        .foregroundStyle(.primary)
-                                }
-                            }
-                        }
-
-                        Toggle(
-                            isOn: Binding(
-                                get: { notificationManager.commentPushEnabled },
-                                set: { newValue in
-                                    Task {
-                                        await notificationManager.setCommentPushEnabled(newValue)
-                                    }
-                                }
-                            )
-                        ) {
-                            Label {
-                                Text(l10n.notificationsCommentsToggle)
-                            } icon: {
-                                Image(systemName: "bubble.left.and.bubble.right")
-                                    .foregroundStyle(.primary)
-                            }
-                        }
-                        .tint(OmakaseTheme.ink)
-
-                        Toggle(
-                            isOn: Binding(
-                                get: { notificationManager.dailyDigestEnabled },
-                                set: { newValue in
-                                    Task {
-                                        await notificationManager.setDailyDigestEnabled(newValue)
-                                    }
-                                }
-                            )
-                        ) {
-                            Label {
-                                Text(l10n.notificationsDigestToggle)
-                            } icon: {
-                                Image(systemName: "sparkles.rectangle.stack")
-                                    .foregroundStyle(.primary)
-                            }
-                        }
-                        .tint(OmakaseTheme.ink)
                     }
-                } header: {
-                    Text(l10n.notificationsSectionTitle)
-                } footer: {
-                    if notificationManager.authorizationStatus != .denied {
-                        Text(l10n.notificationsQuietHoursFooter)
-                    }
-                }
 
-                // MARK: - Support & Legal (Guidelines 1.2, 1.5 & 5.1.1(i))
-                Section(l10n.profileSupportAndLegal) {
-                    if let supportURL = URL(string: "mailto:destek@getomakase.app") {
-                        Link(destination: supportURL) {
-                            HStack {
-                                Label {
-                                    Text(l10n.contactSupport)
-                                        .foregroundStyle(.primary)
-                                } icon: {
-                                    Image(systemName: "envelope")
-                                        .foregroundStyle(.primary)
-                                }
-                                Spacer()
-                                Text("destek@getomakase.app")
-                                    .font(.caption)
+                    // MARK: - Shared Posts
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(userPosts.isEmpty ? l10n.profilePosts : "\(l10n.profilePosts) (\(userPosts.count))")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 2)
+
+                        if isLoadingPosts {
+                            HStack { Spacer(); ProgressView(); Spacer() }
+                                .padding(.vertical, 24)
+                        } else if userPosts.isEmpty {
+                            HStack(spacing: 10) {
+                                Image(systemName: "rectangle.stack")
                                     .foregroundStyle(.secondary)
-                                Image(systemName: "arrow.up.right")
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(.tertiary)
+                                Text(l10n.noPostsYet)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
                             }
-                        }
-                    }
-
-                    if let privacyURL = URL(string: "https://getomakase.app/privacy.html") {
-                        Link(destination: privacyURL) {
-                            HStack {
-                                Label {
-                                    Text(l10n.privacyPolicy)
-                                        .foregroundStyle(.primary)
-                                } icon: {
-                                    Image(systemName: "hand.raised")
-                                        .foregroundStyle(.primary)
-                                }
-                                Spacer()
-                                Image(systemName: "arrow.up.right")
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-
-                    if let termsURL = URL(string: "https://getomakase.app/terms.html") {
-                        Link(destination: termsURL) {
-                            HStack {
-                                Label {
-                                    Text(l10n.termsOfUse)
-                                        .foregroundStyle(.primary)
-                                } icon: {
-                                    Image(systemName: "doc.text")
-                                        .foregroundStyle(.primary)
-                                }
-                                Spacer()
-                                Image(systemName: "arrow.up.right")
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-                }
-
-                // MARK: - Account / Sign Out & Delete Account (Guideline 5.1.1(v))
-                Section(l10n.profileAccount) {
-                    Button {
-                        Task {
-                            await authService.signOutAndCleanup(l10n: l10n)
-                            if authService.isAuthenticated, let err = authService.errorMessage {
-                                accountErrorMessage = err
-                            } else {
-                                dismiss()
-                            }
-                        }
-                    } label: {
-                        Label(l10n.signOut, systemImage: "rectangle.portrait.and.arrow.right")
-                            .foregroundStyle(.primary)
-                    }
-                    .disabled(isDeletingAccount)
-
-                    Button(role: .destructive) {
-                        isShowingDeleteAccountAlert = true
-                    } label: {
-                        if isDeletingAccount {
-                            HStack(spacing: 8) {
-                                ProgressView().controlSize(.small)
-                                Text(l10n.deleteAccount)
-                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 28)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(OmakaseTheme.wash)
+                            )
                         } else {
-                            Label(l10n.deleteAccount, systemImage: "trash")
+                            LazyVStack(spacing: 12) {
+                                ForEach(userPosts) { post in
+                                    TimelinePostCard(
+                                        post: post,
+                                        authService: authService,
+                                        onAuthorTap: { },
+                                        onDelete: {
+                                            Task {
+                                                if let postId = post.id {
+                                                    try? await FirestoreService.shared.deleteSharedPost(postId: postId)
+                                                    withAnimation {
+                                                        userPosts.removeAll { $0.id == post.id }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
-                    .disabled(isDeletingAccount)
                 }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 28)
             }
-            .listStyle(.insetGrouped)
+            .background(Color(uiColor: .systemBackground).ignoresSafeArea())
             .navigationTitle(l10n.myProfile)
             .navigationBarTitleDisplayMode(.inline)
             .bookmarksNavigationDestinations(
@@ -873,8 +565,412 @@ struct MyProfileSheet: View {
                         Button(l10n.done) { dismiss() }
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        settingsDestination
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.primary)
+                    }
+                    .accessibilityLabel(l10n.settingsTitle)
+                }
             }
         }
+        .sheet(isPresented: $isShowingPaywall) {
+            OmakasePaywallView(
+                source: .profile,
+                onToast: { profileToastMessage = $0 }
+            )
+            .environment(\.appLanguage, appLanguage)
+        }
+        .toast(message: $profileToastMessage)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await notificationManager.refreshAuthorizationStatus() }
+            }
+        }
+        .task {
+            await accessManager.refreshAccessStatus()
+            await notificationManager.refreshAuthorizationStatus()
+            guard let uid = authService.uid else { return }
+            profile = try? await FirestoreService.shared.fetchUserProfile(uid: uid)
+            followerCount = (try? await FirestoreService.shared.fetchFollowerCount(uid: uid)) ?? 0
+            followingCount = (try? await FirestoreService.shared.fetchFollowingCount(uid: uid)) ?? 0
+            userPosts = (try? await FirestoreService.shared.fetchUserTimeline(uid: uid)) ?? []
+            isLoadingPosts = false
+        }
+    }
+
+    // MARK: - Dedicated Settings Screen (HIG Settings Rule 2 & 5)
+
+    private var settingsDestination: some View {
+        List {
+            // Membership
+            Section(l10n.profileMembershipSection) {
+                if accessManager.isPro {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Label(l10n.proTitle, systemImage: "checkmark.seal.fill")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(proStatusLabel)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.primary.opacity(0.08), in: Capsule())
+                                .foregroundStyle(.primary)
+                        }
+                        if let expDate = accessManager.effectiveExpirationDate {
+                            let dateText = expDate.formatted(date: .abbreviated, time: .omitted)
+                            Text(accessManager.effectiveWillRenew ? l10n.proRenewsOn(dateText) : l10n.proExpiresOn(dateText))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 2)
+
+                    Button {
+                        Task { await accessManager.openManageSubscriptions() }
+                    } label: {
+                        HStack {
+                            Label(l10n.proManageSubscription, systemImage: "creditcard")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                } else {
+                    Button {
+                        isShowingPaywall = true
+                    } label: {
+                        HStack {
+                            Label(l10n.profileUpgradeToPro, systemImage: "sparkles")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+
+                Button {
+                    Task { await handleProfileRestore() }
+                } label: {
+                    HStack {
+                        Label(l10n.proRestorePurchases, systemImage: "arrow.clockwise")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if accessManager.isRestoring {
+                            ProgressView().controlSize(.small)
+                        }
+                    }
+                }
+                .disabled(accessManager.isRestoring)
+            }
+            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+
+            // Preferences
+            Section(l10n.profilePreferences) {
+                Picker(selection: $languageCode) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        Text(lang.pickerLabel).tag(lang.rawValue)
+                    }
+                } label: {
+                    Label {
+                        Text(l10n.languageMenuAccessibility)
+                    } icon: {
+                        Image(systemName: "globe")
+                            .foregroundStyle(.primary)
+                    }
+                }
+
+                Picker(selection: $appearanceCode) {
+                    ForEach(AppAppearance.allCases) { mode in
+                        Text(l10n.appearanceName(mode)).tag(mode.rawValue)
+                    }
+                } label: {
+                    let current = AppAppearance(rawValue: appearanceCode) ?? .system
+                    Label {
+                        Text(l10n.appearanceLabel)
+                    } icon: {
+                        Image(systemName: current.iconName)
+                            .foregroundStyle(.primary)
+                    }
+                }
+
+                Button {
+                    tempLetterboxdUsername = storedLetterboxdUsername
+                    isShowingLetterboxdPrompt = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Label {
+                            Text("Letterboxd")
+                                .foregroundStyle(.primary)
+                        } icon: {
+                            Image(systemName: "film")
+                                .foregroundStyle(.primary)
+                        }
+                        Spacer()
+                        Text(storedLetterboxdUsername.isEmpty ? l10n.letterboxdConnectDiary : "@\(storedLetterboxdUsername)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+
+            // Notifications
+            Section {
+                if notificationManager.authorizationStatus == .denied {
+                    Button {
+                        notificationManager.openSystemNotificationSettings()
+                    } label: {
+                        HStack(spacing: 10) {
+                            Label {
+                                Text(l10n.notificationsDeniedBanner)
+                                    .foregroundStyle(.primary)
+                            } icon: {
+                                Image(systemName: "bell.slash")
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                } else {
+                    if notificationManager.authorizationStatus == .provisional {
+                        Button {
+                            notificationManager.openSystemNotificationSettings()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text(l10n.notificationsProvisionalHint)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 4)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+
+                    Toggle(
+                        isOn: Binding(
+                            get: { notificationManager.dailyReminderEnabled },
+                            set: { newValue in
+                                Task {
+                                    await notificationManager.setDailyReminderEnabled(
+                                        newValue,
+                                        interests: parsedStoredInterests,
+                                        language: appLanguage,
+                                        menuCompletedToday: !accessManager.isPro && accessManager.snapshot.platesRemaining == 0
+                                    )
+                                }
+                            }
+                        )
+                    ) {
+                        Label {
+                            Text(l10n.notificationsDailyMenuToggle)
+                        } icon: {
+                            Image(systemName: "bell.badge")
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                    .tint(OmakaseTheme.ink)
+
+                    if notificationManager.dailyReminderEnabled {
+                        DatePicker(
+                            selection: Binding(
+                                get: { notificationManager.reminderDateBinding },
+                                set: { newDate in
+                                    Task {
+                                        await notificationManager.updateReminderTime(
+                                            newDate,
+                                            interests: parsedStoredInterests,
+                                            language: appLanguage,
+                                            menuCompletedToday: !accessManager.isPro && accessManager.snapshot.platesRemaining == 0
+                                        )
+                                    }
+                                }
+                            ),
+                            displayedComponents: .hourAndMinute
+                        ) {
+                            Label {
+                                Text(l10n.notificationsReminderTime)
+                            } icon: {
+                                Image(systemName: "clock")
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                    }
+
+                    Toggle(
+                        isOn: Binding(
+                            get: { notificationManager.commentPushEnabled },
+                            set: { newValue in
+                                Task {
+                                    await notificationManager.setCommentPushEnabled(newValue)
+                                }
+                            }
+                        )
+                    ) {
+                        Label {
+                            Text(l10n.notificationsCommentsToggle)
+                        } icon: {
+                            Image(systemName: "bubble.left.and.bubble.right")
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                    .tint(OmakaseTheme.ink)
+
+                    Toggle(
+                        isOn: Binding(
+                            get: { notificationManager.dailyDigestEnabled },
+                            set: { newValue in
+                                Task {
+                                    await notificationManager.setDailyDigestEnabled(newValue)
+                                }
+                            }
+                        )
+                    ) {
+                        Label {
+                            Text(l10n.notificationsDigestToggle)
+                        } icon: {
+                            Image(systemName: "sparkles.rectangle.stack")
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                    .tint(OmakaseTheme.ink)
+                }
+            } header: {
+                Text(l10n.notificationsSectionTitle)
+            } footer: {
+                if notificationManager.authorizationStatus != .denied {
+                    Text(l10n.notificationsQuietHoursFooter)
+                }
+            }
+            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+
+            // Support & Legal
+            Section(l10n.profileSupportAndLegal) {
+                if let supportURL = URL(string: "mailto:destek@getomakase.app") {
+                    Link(destination: supportURL) {
+                        HStack {
+                            Label {
+                                Text(l10n.contactSupport)
+                                    .foregroundStyle(.primary)
+                            } icon: {
+                                Image(systemName: "envelope")
+                                    .foregroundStyle(.primary)
+                            }
+                            Spacer()
+                            Text("destek@getomakase.app")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+
+                if let privacyURL = URL(string: "https://getomakase.app/privacy.html") {
+                    Link(destination: privacyURL) {
+                        HStack {
+                            Label {
+                                Text(l10n.privacyPolicy)
+                                    .foregroundStyle(.primary)
+                            } icon: {
+                                Image(systemName: "hand.raised")
+                                    .foregroundStyle(.primary)
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+
+                if let termsURL = URL(string: "https://getomakase.app/terms.html") {
+                    Link(destination: termsURL) {
+                        HStack {
+                            Label {
+                                Text(l10n.termsOfUse)
+                                    .foregroundStyle(.primary)
+                            } icon: {
+                                Image(systemName: "doc.text")
+                                    .foregroundStyle(.primary)
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+            }
+            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+
+            // Account
+            Section(l10n.profileAccount) {
+                if let email = authService.email, !email.isEmpty {
+                    HStack {
+                        Label(email, systemImage: "person.circle")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Button {
+                    Task {
+                        await authService.signOutAndCleanup(l10n: l10n)
+                        if authService.isAuthenticated, let err = authService.errorMessage {
+                            accountErrorMessage = err
+                        } else {
+                            dismiss()
+                        }
+                    }
+                } label: {
+                    Label(l10n.signOut, systemImage: "rectangle.portrait.and.arrow.right")
+                        .foregroundStyle(.primary)
+                }
+                .disabled(isDeletingAccount)
+
+                Button(role: .destructive) {
+                    isShowingDeleteAccountAlert = true
+                } label: {
+                    if isDeletingAccount {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text(l10n.deleteAccount)
+                        }
+                    } else {
+                        Label(l10n.deleteAccount, systemImage: "trash")
+                    }
+                }
+                .disabled(isDeletingAccount)
+            }
+            .listRowBackground(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+        .navigationTitle(l10n.settingsTitle)
+        .navigationBarTitleDisplayMode(.inline)
         .alert(l10n.letterboxdUsernamePromptTitle, isPresented: $isShowingLetterboxdPrompt) {
             TextField(l10n.letterboxdUsernamePlaceholder, text: $tempLetterboxdUsername)
                 .autocorrectionDisabled()
@@ -915,52 +1011,15 @@ struct MyProfileSheet: View {
         } message: {
             Text(accountErrorMessage ?? "")
         }
-        .sheet(isPresented: $isShowingPaywall) {
-            OmakasePaywallView(
-                source: .profile,
-                onToast: { profileToastMessage = $0 }
-            )
-            .environment(\.appLanguage, appLanguage)
-        }
-        .toast(message: $profileToastMessage)
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                Task { await notificationManager.refreshAuthorizationStatus() }
-            }
-        }
-        .task {
-            await accessManager.refreshAccessStatus()
-            await notificationManager.refreshAuthorizationStatus()
-            guard let uid = authService.uid else { return }
-            profile = try? await FirestoreService.shared.fetchUserProfile(uid: uid)
-            followerCount = (try? await FirestoreService.shared.fetchFollowerCount(uid: uid)) ?? 0
-            followingCount = (try? await FirestoreService.shared.fetchFollowingCount(uid: uid)) ?? 0
-            userPosts = (try? await FirestoreService.shared.fetchUserTimeline(uid: uid)) ?? []
-            isLoadingPosts = false
-        }
     }
 
     // MARK: - Helpers
 
-    @ViewBuilder
     private var avatarView: some View {
-        if let urlStr = profile?.photoURL, let url = URL(string: urlStr) {
-            AsyncImage(url: url) { phase in
-                if let img = phase.image {
-                    img.resizable().scaledToFill()
-                        .frame(width: 80, height: 80)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-                } else { defaultAvatar }
-            }
-        } else { defaultAvatar }
-    }
-
-    private var defaultAvatar: some View {
-        Image(systemName: "person.circle.fill")
-            .font(.system(size: 80))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(.secondary)
+        MonogramAvatarView(
+            name: profile?.displayName ?? authService.displayName ?? "Omakase",
+            size: 80
+        )
     }
 
     private var proStatusLabel: String {
@@ -1000,6 +1059,44 @@ struct MyProfileSheet: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+    }
+}
+
+// MARK: - Editorial Monogram Avatar
+
+struct MonogramAvatarView: View {
+    let name: String
+    var size: CGFloat
+
+    private var initials: String {
+        let parts = name
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(whereSeparator: \.isWhitespace)
+        if parts.count >= 2,
+           let first = parts.first?.first,
+           let last = parts.last?.first {
+            return "\(first)\(last)".uppercased()
+        }
+        if let only = parts.first {
+            return String(only.prefix(1)).uppercased()
+        }
+        return "O"
+    }
+
+    var body: some View {
+        Circle()
+            .fill(Color.primary.opacity(0.08))
+            .frame(width: size, height: size)
+            .overlay(
+                Circle()
+                    .strokeBorder(Color.primary.opacity(0.14), lineWidth: 1)
+            )
+            .overlay(
+                Text(initials)
+                    .font(.system(size: size * 0.38, weight: .semibold, design: .serif))
+                    .foregroundStyle(.primary)
+            )
+            .accessibilityHidden(true)
     }
 }
 

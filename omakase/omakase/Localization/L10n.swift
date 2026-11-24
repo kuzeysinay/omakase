@@ -659,6 +659,7 @@ struct L10n {
     var introSlide3Pill1: String { tr("introSlide3Pill1", fallback: "Community Feed") }
     var introSlide3Pill2: String { tr("introSlide3Pill2", fallback: "Offline Bookmarks") }
     var introSlide3Pill3: String { tr("introSlide3Pill3", fallback: "Letterboxd") }
+    var settingsTitle: String { tr("settingsTitle", fallback: "Settings") }
     var proFeatureUnlimitedDeepDive: String {
         tr("proFeatureUnlimitedDeepDive", fallback: "Unlimited Deep Dives with verified primary sources")
     }

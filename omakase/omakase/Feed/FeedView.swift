@@ -1320,40 +1320,117 @@ private struct FlowLayout: Layout {
     FeedView(authService: AuthService())
 }
 
-// MARK: - Toast Modifier
+// MARK: - Toast Modifier (HIG Feedback: multi-channel icon + text + tap-to-dismiss)
 
 struct ToastModifier: ViewModifier {
     @Binding var message: String?
+    @Environment(\.colorScheme) private var colorScheme
+
+    private enum ToastKind {
+        case error
+        case success
+        case info
+
+        var iconName: String {
+            switch self {
+            case .error: return "exclamationmark.triangle.fill"
+            case .success: return "checkmark.circle.fill"
+            case .info: return "info.circle.fill"
+            }
+        }
+    }
+
+    private func classify(_ text: String) -> ToastKind {
+        let lower = text.lowercased()
+        let errorKeywords = [
+            "hata", "başarısız", "olmadı", "bulunamadı", "kapalı", "beklenmeyen",
+            "bağlan", "çevrimdışı", "silinemedi", "yüklenemedi", "gönderilemedi",
+            "tekrar dene", "sorun", "error", "failed", "couldn't", "could not",
+            "offline", "try again", "unavailable", "no active", "not found", "expired"
+        ]
+        if errorKeywords.contains(where: { lower.contains($0) }) {
+            return .error
+        }
+        let successKeywords = [
+            "kaydedildi", "paylaşıldı", "hoş geldin", "geri yüklendi", "açıldı",
+            "ayarlandı", "alındı", "bookmarked", "shared", "welcome", "restored",
+            "unlocked", "scheduled", "submitted"
+        ]
+        if successKeywords.contains(where: { lower.contains($0) }) {
+            return .success
+        }
+        return .info
+    }
 
     func body(content: Content) -> some View {
         content
             .overlay(alignment: .bottom) {
                 if let message {
-                    Text(message)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(
-                            Color.black.opacity(0.86),
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        )
-                        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .zIndex(1)
-                        .task(id: message) {
-                            try? await Task.sleep(for: .seconds(2.5))
-                            guard !Task.isCancelled else { return }
-                            withAnimation(.easeInOut) {
+                    let kind = classify(message)
+                    HStack(spacing: 10) {
+                        Image(systemName: kind.iconName)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(kind == .error ? Color.red : OmakaseTheme.ink)
+                            .frame(width: 28, height: 28)
+                            .background(
+                                (kind == .error ? Color.red.opacity(0.12) : OmakaseTheme.wash),
+                                in: Circle()
+                            )
+
+                        Text(message)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Spacer(minLength: 4)
+
+                        Button {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
                                 self.message = nil
                             }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 24, height: 24)
+                                .background(Color.primary.opacity(0.06), in: Circle())
                         }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(.regularMaterial)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(
+                                kind == .error
+                                    ? Color.red.opacity(colorScheme == .dark ? 0.45 : 0.3)
+                                    : OmakaseTheme.stroke,
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.35 : 0.10), radius: 14, y: 6)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 18)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(10)
+                    .task(id: message) {
+                        if kind == .error {
+                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                        }
+                        try? await Task.sleep(for: .seconds(3.2))
+                        guard !Task.isCancelled else { return }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            self.message = nil
+                        }
+                    }
                 }
             }
-            .animation(.spring(), value: message)
+            .animation(.spring(response: 0.34, dampingFraction: 0.84), value: message)
     }
 }
 

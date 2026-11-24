@@ -854,35 +854,57 @@ struct AuthView: View {
     @ViewBuilder
     private var messageBanner: some View {
         if let error = authService.errorMessage {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.red)
+                    .frame(width: 28, height: 28)
+                    .background(Color.red.opacity(0.12), in: Circle())
                 Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 4)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.red.opacity(0.08))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.ultraThinMaterial)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.red.opacity(0.32), lineWidth: 1)
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         } else if let info = authService.infoMessage {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(OmakaseTheme.ink)
+                    .frame(width: 28, height: 28)
+                    .background(OmakaseTheme.wash, in: Circle())
                 Text(info)
-                    .font(.footnote)
-                    .foregroundStyle(.green)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 4)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.green.opacity(0.08))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.ultraThinMaterial)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
     }
 
