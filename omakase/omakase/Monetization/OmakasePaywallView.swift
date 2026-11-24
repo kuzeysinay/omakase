@@ -150,19 +150,19 @@ struct OmakasePaywallView: View {
             VStack(spacing: 0) {
                 topBar
                     .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.top, 14)
 
-                Spacer(minLength: 8)
+                Spacer(minLength: 6)
 
                 heroSection
                     .padding(.horizontal, 22)
 
-                Spacer(minLength: 10)
+                Spacer(minLength: 8)
 
                 comparisonCard
                     .padding(.horizontal, 20)
 
-                Spacer(minLength: 12)
+                Spacer(minLength: 10)
 
                 bottomDock
             }
@@ -180,22 +180,25 @@ struct OmakasePaywallView: View {
 
     private var topBar: some View {
         HStack(alignment: .center) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(OmakaseTheme.ink)
-                    .frame(width: 6, height: 6)
-                Text(eyebrowText)
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .tracking(1.2)
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 9) {
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
+
+                Text(l10n.appTitle)
+                    .font(.system(size: 20, weight: .bold))
+                    .tracking(-0.3)
+                    .foregroundStyle(.primary)
+
+                Text("PRO")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .tracking(0.8)
+                    .foregroundStyle(OmakaseTheme.chipActiveText)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(OmakaseTheme.chipActiveFill, in: Capsule())
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(
-                Capsule()
-                    .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
-            )
 
             Spacer()
 
@@ -221,9 +224,28 @@ struct OmakasePaywallView: View {
     // MARK: - Hero
 
     private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 7) {
+            if source == .plateLimit || source == .deepDiveLimit {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(OmakaseTheme.ink)
+                        .frame(width: 5, height: 5)
+                    Text(eyebrowText)
+                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                        .tracking(1.0)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(
+                    Capsule()
+                        .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+                )
+            }
+
             Text(headlineText)
-                .font(.system(size: 27, weight: .heavy, design: .default))
+                .font(.system(size: 28, weight: .heavy, design: .default))
                 .tracking(-0.5)
                 .foregroundStyle(.primary)
                 .lineLimit(2)
@@ -244,7 +266,7 @@ struct OmakasePaywallView: View {
     private var comparisonCard: some View {
         VStack(spacing: 0) {
             // Column headers
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Text("OMAKASE")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .tracking(1.1)
@@ -255,17 +277,17 @@ struct OmakasePaywallView: View {
                 Text(l10n.proCompareFreeHeader)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 60, alignment: .center)
+                    .frame(width: 52, alignment: .center)
 
                 Text(l10n.proCompareProHeader)
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(OmakaseTheme.chipActiveText)
-                    .frame(width: 70, height: 20)
+                    .frame(width: 62, height: 20)
                     .background(OmakaseTheme.chipActiveFill, in: Capsule())
             }
             .padding(.horizontal, 14)
-            .padding(.top, 10)
-            .padding(.bottom, 8)
+            .padding(.top, 11)
+            .padding(.bottom, 9)
 
             Divider()
                 .overlay(OmakaseTheme.stroke)
@@ -278,7 +300,7 @@ struct OmakasePaywallView: View {
             )
             Divider()
                 .overlay(OmakaseTheme.stroke.opacity(0.6))
-                .padding(.leading, 42)
+                .padding(.leading, 40)
 
             comparisonRow(
                 icon: "fish",
@@ -288,7 +310,7 @@ struct OmakasePaywallView: View {
             )
             Divider()
                 .overlay(OmakaseTheme.stroke.opacity(0.6))
-                .padding(.leading, 42)
+                .padding(.leading, 40)
 
             comparisonRow(
                 icon: "sparkles",
@@ -298,7 +320,7 @@ struct OmakasePaywallView: View {
             )
             Divider()
                 .overlay(OmakaseTheme.stroke.opacity(0.6))
-                .padding(.leading, 42)
+                .padding(.leading, 40)
 
             comparisonRow(
                 icon: "checkmark.seal",
@@ -323,52 +345,52 @@ struct OmakasePaywallView: View {
         freeValue: String,
         proValue: String
     ) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(OmakaseTheme.ink)
-                .frame(width: 20, alignment: .center)
+                .frame(width: 18, alignment: .center)
 
             Text(title)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.88)
+                .minimumScaleFactor(0.78)
 
             Spacer(minLength: 4)
 
             Text(freeValue)
                 .font(.system(size: 11.5, weight: .medium))
                 .foregroundStyle(.secondary)
-                .frame(width: 60, alignment: .center)
+                .frame(width: 52, alignment: .center)
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .minimumScaleFactor(0.8)
 
             Text(proValue)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(.primary)
-                .frame(width: 70, alignment: .center)
+                .frame(width: 62, alignment: .center)
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .minimumScaleFactor(0.8)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8.5)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Bottom Pricing & CTA Dock
 
     private var bottomDock: some View {
-        VStack(spacing: 9) {
-            VStack(spacing: 8) {
+        VStack(spacing: 11) {
+            VStack(spacing: 12) {
                 yearlyPlanCard
                 monthlyPlanCard
             }
 
             HStack(spacing: 5) {
                 Image(systemName: "shield.checkered")
-                    .font(.system(size: 10.5, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                 Text(reassuranceText)
-                    .font(.system(size: 11.5, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
             }
             .foregroundStyle(.secondary)
 
@@ -382,16 +404,16 @@ struct OmakasePaywallView: View {
                     } else {
                         HStack(spacing: 8) {
                             Text(ctaTitle)
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 17, weight: .bold))
                             Image(systemName: "arrow.right")
-                                .font(.system(size: 13.5, weight: .bold))
+                                .font(.system(size: 14, weight: .bold))
                         }
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(height: 56)
                 .background(
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(OmakaseTheme.chipActiveFill)
                 )
                 .foregroundStyle(OmakaseTheme.chipActiveText)
@@ -439,46 +461,46 @@ struct OmakasePaywallView: View {
             }
         } label: {
             ZStack(alignment: .topTrailing) {
-                HStack(spacing: 12) {
+                HStack(spacing: 14) {
                     selectionIndicator(isSelected: isSelected)
 
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(l10n.proPlanYearly)
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 18.5, weight: .bold))
                             .foregroundStyle(.primary)
 
                         if !subtitleParts.isEmpty {
                             Text(subtitleParts.joined(separator: " · "))
-                                .font(.system(size: 12.5, weight: .medium))
+                                .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.85)
+                                .minimumScaleFactor(0.82)
                         }
                     }
 
                     Spacer(minLength: 8)
 
-                    VStack(alignment: .trailing, spacing: 1) {
+                    VStack(alignment: .trailing, spacing: 2) {
                         Text(annualPriceString)
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.system(size: 20, weight: .heavy))
                             .foregroundStyle(.primary)
                         Text(l10n.proPerYearSuffix)
-                            .font(.system(size: 11.5, weight: .medium))
+                            .font(.system(size: 12.5, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 18)
                 .background(
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(.ultraThinMaterial)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .fill(isSelected ? OmakaseTheme.wash : Color.clear)
                         )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .strokeBorder(
                             isSelected ? OmakaseTheme.ink : OmakaseTheme.stroke,
                             lineWidth: isSelected ? 2 : 1
@@ -486,17 +508,17 @@ struct OmakasePaywallView: View {
                 )
 
                 Text(badgeLabel)
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .tracking(0.5)
                     .foregroundStyle(OmakaseTheme.chipActiveText)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4.5)
                     .background(OmakaseTheme.chipActiveFill, in: Capsule())
-                    .offset(x: -12, y: -10)
+                    .offset(x: -14, y: -11)
             }
         }
         .buttonStyle(.plain)
-        .padding(.top, 6)
+        .padding(.top, 8)
     }
 
     private var monthlyPlanCard: some View {
@@ -508,44 +530,44 @@ struct OmakasePaywallView: View {
                 selectedPlan = .monthly
             }
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 selectionIndicator(isSelected: isSelected)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(l10n.proPlanMonthly)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 18.5, weight: .bold))
                         .foregroundStyle(.primary)
 
                     Text(l10n.proBilledMonthly)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 12.5, weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                        .minimumScaleFactor(0.75)
                 }
 
                 Spacer(minLength: 8)
 
-                VStack(alignment: .trailing, spacing: 1) {
+                VStack(alignment: .trailing, spacing: 2) {
                     Text(monthlyPriceString)
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.system(size: 20, weight: .heavy))
                         .foregroundStyle(.primary)
                     Text(l10n.proPerMonthSuffix)
-                        .font(.system(size: 11.5, weight: .medium))
+                        .font(.system(size: 12.5, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 18)
             .background(
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(.ultraThinMaterial)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
                             .fill(isSelected ? OmakaseTheme.wash : Color.clear)
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .strokeBorder(
                         isSelected ? OmakaseTheme.ink : OmakaseTheme.stroke,
                         lineWidth: isSelected ? 2 : 1
@@ -558,19 +580,19 @@ struct OmakasePaywallView: View {
     private func selectionIndicator(isSelected: Bool) -> some View {
         ZStack {
             Circle()
-                .strokeBorder(isSelected ? OmakaseTheme.ink : Color.primary.opacity(0.28), lineWidth: 1.8)
-                .frame(width: 22, height: 22)
+                .strokeBorder(isSelected ? OmakaseTheme.ink : Color.primary.opacity(0.28), lineWidth: 2)
+                .frame(width: 24, height: 24)
 
             if isSelected {
                 Circle()
                     .fill(OmakaseTheme.ink)
-                    .frame(width: 12, height: 12)
+                    .frame(width: 13, height: 13)
             }
         }
     }
 
     private var footerLinks: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 6) {
             Button {
                 Task { await handleRestoreTap() }
             } label: {
@@ -597,10 +619,10 @@ struct OmakasePaywallView: View {
                 Link(l10n.privacyPolicy, destination: privacyURL)
             }
         }
-        .font(.system(size: 11, weight: .medium))
+        .font(.system(size: 10.5, weight: .medium))
         .foregroundStyle(.secondary)
         .lineLimit(1)
-        .minimumScaleFactor(0.8)
+        .minimumScaleFactor(0.72)
     }
 
     // MARK: - Actions
