@@ -184,7 +184,14 @@ final class FirestoreService {
                     "createdAt": FieldValue.serverTimestamp()
                 ])
             } catch {
-                throw ProfileUpdateError.usernameTaken
+                // Only map to `.usernameTaken` if the handle is actually owned by another user;
+                // otherwise propagate the real Firestore/network error.
+                if let existingDoc = try? await newHandleRef.getDocument(),
+                   existingDoc.exists,
+                   (existingDoc.data()?["uid"] as? String) != uid {
+                    throw ProfileUpdateError.usernameTaken
+                }
+                throw error
             }
         } else if let existingHandle = oldUsername, !existingHandle.isEmpty {
             // Backfill `usernames/{handle}` reservation for legacy users keeping their handle.
