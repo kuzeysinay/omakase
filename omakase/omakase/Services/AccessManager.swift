@@ -208,7 +208,7 @@ final class AccessManager {
         }
 
         #if DEBUG
-        Purchases.logLevel = .warn
+        Purchases.logLevel = .debug
         #else
         Purchases.logLevel = .error
         #endif
@@ -322,6 +322,20 @@ final class AccessManager {
             ErrorReporter.record(error, mapped: mapped, area: "revenuecat_restore")
             return .failed(mapped)
         }
+    }
+
+    @discardableResult
+    func handlePaywallPurchaseCompleted(_ info: CustomerInfo) async -> Bool {
+        _ = applyCustomerInfo(info)
+        _ = await syncWithBackend(retryOnFailure: true)
+        return isPro
+    }
+
+    @discardableResult
+    func handlePaywallRestoreCompleted(_ info: CustomerInfo) async -> Bool {
+        _ = applyCustomerInfo(info)
+        _ = await syncWithBackend(retryOnFailure: true)
+        return isPro
     }
 
     func openManageSubscriptions() async {
@@ -451,14 +465,14 @@ final class AccessManager {
         snapshot = normalizeSnapshot(decoded)
     }
 
-    /// Ensures free-tier daily cap aligns with the current 3-plate limit even while older
-    /// server instances or cached responses report 5.
+    /// Preserves the server-authoritative daily plate limit (default 3 for free users,
+    /// with per-user overrides applied on the backend when configured).
     private func normalizeSnapshot(_ raw: AccessSnapshot) -> AccessSnapshot {
         guard !raw.isPro && !rcEntitlementActive else { return raw }
         var normalized = raw
-        let cappedLimit = min(max(1, raw.platesLimit), 3)
-        normalized.platesLimit = cappedLimit
-        normalized.platesRemaining = max(0, cappedLimit - raw.platesUsed)
+        let effectiveLimit = max(1, raw.platesLimit)
+        normalized.platesLimit = effectiveLimit
+        normalized.platesRemaining = max(0, effectiveLimit - raw.platesUsed)
         return normalized
     }
 
@@ -481,6 +495,11 @@ final class AccessManager {
             next.resetsAt = fmt.string(from: resetsAt)
         }
         snapshot = next
+        if kind == .plate {
+            Task { @MainActor in
+                await NotificationManager.shared.refreshScheduledRemindersForQuotaChange()
+            }
+        }
     }
 
     // MARK: - Private Helpers

@@ -475,6 +475,9 @@ struct FeedView: View {
                                     .clipped()
                                     .id("category-page")
                                     .transition(.opacity)
+                                    .onAppear {
+                                        TelemetryService.shared.track("daily_limit_reached")
+                                    }
                                 } else {
                                     BentoTasteBox(
                                         allInterests: allInterests,
@@ -671,7 +674,7 @@ struct FeedView: View {
 
 // MARK: - Reels-style Post Card (full-screen, one post per page)
 
-private struct ReelsPostCard: View {
+struct ReelsPostCard: View {
     let post: Post
     let isLastPost: Bool
     @Bindable var bookmarkStore: BookmarkStore
@@ -1006,6 +1009,7 @@ private struct ReelsPostCard: View {
             // iOS Share Sheet button
             Button {
                 ShareService.presentShareSheet(post: post, language: appLanguage) {
+                    TelemetryService.shared.track("share_card_shared")
                     guard AccessManager.shared.canClaimShareBonus else { return }
                     Task {
                         if await AccessManager.shared.claimShareBonus() {
@@ -1034,6 +1038,7 @@ private struct ReelsPostCard: View {
             Button {
                 bookmarkStore.toggle(post)
                 if bookmarkStore.contains(postId: post.id) {
+                    TelemetryService.shared.track("post_bookmarked")
                     toastMessage.wrappedValue = l10n.toastBookmarked
                 } else {
                     toastMessage.wrappedValue = l10n.toastBookmarkRemoved

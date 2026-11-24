@@ -9,6 +9,8 @@ class ErrorCode:
     """Canonical error codes shared between the backend and iOS client."""
 
     UNAUTHORIZED = "unauthorized"
+    FORBIDDEN = "forbidden"
+    NOT_FOUND = "not_found"
     RATE_LIMITED = "rate_limited"
     QUOTA_EXCEEDED = "quota_exceeded"
     CONTENT_BLOCKED = "content_blocked"

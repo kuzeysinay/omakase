@@ -206,7 +206,7 @@ struct CommentsView: View {
 
     private func commentRow(_ comment: Comment) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            commentAvatar(photoURL: comment.authorPhotoURL)
+            MonogramAvatarView(name: comment.authorName, size: 28)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -283,33 +283,6 @@ struct CommentsView: View {
                 }
             }
         }
-    }
-
-    @ViewBuilder
-    private func commentAvatar(photoURL: String?) -> some View {
-        if let urlStr = photoURL, let url = URL(string: urlStr) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 28, height: 28)
-                        .clipShape(Circle())
-                default:
-                    commentAvatarPlaceholder
-                }
-            }
-        } else {
-            commentAvatarPlaceholder
-        }
-    }
-
-    private var commentAvatarPlaceholder: some View {
-        Image(systemName: "person.circle.fill")
-            .font(.system(size: 24))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(.secondary)
     }
 
     private var composerBar: some View {
@@ -393,7 +366,7 @@ struct CommentsView: View {
                 text: text,
                 authorId: uid,
                 authorName: name,
-                authorPhotoURL: authService.photoURL?.absoluteString
+                authorPhotoURL: nil
             )
             hasSentCommentInSession = true
             NotificationManager.shared.notifySocialEvent(

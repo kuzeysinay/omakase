@@ -1,0 +1,890 @@
+{
+  "schemaVersion": 3,
+  "appName": "Omakase",
+  "themeId": "bento-keynote-grid",
+  "fontId": "system-sans",
+  "connectedCanvas": true,
+  "locales": [
+    "en",
+    "tr",
+    "ja",
+    "de",
+    "fr",
+    "es",
+    "ko"
+  ],
+  "locale": "tr",
+  "device": "iphone",
+  "orientation": "portrait",
+  "appIcon": "/app-icon.png",
+  "slidesByDevice": {
+    "iphone": [
+      {
+        "id": "omakase_slide_01",
+        "layout": "hero",
+        "label": {
+          "en": "OMAKASE",
+          "ja": "おまかせ",
+          "de": "OMAKASE",
+          "fr": "OMAKASE",
+          "es": "OMAKASE",
+          "ko": "오마카세",
+          "tr": "-"
+        },
+        "headline": {
+          "en": "Feed your mind,\nnot the algorithm.",
+          "tr": "Algoritmayı değil,\nzihnini besle.",
+          "ja": "アルゴリズムではなく、\n知性を満たす。",
+          "de": "Nähre deinen Geist,\nnicht den Algorithmus.",
+          "fr": "Nourris ton esprit,\npas l'algorithme.",
+          "es": "Alimenta tu mente,\nno el algoritmo.",
+          "ko": "알고리즘이 아닌,\n지성을 채우세요."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/01.png",
+        "transforms": {
+          "caption": {
+            "x": 13.599990971010982,
+            "y": 667.1200064402863,
+            "width": 1293,
+            "height": 534,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 154.08480000000003,
+            "y": 1112.7839999999999,
+            "width": 1011.8303999999999,
+            "height": 2064.96,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        },
+        "screenshotSecondary": "/screenshots/apple/iphone/{locale}/01.png",
+        "inverted": false,
+        "hideLabel": true,
+        "textElements": [
+          {
+            "id": "s_mwv68493_1i",
+            "text": {
+              "en": "omakase",
+              "tr": "omakase",
+              "ja": "omakase",
+              "de": "omakase",
+              "fr": "omakase",
+              "es": "omakase",
+              "ko": "omakase"
+            },
+            "transform": {
+              "x": 337.8797213620461,
+              "y": 157.65090135510738,
+              "width": 845,
+              "height": 348,
+              "rotation": 0,
+              "zIndex": 7
+            },
+            "fontSize": 158,
+            "fontWeight": 800,
+            "align": "center"
+          }
+        ],
+        "imageElements": [
+          {
+            "id": "s_mwv67e9h_1h",
+            "src": "/screenshots/uploaded/f22007b24404af1e.svg",
+            "transform": {
+              "x": 161.53006805191654,
+              "y": 230.2422362406152,
+              "width": 239,
+              "height": 239,
+              "rotation": 0,
+              "zIndex": 6
+            },
+            "fit": "cover"
+          }
+        ]
+      },
+      {
+        "id": "omakase_slide_02",
+        "layout": "device-bottom",
+        "label": {
+          "en": "12 DISCIPLINES",
+          "ja": "十二の教養",
+          "de": "12 DISZIPLINEN",
+          "fr": "12 DISCIPLINES",
+          "es": "12 DISCIPLINAS",
+          "ko": "12가지 교양"
+        },
+        "headline": {
+          "tr": "\n\nTek dokunuşta kültür.\n\nPostu AI anlık üretir.\n\nKaynağını da verir.",
+          "en": "\n\nCulture in one tap.\n\nAI crafts each post live.\n\nAlways with its source.",
+          "ja": "\n\nひと触れで教養を。\n\nAIがその場で紡ぎ、\n\n一次出典まで添える。",
+          "de": "\n\nKultur mit einem Tipp.\n\nKI erstellt ihn sofort.\n\nImmer mit Quelle.",
+          "fr": "\n\nLa culture en un geste.\n\nL'IA rédige à l'instant.\n\nToujours avec sa source.",
+          "es": "\n\nCultura en un toque.\n\nLa IA lo crea al instante.\n\nSiempre con su fuente.",
+          "ko": "\n\n한 번의 터치로 교양을.\n\nAI가 즉시 글을 짓고,\n\n출처까지 함께 전해요."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/02.png",
+        "transforms": {
+          "caption": {
+            "x": 9.599922740218517,
+            "y": 157.42881077266034,
+            "width": 1297,
+            "height": 851,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 146.0624223776224,
+            "y": 1174.8772027972009,
+            "width": 1011.8303999999999,
+            "height": 2064.96,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        },
+        "hideLabel": true,
+        "typography": {
+          "headlineScale": 0.9
+        }
+      },
+      {
+        "id": "omakase_slide_03",
+        "layout": "device-bottom",
+        "label": {
+          "en": "DEEP DIVE",
+          "tr": "DERİN İNCELEME",
+          "ja": "深掘り",
+          "de": "TIEFENBLICK",
+          "fr": "APPROFONDIR",
+          "es": "A FONDO",
+          "ko": "심층 탐구"
+        },
+        "headline": {
+          "en": "Caught your interest?\n\nDive deeper.",
+          "ja": "気になる話に出会った？\n\nもっと深く潜れる。",
+          "de": "Neugierig geworden?\n\nTauche tiefer ein.",
+          "fr": "Ça t'intrigue ?\n\nCreuse le sujet.",
+          "es": "¿Te despertó curiosidad?\n\nProfundiza al instante.",
+          "ko": "흥미가 생겼나요?\n\n더 깊이 파고들어 보세요.",
+          "tr": "Post ilgini mi çekti?\n\nDerine inebilirsin."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/03.png",
+        "transforms": {
+          "device": {
+            "x": 154.0848000000001,
+            "y": 745.68,
+            "width": 1011.8303999999999,
+            "height": 2064.96,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 105.5999573864533,
+            "y": 205.43999838625183,
+            "width": 1109,
+            "height": 827,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        },
+        "hideLabel": true
+      },
+      {
+        "id": "omakase_slide_04",
+        "layout": "device-bottom",
+        "label": {
+          "en": "READING RITUAL",
+          "tr": "OKUMA RİTÜELİ",
+          "ja": "静かな余韻",
+          "de": "LESERITUAL",
+          "fr": "RITUEL DE LECTURE",
+          "es": "RITUAL DE LECTURA",
+          "ko": "독서 의식"
+        },
+        "headline": {
+          "en": "\nA brief pause to read.\n\nSo every bite sinks in.\n",
+          "tr": "\nOkuma süresi kadar beklenir.\n\nOkuyup sindirmen için.\n",
+          "ja": "\n読む時間だけ、少し待つ。\n\nしっかり味わうために。\n",
+          "de": "\nEine kurze Lesepause.\n\nDamit es wirklich wirkt.\n",
+          "fr": "\nUne pause le temps de lire.\n\nPour vraiment savourer.\n",
+          "es": "\nUna pausa para leer.\n\nPara absorberlo de verdad.\n",
+          "ko": "\n읽는 시간만큼 잠시 멈춤.\n\n온전히 음미할 수 있게.\n"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/04.png",
+        "hideLabel": true,
+        "transforms": {
+          "device": {
+            "x": 154.08479999999963,
+            "y": 741.6688111888111,
+            "width": 1011.8303999999999,
+            "height": 2064.96,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "callout": {
+            "x": 818.7692307692269,
+            "y": 1669.7295440559449,
+            "width": 580.8,
+            "height": 580.8,
+            "rotation": 0,
+            "zIndex": 5
+          },
+          "caption": {
+            "x": 13.599889914218693,
+            "y": 97.44001032254832,
+            "width": 1305,
+            "height": 935,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        },
+        "callout": {
+          "focusX": 0.579,
+          "focusY": 0.228,
+          "zoom": 1.8,
+          "shape": "circle"
+        },
+        "typography": {
+          "headlineScale": 0.8
+        }
+      },
+      {
+        "id": "omakase_slide_05",
+        "layout": "device-bottom",
+        "label": {
+          "en": "COMMUNITY",
+          "tr": "TOPLULUK",
+          "ja": "コミュニティ",
+          "de": "GEMEINSCHAFT",
+          "fr": "COMMUNAUTÉ",
+          "es": "COMUNIDAD",
+          "ko": "커뮤니티"
+        },
+        "headline": {
+          "en": "Share the cultural bites you loved with friends.\n\nTaste what others discovered too.",
+          "ja": "気に入った教養のひと口を、仲間と分かち合おう。\n\n誰かが見つけた一皿も味わえる。",
+          "de": "Teile deine liebsten Kultur-Happen mit Freunden.\n\nKoste auch, was andere entdecken.",
+          "fr": "Partage tes bouchées culturelles avec tes amis.\n\nGoûte aussi aux trouvailles des autres.",
+          "es": "Comparte tus bocados culturales con amigos.\n\nPrueba también lo que otros descubren.",
+          "ko": "마음에 든 교양 한 입을 친구와 나누세요.\n\n다른 이들이 발견한 한 입도 맛보세요.",
+          "tr": "Tattığın kültürel lokmayı arkadaşlarınla da paylaş.\n\nBaşkalarının denk geldiği lokmaları da tat."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/05.png",
+        "transforms": {
+          "caption": {
+            "x": 9.655892103275619,
+            "y": 165.27216955078052,
+            "width": 1305,
+            "height": 807,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 154.08479999999963,
+            "y": 745.68,
+            "width": 1011.8303999999999,
+            "height": 2064.96,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        },
+        "hideLabel": true,
+        "typography": {
+          "headlineScale": 0.85
+        }
+      }
+    ],
+    "android": [
+      {
+        "id": "s_mwv4ghbf_5",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "Sell one\nidea per slide."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_6",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "Your headline\nlives here."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_7",
+        "layout": "two-devices",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Show two\nscreens at once."
+        },
+        "screenshot": "",
+        "screenshotSecondary": ""
+      },
+      {
+        "id": "s_mwv4ghbf_8",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 03"
+        },
+        "headline": {
+          "en": "Flip the contrast\nfor visual rhythm."
+        },
+        "screenshot": "",
+        "inverted": true
+      },
+      {
+        "id": "s_mwv4ghbf_9",
+        "layout": "no-device",
+        "label": {
+          "en": "MORE"
+        },
+        "headline": {
+          "en": "And so\nmuch more."
+        },
+        "screenshot": ""
+      }
+    ],
+    "ipad": [
+      {
+        "id": "s_mwv4ghbf_a",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "Made for\nthe big screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_b",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "Built for\nfocus."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_c",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Always within reach."
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "tvos": [
+      {
+        "id": "s_mwv4ghbf_d",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "Made for\nthe living room."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_e",
+        "layout": "split-landscape",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_f",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Flip the contrast."
+        },
+        "screenshot": "",
+        "inverted": true
+      },
+      {
+        "id": "s_mwv4ghbf_g",
+        "layout": "no-device",
+        "label": {
+          "en": "MORE"
+        },
+        "headline": {
+          "en": "And so\nmuch more."
+        },
+        "screenshot": ""
+      }
+    ],
+    "watchos": [
+      {
+        "id": "s_mwv4ghbf_h",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "On your\nwrist."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_i",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One glance.\nDone."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_j",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Always\nwith you."
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "carplay": [
+      {
+        "id": "s_mwv4ghbf_k",
+        "layout": "split-landscape",
+        "label": {
+          "en": "CARPLAY"
+        },
+        "headline": {
+          "en": "Eyes on\nthe road."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_l",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "Everything, one tap away."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_m",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Made for every drive."
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "mac": [
+      {
+        "id": "s_mwv4ghbf_n",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "Made for\nyour Mac."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_o",
+        "layout": "split-landscape",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "Everything in\none window."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_p",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "One shortcut away."
+        },
+        "screenshot": "",
+        "inverted": true
+      },
+      {
+        "id": "s_mwv4ghbf_q",
+        "layout": "two-devices",
+        "label": {
+          "en": "FEATURE 03"
+        },
+        "headline": {
+          "en": "Work across windows."
+        },
+        "screenshot": "",
+        "screenshotSecondary": ""
+      },
+      {
+        "id": "s_mwv4ghbf_r",
+        "layout": "no-device",
+        "label": {
+          "en": "MORE"
+        },
+        "headline": {
+          "en": "And so\nmuch more."
+        },
+        "screenshot": ""
+      }
+    ],
+    "android-7": [
+      {
+        "id": "s_mwv4ghbf_s",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "Pocket-sized\npower."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_t",
+        "layout": "split-landscape",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "Wide canvas,\nbigger ideas."
+        },
+        "screenshot": ""
+      }
+    ],
+    "android-10": [
+      {
+        "id": "s_mwv4ghbf_u",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "Made for\nthe big screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_v",
+        "layout": "split-landscape",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "Wide canvas,\nbigger ideas."
+        },
+        "screenshot": ""
+      }
+    ],
+    "feature-graphic": [
+      {
+        "id": "s_mwv4ghbf_w",
+        "layout": "feature-graphic",
+        "label": {},
+        "headline": {
+          "en": "Your tagline goes here."
+        },
+        "screenshot": ""
+      }
+    ],
+    "duo-outer": [
+      {
+        "id": "s_mwv4ghbf_x",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "Everything,\none hand."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_y",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_z",
+        "layout": "two-devices",
+        "label": {
+          "en": "OPEN IT"
+        },
+        "headline": {
+          "en": "Open it for\nthe full view."
+        },
+        "screenshot": "",
+        "screenshotSecondary": ""
+      },
+      {
+        "id": "s_mwv4ghbf_10",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Flip the contrast."
+        },
+        "screenshot": "",
+        "inverted": true
+      },
+      {
+        "id": "s_mwv4ghbf_11",
+        "layout": "no-device",
+        "label": {
+          "en": "MORE"
+        },
+        "headline": {
+          "en": "And so\nmuch more."
+        },
+        "screenshot": ""
+      }
+    ],
+    "duo-outer-landscape": [
+      {
+        "id": "s_mwv4ghbf_12",
+        "layout": "hero",
+        "label": {
+          "en": "TURN IT"
+        },
+        "headline": {
+          "en": "Made for the wide view."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_13",
+        "layout": "split-landscape",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_14",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Flip the contrast."
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "duo-inner": [
+      {
+        "id": "s_mwv4ghbf_15",
+        "layout": "hero",
+        "label": {
+          "en": "UNFOLD IT"
+        },
+        "headline": {
+          "en": "Room for\nthe whole view."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_16",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_17",
+        "layout": "two-devices",
+        "label": {
+          "en": "FOLDED + OPEN"
+        },
+        "headline": {
+          "en": "Turn it, open it,\nkeep going."
+        },
+        "screenshot": "",
+        "screenshotSecondary": ""
+      },
+      {
+        "id": "s_mwv4ghbf_18",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Flip the contrast."
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "duo-inner-landscape": [
+      {
+        "id": "s_mwv4ghbf_19",
+        "layout": "hero",
+        "label": {
+          "en": "UNFOLD IT"
+        },
+        "headline": {
+          "en": "Lead with the two-pane view."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_1a",
+        "layout": "two-devices",
+        "label": {
+          "en": "FOLDED + OPEN"
+        },
+        "headline": {
+          "en": "Same moment, closed and open."
+        },
+        "screenshot": "",
+        "screenshotSecondary": ""
+      },
+      {
+        "id": "s_mwv4ghbf_1b",
+        "layout": "split-landscape",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mwv4ghbf_1c",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 03"
+        },
+        "headline": {
+          "en": "Show what only the wide screen can."
+        },
+        "screenshot": "",
+        "inverted": true
+      },
+      {
+        "id": "s_mwv4ghbf_1d",
+        "layout": "no-device",
+        "label": {
+          "en": "MORE"
+        },
+        "headline": {
+          "en": "And so much more."
+        },
+        "screenshot": ""
+      }
+    ],
+    "creative-universal": [
+      {
+        "id": "s_mwv4ghbf_1e",
+        "layout": "split-landscape",
+        "label": {
+          "en": "NEW"
+        },
+        "headline": {
+          "en": "Your app,\nat a glance."
+        },
+        "screenshot": ""
+      }
+    ],
+    "creative-header": [
+      {
+        "id": "s_mwv4ghbf_1f",
+        "layout": "split-landscape",
+        "label": {
+          "en": "NEW"
+        },
+        "headline": {
+          "en": "Your app,\nat a glance."
+        },
+        "screenshot": ""
+      }
+    ],
+    "creative-search": [
+      {
+        "id": "s_mwv4ghbf_1g",
+        "layout": "split-landscape",
+        "label": {
+          "en": "NEW"
+        },
+        "headline": {
+          "en": "Your app,\nat a glance."
+        },
+        "screenshot": ""
+      }
+    ]
+  },
+  "scene": {
+    "backdrop": "lines",
+    "span": true,
+    "decoration": "none",
+    "shadow": 42,
+    "glow": 0,
+    "tilt": 0,
+    "headlineWeight": 800,
+    "headlineScale": 1.05,
+    "headlineCase": "as-typed",
+    "captionAlign": "center"
+  },
+  "crossScreenMockupsByDevice": {
+    "iphone": []
+  },
+  "themeColors": {
+    "bgAlt": "#000000",
+    "accent": "#000000"
+  }
+}

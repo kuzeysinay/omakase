@@ -105,50 +105,71 @@ _COMMENT_COPY: dict[str, dict[str, str]] = {
         "single_title_actor": "{actor} commented",
         "single_title_anon": "New Comment",
         "single_body_empty": "Someone commented on your shared post.",
+        "single_body_titled_empty": "Your plate “{post_title}” received a new comment.",
+        "single_preview_titled": "“{post_title}”: {preview}",
         "multi_title": "New Comments",
         "multi_body": "Your shared post received {count} new comments.",
+        "multi_body_titled": "Your plate “{post_title}” received {count} new comments.",
     },
     "tr": {
         "single_title_actor": "{actor} yorum yaptı",
         "single_title_anon": "Yeni yorum",
         "single_body_empty": "Paylaşımına yeni bir yorum geldi.",
+        "single_body_titled_empty": "“{post_title}” paylaşımına yeni bir yorum geldi.",
+        "single_preview_titled": "“{post_title}”: {preview}",
         "multi_title": "Gönderine yeni yorumlar",
         "multi_body": "Paylaşımına {count} yeni yorum geldi.",
+        "multi_body_titled": "“{post_title}” paylaşımına {count} yeni yorum geldi.",
     },
     "ja": {
         "single_title_actor": "{actor}さんがコメントしました",
         "single_title_anon": "新しいコメント",
         "single_body_empty": "共有した投稿に新しいコメントが届きました。",
+        "single_body_titled_empty": "「{post_title}」に新しいコメントが届きました。",
+        "single_preview_titled": "「{post_title}」：{preview}",
         "multi_title": "新しいコメント",
         "multi_body": "共有した投稿に{count}件の新しいコメントが届きました。",
+        "multi_body_titled": "「{post_title}」に{count}件の新しいコメントが届きました。",
     },
     "de": {
         "single_title_actor": "{actor} hat kommentiert",
         "single_title_anon": "Neuer Kommentar",
         "single_body_empty": "Jemand hat deinen geteilten Beitrag kommentiert.",
+        "single_body_titled_empty": "Zu „{post_title}“ gibt es einen neuen Kommentar.",
+        "single_preview_titled": "„{post_title}“: {preview}",
         "multi_title": "Neue Kommentare",
         "multi_body": "Dein geteilter Beitrag hat {count} neue Kommentare erhalten.",
+        "multi_body_titled": "Dein Beitrag „{post_title}“ hat {count} neue Kommentare erhalten.",
     },
     "fr": {
         "single_title_actor": "{actor} a commenté",
         "single_title_anon": "Nouveau commentaire",
         "single_body_empty": "Quelqu'un a commenté votre publication partagée.",
+        "single_body_titled_empty": "Nouveau commentaire sur « {post_title} ».",
+        "single_preview_titled": "« {post_title} » : {preview}",
         "multi_title": "Nouveaux commentaires",
         "multi_body": "Votre publication a reçu {count} nouveaux commentaires.",
+        "multi_body_titled": "« {post_title} » a reçu {count} nouveaux commentaires.",
     },
     "es": {
         "single_title_actor": "{actor} comentó",
         "single_title_anon": "Nuevo comentario",
         "single_body_empty": "Alguien comentó tu publicación compartida.",
+        "single_body_titled_empty": "Nuevo comentario en «{post_title}».",
+        "single_preview_titled": "«{post_title}»: {preview}",
         "multi_title": "Nuevos comentarios",
         "multi_body": "Tu publicación recibió {count} comentarios nuevos.",
+        "multi_body_titled": "«{post_title}» recibió {count} comentarios nuevos.",
     },
     "ko": {
         "single_title_actor": "{actor}님이 댓글을 남겼습니다",
         "single_title_anon": "새 댓글",
         "single_body_empty": "공유한 게시물에 새 댓글이 달렸습니다.",
+        "single_body_titled_empty": "“{post_title}” 게시물에 새 댓글이 달렸습니다.",
+        "single_preview_titled": "“{post_title}”: {preview}",
         "multi_title": "새 댓글",
         "multi_body": "공유한 게시물에 새 댓글 {count}개가 달렸습니다.",
+        "multi_body_titled": "“{post_title}”에 새 댓글 {count}개가 달렸습니다.",
     },
 }
 
@@ -226,17 +247,31 @@ _DIGEST_COPY: dict[str, dict[str, str]] = {
 }
 
 
+def _truncate_post_title(post_title: Optional[str], limit: int = 60) -> str:
+    collapsed = " ".join((post_title or "").split()).strip("\"'“”«»「」")
+    if not collapsed:
+        return ""
+    if len(collapsed) <= limit:
+        return collapsed
+    cut = collapsed[: limit - 1]
+    if " " in cut and cut.rfind(" ") > limit // 2:
+        cut = cut[: cut.rfind(" ")]
+    return f"{cut.rstrip()}…"
+
+
 def build_comment_copy(
     language: str,
     actor_names: list[str],
     count: int,
     preview: Optional[str],
+    post_title: Optional[str] = None,
 ) -> tuple[str, str, str]:
     """Return `(title, body, apns_category_id)` for immediate or grouped comment notifications."""
     lang = normalize_language(language)
     copy = _COMMENT_COPY[lang]
     category = "COMMENT_NOTIFICATION"
     clean_preview = (preview or "").strip()
+    clean_post_title = _truncate_post_title(post_title)
 
     if count <= 1:
         raw_actor = next((n.strip() for n in actor_names if n and n.strip()), "")
@@ -250,8 +285,22 @@ def build_comment_copy(
             if display_actor
             else copy["single_title_anon"]
         )
-        body = clean_preview if clean_preview else copy["single_body_empty"]
+        if clean_post_title:
+            body = (
+                copy["single_preview_titled"].format(post_title=clean_post_title, preview=clean_preview)
+                if clean_preview
+                else copy["single_body_titled_empty"].format(post_title=clean_post_title)
+            )
+        else:
+            body = clean_preview if clean_preview else copy["single_body_empty"]
         return title, body, category
+
+    if clean_post_title:
+        return (
+            copy["multi_title"],
+            copy["multi_body_titled"].format(post_title=clean_post_title, count=count),
+            category,
+        )
 
     return (
         copy["multi_title"],
@@ -364,11 +413,11 @@ def _is_blocked_pair(db: Any, uid_a: str, uid_b: str) -> bool:
         return False
 
 
-def _resolve_recipient_uid(
+def _resolve_recipient_and_post_title(
     db: Any,
     actor_uid: str,
     req: SocialNotificationEventRequest,
-) -> Optional[str]:
+) -> tuple[Optional[str], str]:
     if req.event_type in ("comment", "reaction"):
         if not req.post_id:
             raise OmakaseAPIError(
@@ -378,10 +427,11 @@ def _resolve_recipient_uid(
             )
         post_snap = db.collection("shared_posts").document(req.post_id).get()
         if not post_snap.exists:
-            return None
+            return None, ""
         post_data = post_snap.to_dict() or {}
         author_id = str(post_data.get("authorId") or "").strip()
-        return author_id or None
+        post_title = str(post_data.get("title") or "").strip()
+        return (author_id or None), post_title
 
     if not req.target_uid:
         raise OmakaseAPIError(
@@ -398,8 +448,17 @@ def _resolve_recipient_uid(
         .get()
     )
     if not follower_snap.exists:
-        return None
-    return req.target_uid
+        return None, ""
+    return req.target_uid, ""
+
+
+def _resolve_recipient_uid(
+    db: Any,
+    actor_uid: str,
+    req: SocialNotificationEventRequest,
+) -> Optional[str]:
+    recipient_uid, _ = _resolve_recipient_and_post_title(db, actor_uid, req)
+    return recipient_uid
 
 
 def _resolve_actor_display_name(
@@ -499,7 +558,7 @@ def record_social_event(
         return {"status": "ignored", "reason": "firestore_unavailable"}
 
     now = (now_utc or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    recipient_uid = _resolve_recipient_uid(db, actor_uid, req)
+    recipient_uid, post_title = _resolve_recipient_and_post_title(db, actor_uid, req)
     if not recipient_uid:
         return {"status": "ignored", "reason": "target_not_found"}
     if recipient_uid == actor_uid:
@@ -537,7 +596,13 @@ def record_social_event(
 
         if not in_cooldown and not in_quiet:
             actors = [resolved_actor_name] if resolved_actor_name else []
-            title, body, category = build_comment_copy(language, actors, 1, req.comment_preview)
+            title, body, category = build_comment_copy(
+                language,
+                actors,
+                1,
+                req.comment_preview,
+                post_title=post_title,
+            )
             delivery = send_fcm_to_user(
                 db=db,
                 uid=recipient_uid,
@@ -581,6 +646,7 @@ def record_social_event(
                 "kind": "comment",
                 "recipientUid": recipient_uid,
                 "postId": req.post_id,
+                "postTitle": post_title or existing.get("postTitle") or "",
                 "count": count,
                 "actorNames": actor_names,
                 "lastPreview": req.comment_preview or existing.get("lastPreview") or "",
@@ -691,10 +757,17 @@ def process_due_notifications(
 
         if kind == "comment":
             post_id = str(item.get("postId") or "")
+            post_title = str(item.get("postTitle") or "")
             count = int(item.get("count") or 1)
             actors = list(item.get("actorNames") or [])
             preview = item.get("lastPreview")
-            title, body, category = build_comment_copy(language, actors, count, preview)
+            title, body, category = build_comment_copy(
+                language,
+                actors,
+                count,
+                preview,
+                post_title=post_title,
+            )
             send_fcm_to_user(
                 db=db,
                 uid=recipient_uid,

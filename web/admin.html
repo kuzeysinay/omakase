@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Omakase — Komuta Merkezi (Admin)</title>
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="apple-touch-icon" href="assets/app-icon.png">
+  <meta name="theme-color" content="#FAFAFA" id="theme-color-meta">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- ======================================================================
+       AUTH GATE SCREEN
+       ====================================================================== -->
+  <main id="auth-gate" class="auth-gate">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <img src="assets/logo.svg" alt="Omakase" width="32" height="32">
+        <div>
+          <div class="auth-title-row">
+            <span class="brand-word">omakase</span>
+            <span class="badge-mono">MISSION CONTROL</span>
+          </div>
+          <p class="auth-subtitle">Lansman nabzı, gelir, AI maliyeti ve kullanıcı geri bildirimi tek ekranda.</p>
+        </div>
+      </div>
+
+      <div id="auth-error-banner" class="alert-banner alert-danger hidden" role="alert"></div>
+
+      <button id="google-signin-btn" class="btn btn-primary btn-full" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z"/>
+        </svg>
+        <span>Google ile Admin Girişi</span>
+      </button>
+
+      <details class="email-login-details">
+        <summary>veya E-posta / Şifre ile giriş yap</summary>
+        <form id="email-signin-form" class="email-form">
+          <label class="field-label">
+            <span>E-posta</span>
+            <input id="email-input" type="email" autocomplete="email" required placeholder="admin@getomakase.app">
+          </label>
+          <label class="field-label">
+            <span>Şifre</span>
+            <input id="password-input" type="password" autocomplete="current-password" required placeholder="••••••••">
+          </label>
+          <button type="submit" class="btn btn-outline btn-full">Giriş Yap</button>
+        </form>
+      </details>
+
+      <div class="auth-divider"><span>veya önizle</span></div>
+
+      <button id="demo-mode-btn" class="btn btn-ghost btn-full" type="button">
+        Demo Veriyle Paneli İncele
+      </button>
+
+      <details class="api-env-details">
+        <summary>Bağlantı Ayarları (Cloud Run / Lokal)</summary>
+        <div class="api-env-box">
+          <label class="field-label">
+            <span>Backend API Adresi</span>
+            <select id="api-base-select">
+              <option value="https://omakase-backend-20235796246.us-central1.run.app">Canlı Cloud Run (Production)</option>
+              <option value="http://127.0.0.1:8000">Lokal Backend (127.0.0.1:8000)</option>
+            </select>
+          </label>
+          <p class="micro-help">Sadece <code>ADMIN_UIDS</code> listesinde tanımlı Firebase hesabına izin verilir.</p>
+        </div>
+      </details>
+    </div>
+  </main>
+
+  <!-- ======================================================================
+       DASHBOARD SHELL
+       ====================================================================== -->
+  <div id="dashboard-shell" class="dashboard-shell hidden">
+    <div id="demo-banner" class="demo-banner hidden">
+      <span><strong>DEMO MODU:</strong> Örnek lansman verisi gösteriliyor.</span>
+      <button id="exit-demo-btn" class="btn btn-xs btn-outline" type="button">Gerçek Girişe Dön</button>
+    </div>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="topbar-left">
+          <a href="/" class="brand-link" title="Ana Siteye Dön">
+            <img src="assets/logo.svg" alt="Omakase" width="24" height="24">
+            <span class="brand-word">omakase</span>
+          </a>
+          <span class="badge-mono hide-xs">COMMAND</span>
+        </div>
+
+        <nav class="desktop-tabs" aria-label="Admin Bölümleri">
+          <button class="tab-pill active" data-tab="overview" type="button">Genel Bakış</button>
+          <button class="tab-pill" data-tab="revenue" type="button">Gelir &amp; AI</button>
+          <button class="tab-pill" data-tab="feedback" type="button">
+            Geri Bildirim <span id="badge-feedback-desktop" class="count-pill hidden">0</span>
+          </button>
+          <button class="tab-pill" data-tab="moderation" type="button">
+            Moderasyon <span id="badge-reports-desktop" class="count-pill hidden">0</span>
+          </button>
+          <button class="tab-pill" data-tab="users" type="button">Kullanıcılar</button>
+        </nav>
+
+        <div class="topbar-actions">
+          <button id="open-glossary-btn" class="btn btn-sm btn-ghost" type="button" title="Metrik Sözlüğü">
+            <span class="icon-q">?</span>
+            <span class="hide-sm">Sözlük</span>
+          </button>
+          <button id="open-export-btn" class="btn btn-sm btn-primary" type="button">
+            <span>Agent'a Aktar</span>
+          </button>
+          <button id="theme-toggle-btn" class="btn btn-sm btn-icon" type="button" aria-label="Temayı Değiştir" title="Açık / Koyu Tema">
+            <span id="theme-icon-label">◐</span>
+          </button>
+          <button id="signout-btn" class="btn btn-sm btn-outline hide-xs" type="button">Çıkış</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-wrap">
+      <!-- Status & Controls Strip -->
+      <section class="status-strip" aria-label="Bağlantı ve Zaman Penceresi">
+        <div class="status-pills" id="connection-pills">
+          <span class="status-chip"><span class="dot dot-muted"></span> Yükleniyor…</span>
+        </div>
+        <div class="strip-controls">
+          <div class="range-group" role="group" aria-label="Zaman Aralığı">
+            <button class="range-btn active" data-days="7" type="button">7g</button>
+            <button class="range-btn" data-days="14" type="button">14g</button>
+            <button class="range-btn" data-days="30" type="button">30g</button>
+          </div>
+          <label class="autorefresh-toggle" title="Her 60 saniyede otomatik yenile">
+            <input id="autorefresh-checkbox" type="checkbox">
+            <span>Canlı 60s</span>
+          </label>
+          <button id="refresh-btn" class="btn btn-sm btn-outline" type="button">Yenile</button>
+        </div>
+      </section>
+
+      <!-- TAB 1: GENEL BAKIŞ -->
+      <section id="tab-overview" class="tab-panel active">
+        <div id="insights-container" class="insights-grid"></div>
+
+        <div class="section-head-row">
+          <div>
+            <h2>Lansman Nabzı</h2>
+            <p class="section-sub">Her kartın altında metriğin ne anlama geldiği yazar; sağ üstteki <strong>?</strong> ile hedef ve eylem kuralını açabilirsin.</p>
+          </div>
+          <span id="last-updated-label" class="mono-muted"></span>
+        </div>
+
+        <div id="kpi-grid" class="kpi-grid"></div>
+
+        <div class="split-grid">
+          <article class="panel-card">
+            <div class="panel-head">
+              <div>
+                <h3>Günlük Trend</h3>
+                <p class="panel-desc">Zaman içindeki hareketi görmek için aşağıdaki serilerden birini seç.</p>
+              </div>
+              <div class="series-pills" id="chart-series-pills">
+                <button class="series-btn active" data-series="plates" type="button">Tabaklar</button>
+                <button class="series-btn" data-series="dau" type="button">DAU</button>
+                <button class="series-btn" data-series="deep_dives" type="button">Derin İnceleme</button>
+                <button class="series-btn" data-series="errors" type="button">Hatalar</button>
+                <button class="series-btn" data-series="ai_cost_usd" type="button">AI Maliyet ($)</button>
+              </div>
+            </div>
+            <div id="trend-chart-wrap" class="chart-wrap"></div>
+            <div id="chart-hover-bar" class="chart-hover-bar">Grafik noktasına dokunarak günlük detayı gör.</div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-head">
+              <div>
+                <h3>Aktivasyon &amp; Dönüşüm Hunisi</h3>
+                <p class="panel-desc">Kullanıcının kayıttan ücretli aboneliğe yolculuğu ve en büyük kayıp noktası.</p>
+              </div>
+            </div>
+            <div id="funnel-list" class="funnel-list"></div>
+          </article>
+        </div>
+
+        <div class="tri-grid">
+          <article class="panel-card">
+            <div class="panel-head">
+              <div>
+                <h3>Okuma Kalitesi &amp; Etkileşim</h3>
+                <p class="panel-desc">Kullanıcılar içeriği gerçekten sindiriyor ve kaynakları inceliyor mu?</p>
+              </div>
+            </div>
+            <div id="engagement-list" class="metric-rows"></div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-head">
+              <div>
+                <h3>Dil Dağılımı (7 Dil)</h3>
+                <p class="panel-desc">Hangi dilde kaç tabak/inceleme üretildiğini gösterir; pazarlama odağını belirler.</p>
+              </div>
+            </div>
+            <div id="language-bars" class="bar-list"></div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-head">
+              <div>
+                <h3>Popüler Konular &amp; Paywall Kaynağı</h3>
+                <p class="panel-desc">En çok ilgi gören tatlar ve kullanıcıların Pro ekranını nereden açtığı.</p>
+              </div>
+            </div>
+            <div id="topics-and-paywall" class="topics-wrap"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- TAB 2: GELİR & AI EKONOMİSİ -->
+      <section id="tab-revenue" class="tab-panel">
+        <div class="section-head-row">
+          <div>
+            <h2>RevenueCat &amp; Yapay Zeka Birim Ekonomisi</h2>
+            <p class="section-sub">Abonelik gelirleri ile Gemini API token maliyetinin gerçek zamanlı dengesi.</p>
+          </div>
+        </div>
+        <div id="revenue-content" class="split-grid"></div>
+        <div id="ai-econ-content" class="kpi-grid" style="margin-top:16px;"></div>
+      </section>
+
+      <!-- TAB 3: GERİ BİLDİRİM -->
+      <section id="tab-feedback" class="tab-panel">
+        <div class="section-head-row">
+          <div>
+            <h2>Uygulama İçi Geri Bildirim Gelen Kutusu</h2>
+            <p class="section-sub">Ayarlar → Geri Bildirim Gönder üzerinden gelen bug, fikir ve içerik notları.</p>
+          </div>
+          <div class="filter-bar">
+            <select id="feedback-status-filter" class="select-sm">
+              <option value="all">Durum: Tümü</option>
+              <option value="new">Yeni</option>
+              <option value="reviewed">İncelendi</option>
+              <option value="resolved">Çözüldü</option>
+              <option value="archived">Arşiv</option>
+            </select>
+            <select id="feedback-cat-filter" class="select-sm">
+              <option value="all">Kategori: Tümü</option>
+              <option value="bug">Hata</option>
+              <option value="idea">Fikir</option>
+              <option value="content">İçerik</option>
+              <option value="other">Diğer</option>
+            </select>
+            <input id="feedback-search" class="input-sm" type="search" placeholder="Mesaj veya @kullanıcı ara…">
+          </div>
+        </div>
+        <div id="feedback-list" class="cards-stack"></div>
+      </section>
+
+      <!-- TAB 4: MODERASYON -->
+      <section id="tab-moderation" class="tab-panel">
+        <div class="section-head-row">
+          <div>
+            <h2>Topluluk Moderasyon Şikayetleri</h2>
+            <p class="section-sub">App Store Guideline 1.2 uyumluluğu için kullanıcıların bildirdiği gönderi/yorumlar.</p>
+          </div>
+          <div class="filter-bar">
+            <select id="reports-status-filter" class="select-sm">
+              <option value="all">Tümü</option>
+              <option value="open" selected>Açık Şikayetler</option>
+              <option value="resolved">Çözüldü</option>
+              <option value="dismissed">Yoksayıldı</option>
+            </select>
+          </div>
+        </div>
+        <div id="reports-list" class="cards-stack"></div>
+      </section>
+
+      <!-- TAB 5: KULLANICILAR -->
+      <section id="tab-users" class="tab-panel">
+        <div class="section-head-row">
+          <div>
+            <h2>Son Kullanıcılar &amp; Kota Durumu</h2>
+            <p class="section-sub">Kayıt olan kullanıcıların abonelik katmanı ve bugünkü tabak kullanımı.</p>
+          </div>
+          <div class="filter-bar">
+            <input id="users-search" class="input-sm" type="search" placeholder="İsim, @kullanıcı veya UID ara…">
+          </div>
+        </div>
+        <div id="users-container" class="users-table-wrap"></div>
+      </section>
+    </main>
+
+    <!-- Mobile Sticky Bottom Tab Bar -->
+    <nav class="mobile-bottom-nav" aria-label="Mobil Navigasyon">
+      <button class="mnav-btn active" data-tab="overview" type="button">
+        <span class="mnav-ico">◈</span>
+        <span>Genel</span>
+      </button>
+      <button class="mnav-btn" data-tab="revenue" type="button">
+        <span class="mnav-ico">◎</span>
+        <span>Gelir/AI</span>
+      </button>
+      <button class="mnav-btn" data-tab="feedback" type="button">
+        <span class="mnav-ico">✉</span>
+        <span>Feedback</span>
+        <span id="badge-feedback-mobile" class="mnav-dot hidden"></span>
+      </button>
+      <button class="mnav-btn" data-tab="moderation" type="button">
+        <span class="mnav-ico">⚑</span>
+        <span>Mod.</span>
+        <span id="badge-reports-mobile" class="mnav-dot hidden"></span>
+      </button>
+      <button class="mnav-btn" data-tab="users" type="button">
+        <span class="mnav-ico">☺</span>
+        <span>Kişiler</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: AI AGENT EXPORT ("Agent'a Aktar")
+       ====================================================================== -->
+  <div id="export-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <div>
+          <h3 id="export-modal-title">Verileri AI Agent'a Aktar</h3>
+          <p class="panel-desc">Canlı metrikler, huni darboğazları ve son kullanıcı geri bildirimlerini tek tıkla kopyalanabilir brifinge dönüştür.</p>
+        </div>
+        <button class="btn btn-sm btn-ghost" data-close-modal="export-modal" type="button">Kapat</button>
+      </div>
+
+      <div class="preset-pills" id="export-preset-pills">
+        <button class="preset-btn active" data-preset="launch" type="button">Lansman Günü Analizi</button>
+        <button class="preset-btn" data-preset="conversion" type="button">Paywall &amp; Dönüşüm</button>
+        <button class="preset-btn" data-preset="triage" type="button">Hata &amp; Feedback Triyajı</button>
+        <button class="preset-btn" data-preset="growth" type="button">Büyüme &amp; İçerik</button>
+      </div>
+
+      <div class="export-actions-row">
+        <button id="copy-md-btn" class="btn btn-sm btn-primary" type="button">Markdown Brifingi Kopyala</button>
+        <button id="copy-json-btn" class="btn btn-sm btn-outline" type="button">JSON Kopyala</button>
+        <button id="download-md-btn" class="btn btn-sm btn-ghost" type="button">.md İndir</button>
+        <button id="download-json-btn" class="btn btn-sm btn-ghost" type="button">.json İndir</button>
+      </div>
+
+      <pre id="export-preview" class="export-preview">Hazırlanıyor…</pre>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: METRIC GLOSSARY ("Metrik Sözlüğü")
+       ====================================================================== -->
+  <div id="glossary-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="glossary-modal-title">
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <div>
+          <h3 id="glossary-modal-title">Metrik Sözlüğü &amp; Eylem Rehberi</h3>
+          <p class="panel-desc">Paneldeki her metriğin sade Türkçe tanımı, neden önemli olduğu ve hangi eşikte aksiyon alman gerektiği.</p>
+        </div>
+        <button class="btn btn-sm btn-ghost" data-close-modal="glossary-modal" type="button">Kapat</button>
+      </div>
+      <input id="glossary-search" class="input-sm" style="width:100%;margin-bottom:12px;" type="search" placeholder="Metrik ara (örn. MRR, Stickiness, Cooldown)…">
+      <div id="glossary-list" class="glossary-list"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

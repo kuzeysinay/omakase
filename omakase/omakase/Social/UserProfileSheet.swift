@@ -345,6 +345,7 @@ struct MyProfileSheet: View {
     @State private var accountErrorMessage: String?
     @State private var isShowingPaywall = false
     @State private var isShowingEditProfile = false
+    @State private var isShowingFeedbackSheet = false
     @State private var profileToastMessage: String?
 
     private var l10n: L10n { L10n(lang: appLanguage) }
@@ -614,6 +615,15 @@ struct MyProfileSheet: View {
                 onSaved: { updated in
                     profile = updated
                     profileToastMessage = l10n.profileSavedToast
+                }
+            )
+            .environment(\.appLanguage, appLanguage)
+        }
+        .sheet(isPresented: $isShowingFeedbackSheet) {
+            FeedbackSheetView(
+                screenContext: "profile_settings",
+                onSubmitted: {
+                    profileToastMessage = l10n.feedbackSentToast
                 }
             )
             .environment(\.appLanguage, appLanguage)
@@ -900,6 +910,25 @@ struct MyProfileSheet: View {
 
             // Support & Legal
             Section(l10n.profileSupportAndLegal) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    isShowingFeedbackSheet = true
+                } label: {
+                    HStack {
+                        Label {
+                            Text(l10n.feedbackRowLabel)
+                                .foregroundStyle(.primary)
+                        } icon: {
+                            Image(systemName: "bubble.left.and.exclamationmark.bubble.right")
+                                .foregroundStyle(.primary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
                 if let supportURL = URL(string: "mailto:destek@getomakase.app") {
                     Link(destination: supportURL) {
                         HStack {

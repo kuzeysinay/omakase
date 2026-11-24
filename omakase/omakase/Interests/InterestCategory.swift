@@ -480,6 +480,99 @@ final class SubTopicDiscoveryStore {
         return selected
     }
 
+    /// Picks `count` unseen topics across diverse categories for daily notifications,
+    /// avoiding previously seen sub-topics, excluded titles, and consecutive same-category repeats.
+    func pickUnseenNotificationCandidates(
+        count: Int,
+        preferredInterests: [String],
+        excludedTitles: Set<String>,
+        language: AppLanguage,
+        dayOfYear: Int
+    ) -> [(topic: String, category: InterestCategory)] {
+        guard count > 0, !InterestCategory.presets.isEmpty else { return [] }
+
+        let normalizedExcluded = Set(
+            excludedTitles
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+        )
+
+        var preferredCategories: [InterestCategory] = []
+        for interest in preferredInterests {
+            let resolved = InterestCategory.resolveMainCategory(tags: [interest], title: interest)
+            if !preferredCategories.contains(where: { $0.id == resolved.id }) {
+                preferredCategories.append(resolved)
+            }
+        }
+        let remainingCategories = InterestCategory.presets.filter { cat in
+            !preferredCategories.contains(where: { $0.id == cat.id })
+        }
+
+        var orderedCategories: [InterestCategory] = []
+        let maxLen = max(preferredCategories.count, remainingCategories.count)
+        for i in 0..<maxLen {
+            if i < preferredCategories.count { orderedCategories.append(preferredCategories[i]) }
+            if i < remainingCategories.count { orderedCategories.append(remainingCategories[i]) }
+        }
+        if orderedCategories.isEmpty {
+            orderedCategories = InterestCategory.presets
+        }
+
+        let shift = abs(dayOfYear) % orderedCategories.count
+        let rotatedCategories = (0..<orderedCategories.count).map {
+            orderedCategories[(shift + $0) % orderedCategories.count]
+        }
+
+        var chosenTitlesLower = Set<String>()
+        var results: [(topic: String, category: InterestCategory)] = []
+
+        for slot in 0..<count {
+            let cat = rotatedCategories[slot % rotatedCategories.count]
+            let key = storageKey(categoryId: cat.id, language: language)
+            let seenLower = Set(
+                (seenByKey[key] ?? []).map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            )
+
+            let aiPool = prefetchedByKey[key] ?? []
+            let curatedPool = cat.fallbackInterests(for: language)
+            let combinedPool = aiPool + curatedPool.filter { item in
+                !aiPool.contains(where: { $0.caseInsensitiveCompare(item) == .orderedSame })
+            }
+
+            let unseenPool = combinedPool.filter { candidate in
+                let clean = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                let lower = clean.lowercased()
+                return !clean.isEmpty
+                    && ContentModerationService.isAppropriate(clean)
+                    && !seenLower.contains(lower)
+                    && !normalizedExcluded.contains(lower)
+                    && !chosenTitlesLower.contains(lower)
+            }
+
+            let picked: String?
+            if !unseenPool.isEmpty {
+                let idx = (abs(dayOfYear) + slot * 7) % unseenPool.count
+                picked = unseenPool[idx]
+            } else {
+                let fallbackPool = combinedPool.filter { candidate in
+                    let clean = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let lower = clean.lowercased()
+                    return !clean.isEmpty
+                        && ContentModerationService.isAppropriate(clean)
+                        && !chosenTitlesLower.contains(lower)
+                }
+                picked = fallbackPool.first ?? curatedPool.first
+            }
+
+            if let topic = picked?.trimmingCharacters(in: .whitespacesAndNewlines), !topic.isEmpty {
+                chosenTitlesLower.insert(topic.lowercased())
+                results.append((topic: topic, category: cat))
+            }
+        }
+
+        return results
+    }
+
     /// Records displayed topics into the persistent ring buffer so they won't immediately repeat on next open/launch.
     func recordSeen(_ topics: [String], for categoryId: String, language: AppLanguage) {
         guard !topics.isEmpty else { return }

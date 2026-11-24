@@ -230,6 +230,8 @@ class NotificationServiceTests(unittest.TestCase):
             )
             self.assertEqual(res1["status"], "sent")
             self.assertEqual(len(self.sent_messages), 1)
+            self.assertIn("Cinema", self.sent_messages[0].notification.body)
+            self.assertIn("Harika yazı", self.sent_messages[0].notification.body)
             self.assertIsNone(self.sent_messages[0].apns.payload.aps.badge)
 
             # Second & third comments within 30 min cooldown get grouped in queue
@@ -255,6 +257,7 @@ class NotificationServiceTests(unittest.TestCase):
             )
             self.assertEqual(flushed["sent"], 1)
             self.assertEqual(len(self.sent_messages), 2)
+            self.assertIn("Cinema", self.sent_messages[1].notification.body)
             self.assertIn("2 yeni yorum", self.sent_messages[1].notification.body)
 
     def test_comment_during_quiet_hours_defers_to_0830(self) -> None:
@@ -382,6 +385,18 @@ class NotificationServiceTests(unittest.TestCase):
             title, body, _ = notification_service.build_comment_copy(code, ["Ada"], 2, None)
             self.assertTrue(title)
             self.assertIn("2", body)
+            titled_1, titled_body_1, _ = notification_service.build_comment_copy(
+                code, ["Ada"], 1, "Breathtaking angle", post_title="Ozu's Tatami Shot"
+            )
+            self.assertTrue(titled_1)
+            self.assertIn("Ozu's Tatami Shot", titled_body_1)
+            self.assertIn("Breathtaking angle", titled_body_1)
+            titled_2, titled_body_2, _ = notification_service.build_comment_copy(
+                code, ["Ada"], 2, None, post_title="Ozu's Tatami Shot"
+            )
+            self.assertTrue(titled_2)
+            self.assertIn("Ozu's Tatami Shot", titled_body_2)
+            self.assertIn("2", titled_body_2)
             d_title, d_body, _ = notification_service.build_digest_copy(code, 3, 2)
             self.assertTrue(d_title)
             self.assertIn("3", d_body)

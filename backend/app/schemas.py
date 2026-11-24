@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional, Union
+import re
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -267,3 +268,137 @@ class SocialNotificationEventRequest(BaseModel):
         if cleaned and _BLOCKLIST_RE.search(cleaned):
             return ""
         return cleaned or None
+
+
+ALLOWED_TELEMETRY_EVENTS: frozenset[str] = frozenset(
+    {
+        "app_open",
+        "onboarding_started",
+        "onboarding_completed",
+        "onboarding_skipped",
+        "cooldown_completed",
+        "source_tapped",
+        "source_opened_browser",
+        "daily_limit_reached",
+        "paywall_viewed",
+        "paywall_purchase_started",
+        "paywall_purchase_completed",
+        "paywall_purchase_cancelled",
+        "share_card_shared",
+        "post_bookmarked",
+        "community_post_shared",
+        "letterboxd_connected",
+    }
+)
+_PROP_KEY_RE = re.compile(r"^[a-zA-Z0-9_]{1,40}$")
+
+
+class TelemetryEventItem(BaseModel):
+    """Single lightweight client-side product telemetry event."""
+
+    name: str = Field(..., min_length=1, max_length=64)
+    properties: dict[str, Union[str, int, float, bool]] = Field(default_factory=dict)
+    timestamp: Optional[str] = Field(default=None, max_length=40)
+
+    @field_validator("name")
+    @classmethod
+    def _validate_name(cls, v: str) -> str:
+        cleaned = (v or "").strip().lower()
+        if cleaned not in ALLOWED_TELEMETRY_EVENTS:
+            raise ValueError(f"Unsupported telemetry event: {cleaned!r}")
+        return cleaned
+
+    @field_validator("properties")
+    @classmethod
+    def _validate_properties(
+        cls, v: dict[str, Union[str, int, float, bool]]
+    ) -> dict[str, Union[str, int, float, bool]]:
+        if not isinstance(v, dict):
+            return {}
+        sanitized: dict[str, str | int | float | bool] = {}
+        for raw_k, raw_val in list(v.items())[:10]:
+            k = str(raw_k).strip()
+            if not _PROP_KEY_RE.match(k):
+                continue
+            if isinstance(raw_val, (bool, int, float)):
+                sanitized[k] = raw_val
+            else:
+                sanitized[k] = _sanitize_single_line(str(raw_val), 80)
+        return sanitized
+
+
+class TelemetryBatchRequest(BaseModel):
+    """Batched client product events sent by the iOS app."""
+
+    events: list[TelemetryEventItem] = Field(..., min_length=1, max_length=25)
+    app_version: Optional[str] = Field(default=None, max_length=32)
+    os_version: Optional[str] = Field(default=None, max_length=32)
+    language: str = Field(default="en")
+
+    @field_validator("language")
+    @classmethod
+    def _normalize_telemetry_lang(cls, v: str) -> str:
+        return normalize_language(v)
+
+
+class FeedbackSubmitRequest(BaseModel):
+    """User-submitted in-app feedback or bug report."""
+
+    category: Literal["bug", "idea", "content", "other"] = Field(default="idea")
+    message: str = Field(..., min_length=3, max_length=2000)
+    rating: Optional[int] = Field(default=None, ge=1, le=5)
+    app_version: Optional[str] = Field(default=None, max_length=32)
+    os_version: Optional[str] = Field(default=None, max_length=32)
+    device_model: Optional[str] = Field(default=None, max_length=64)
+    language: str = Field(default="en")
+    screen: Optional[str] = Field(default=None, max_length=64)
+
+    @field_validator("message")
+    @classmethod
+    def _clean_message(cls, v: str) -> str:
+        cleaned = (v or "").replace("\x00", "").strip()
+        if len(cleaned) < 3:
+            raise ValueError("Feedback message must be at least 3 characters.")
+        return cleaned[:2000]
+
+    @field_validator("language")
+    @classmethod
+    def _normalize_feedback_lang(cls, v: str) -> str:
+        return normalize_language(v)
+
+    @field_validator("app_version", "os_version", "device_model", "screen")
+    @classmethod
+    def _clean_meta(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        cleaned = _sanitize_single_line(v, 64)
+        return cleaned or None
+
+
+class AdminFeedbackUpdateRequest(BaseModel):
+    """Admin status/note update for a user feedback item."""
+
+    status: Literal["new", "reviewed", "resolved", "archived"]
+    admin_note: Optional[str] = Field(default=None, max_length=1000)
+
+    @field_validator("admin_note")
+    @classmethod
+    def _clean_note(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        return (v or "").replace("\x00", "").strip()[:1000]
+
+
+class AdminReportUpdateRequest(BaseModel):
+    """Admin triage action for a moderation report."""
+
+    status: Literal["open", "resolved", "dismissed"]
+    admin_note: Optional[str] = Field(default=None, max_length=1000)
+    delete_post: bool = Field(default=False)
+
+    @field_validator("admin_note")
+    @classmethod
+    def _clean_report_note(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        return (v or "").replace("\x00", "").strip()[:1000]

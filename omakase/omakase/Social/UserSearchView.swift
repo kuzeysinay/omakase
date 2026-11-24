@@ -148,7 +148,7 @@ struct UserSearchView: View {
                 selectedProfileUid = user.id
             } label: {
                 HStack(spacing: 12) {
-                    avatarView(urlString: user.photoURL)
+                    MonogramAvatarView(name: user.displayName, size: 40)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(user.displayName).font(.body.bold()).foregroundStyle(.primary)
                         Text(user.formattedHandle).font(.caption).foregroundStyle(.secondary)
@@ -160,25 +160,6 @@ struct UserSearchView: View {
             followButton(for: user)
         }
         .padding(.vertical, 4)
-    }
-
-    @ViewBuilder
-    private func avatarView(urlString: String?) -> some View {
-        if let s = urlString, let url = URL(string: s) {
-            AsyncImage(url: url) { phase in
-                if let img = phase.image {
-                    img.resizable().scaledToFill()
-                        .frame(width: 40, height: 40).clipShape(Circle())
-                } else {
-                    defaultAvatar
-                }
-            }
-        } else { defaultAvatar }
-    }
-
-    private var defaultAvatar: some View {
-        Image(systemName: "person.circle.fill")
-            .font(.system(size: 36)).symbolRenderingMode(.hierarchical).foregroundStyle(.secondary)
     }
 
     @ViewBuilder

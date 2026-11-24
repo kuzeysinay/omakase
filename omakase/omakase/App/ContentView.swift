@@ -24,6 +24,19 @@ struct ContentView: View {
     @State private var showSplash = true
 
     var body: some View {
+#if DEBUG
+        if let screenshotConfig = ScreenshotLaunchConfig.current {
+            ScreenshotPreviewHarness(config: screenshotConfig)
+        } else {
+            mainRootBody
+        }
+#else
+        mainRootBody
+#endif
+    }
+
+    @ViewBuilder
+    private var mainRootBody: some View {
         ZStack {
             Group {
                 if !authService.isAuthenticated {
@@ -70,6 +83,7 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active && authService.isAuthenticated {
+                TelemetryService.shared.track("app_open")
                 Task {
                     await AccessManager.shared.refreshAccessStatus()
                     let raw = UserDefaults.standard.string(forKey: "omakase.interests") ?? ""
@@ -83,6 +97,10 @@ struct ContentView: View {
                         language: resolvedLanguage,
                         menuCompletedToday: completedToday
                     )
+                }
+            } else if newPhase == .background {
+                Task {
+                    await TelemetryService.shared.flush()
                 }
             }
         }

@@ -31,6 +31,8 @@ struct BentoTasteBox: View {
     var onSelectDedicatedTopic: ((String, String?) -> Void)? = nil
     var onPromptLetterboxdUsername: (() -> Void)? = nil
     var onSelectLetterboxdPost: (() -> Void)? = nil
+    var initialSubtopicCategory: InterestCategory? = nil
+    var initialSubtopics: [String] = []
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
 
     @Environment(\.appLanguage) private var appLanguage
@@ -104,6 +106,14 @@ struct BentoTasteBox: View {
             SubTopicDiscoveryStore.shared.prewarmAllCategories(language: newLang, userInterests: allInterests)
         }
         .task(id: appLanguage) {
+            if let initialSubtopicCategory, currentSubInterests.isEmpty {
+                mode = .subInterests(category: initialSubtopicCategory)
+                let topics = initialSubtopics.isEmpty
+                    ? initialSubtopicCategory.fallbackInterests(for: appLanguage)
+                    : initialSubtopics
+                currentSubInterests = topics
+                revealedTilesCount = topics.count
+            }
             SubTopicDiscoveryStore.shared.prewarmAllCategories(language: appLanguage, userInterests: allInterests)
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.82), value: mode)

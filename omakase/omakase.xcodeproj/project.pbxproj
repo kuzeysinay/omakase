@@ -14,6 +14,7 @@
 		6FA13F492FAD2C5600617193 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6FA13F482FAD2C5600617193 /* GoogleSignInSwift */; };
 		9A3AF1EB8C6717F6930406C0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = DC67AD6C6F82D9611BAA06FD /* FirebaseMessaging */; };
 		FBBBF3521D4A9138077248F8 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 1D08C65EF559E554013B6475 /* RevenueCat */; };
+		2A91B4C6D8E0F1A2B3C4D5E6 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 2A91B4C6D8E0F1A2B3C4D5E7 /* RevenueCatUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +53,7 @@
 				6FA13F492FAD2C5600617193 /* GoogleSignInSwift in Frameworks */,
 				31E1A42BF50A4D0F036F944E /* FirebaseCrashlytics in Frameworks */,
 				FBBBF3521D4A9138077248F8 /* RevenueCat in Frameworks */,
+				2A91B4C6D8E0F1A2B3C4D5E6 /* RevenueCatUI in Frameworks */,
 				9A3AF1EB8C6717F6930406C0 /* FirebaseMessaging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -102,6 +104,7 @@
 				6FA13F482FAD2C5600617193 /* GoogleSignInSwift */,
 				638242FD98ABC76F4D0C4391 /* FirebaseCrashlytics */,
 				1D08C65EF559E554013B6475 /* RevenueCat */,
+				2A91B4C6D8E0F1A2B3C4D5E7 /* RevenueCatUI */,
 				DC67AD6C6F82D9611BAA06FD /* FirebaseMessaging */,
 			);
 			productName = omakase;
@@ -334,8 +337,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -371,8 +374,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -447,6 +450,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C915C13FAEF6840B0E242B35 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
+		};
+		2A91B4C6D8E0F1A2B3C4D5E7 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C915C13FAEF6840B0E242B35 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
 		};
 		638242FD98ABC76F4D0C4391 /* FirebaseCrashlytics */ = {
 			isa = XCSwiftPackageProductDependency;

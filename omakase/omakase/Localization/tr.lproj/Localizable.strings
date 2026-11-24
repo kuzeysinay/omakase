@@ -441,3 +441,19 @@
 "profileSavedToast" = "Profilin güncellendi.";
 "profileSetupContinue" = "Devam Et";
 "authUsernameInvalid" = "Kullanıcı adı en az 3 karakter olmalı (a-z, 0-9, _ veya .).";
+
+"feedbackRowLabel" = "Geri Bildirim Gönder";
+"feedbackTitle" = "Geri Bildirim Gönder";
+"feedbackSubtitle" = "Bir hatayı, fikri veya içerik notunu doğrudan geliştiriciye ilet.";
+"feedbackCategoryLabel" = "Kategori";
+"feedbackCategoryBug" = "Hata";
+"feedbackCategoryIdea" = "Fikir";
+"feedbackCategoryContent" = "İçerik";
+"feedbackCategoryOther" = "Diğer";
+"feedbackRatingLabel" = "Deneyim (isteğe bağlı)";
+"feedbackMessageLabel" = "Notun";
+"feedbackMessagePlaceholder" = "Neler harika hissettiriyor, neler bozuldu veya sırada ne görmek istersin?";
+"feedbackMetaFootnote" = "Hata ayıklamaya yardımcı olması için uygulama sürümü, iOS sürümü ve dil otomatik olarak eklenir.";
+"feedbackSubmitButton" = "Gönder";
+"feedbackSending" = "Gönderiliyor…";
+"feedbackSentToast" = "Teşekkürler! Geri bildirimin şefe ulaştı.";

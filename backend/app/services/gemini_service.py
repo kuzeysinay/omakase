@@ -32,6 +32,7 @@ from app.prompts import (
     _suggest_system_for_language,
 )
 from app.schemas import DeepDiveRequest, ExpandCategoryRequest, SuggestRequest
+from app.services.metrics_service import record_api_error_async, record_generation_async
 
 _TITLE_LINE = re.compile(r"(?i)^TITLE:\s*(.+)$")
 _TAGS_LINE = re.compile(r"(?i)^TAGS:\s*(.+)$")
@@ -138,10 +139,24 @@ def _is_safety_block_chunk(chunk: object) -> bool:
     return False
 
 
+def _extract_usage_tokens(obj: object) -> tuple[int, int]:
+    """Safely extract (prompt_token_count, candidates_token_count) from a Gemini chunk or response."""
+    try:
+        meta = getattr(obj, "usage_metadata", None)
+        if meta is None:
+            return 0, 0
+        prompt_tokens = int(getattr(meta, "prompt_token_count", 0) or 0)
+        cand_tokens = int(getattr(meta, "candidates_token_count", 0) or 0)
+        return max(0, prompt_tokens), max(0, cand_tokens)
+    except (TypeError, ValueError, AttributeError):
+        return 0, 0
+
+
 def _feed_tokens_from_stream_chunks(
     response: Any,
     queue: asyncio.Queue,
     loop: asyncio.AbstractEventLoop,
+    usage_out: Optional[dict[str, int]] = None,
 ) -> bool:
     """Turn Gemini stream chunks into queue items.
 
@@ -153,6 +168,10 @@ def _feed_tokens_from_stream_chunks(
     tags_done = False
     saw_text = False
     for chunk in response:
+        in_tok, out_tok = _extract_usage_tokens(chunk)
+        if usage_out is not None and (in_tok or out_tok):
+            usage_out["input_tokens"] = max(usage_out.get("input_tokens", 0), in_tok)
+            usage_out["output_tokens"] = max(usage_out.get("output_tokens", 0), out_tok)
         text = _stream_chunk_text(chunk)
         if not text:
             if not saw_text and _is_safety_block_chunk(chunk):
@@ -216,6 +235,8 @@ async def _stream_post(
     language: str,
     letterboxd_films: Optional[list[dict]] = None,
     on_complete: Optional[Callable[[], Awaitable[Optional[dict[str, Any]]]]] = None,
+    is_disconnected: Optional[Callable[[], Awaitable[bool]]] = None,
+    uid: Optional[str] = None,
 ) -> AsyncIterator[str]:
     """Yield SSE frames for one generated post."""
     post_id = str(uuid.uuid4())
@@ -241,6 +262,7 @@ async def _stream_post(
         interests, seen_count, language, letterboxd_films=letterboxd_films
     )
 
+    usage_stats: dict[str, int] = {"input_tokens": 0, "output_tokens": 0}
     try:
         queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
         loop = asyncio.get_running_loop()
@@ -265,7 +287,7 @@ async def _stream_post(
                         safety_settings=SAFETY_SETTINGS,
                     ),
                 )
-                blocked = _feed_tokens_from_stream_chunks(response, queue, loop)
+                blocked = _feed_tokens_from_stream_chunks(response, queue, loop, usage_stats)
                 if not blocked:
                     loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
             except Exception as exc:  # noqa: BLE001
@@ -277,6 +299,12 @@ async def _stream_post(
         saw_error = False
         while True:
             kind, payload = await queue.get()
+            if is_disconnected is not None and await is_disconnected():
+                logger.info(
+                    "Client disconnected mid-stream %s; skipping quota deduction",
+                    post_id,
+                )
+                return
             if kind == "token":
                 saw_any_output = True
                 yield _sse_event({"text": payload}, event="token")
@@ -296,6 +324,7 @@ async def _stream_post(
             elif kind == "blocked":
                 saw_error = True
                 logger.warning("Gemini stream blocked by safety filter (post_id=%s)", post_id)
+                await record_api_error_async(ErrorCode.CONTENT_BLOCKED, status_code=422, safety_blocked=True)
                 yield _sse_event(
                     {
                         "code": ErrorCode.CONTENT_BLOCKED,
@@ -307,9 +336,11 @@ async def _stream_post(
             elif kind == "error":
                 saw_error = True
                 logger.exception("Gemini streaming failed", exc_info=payload)
+                err_code = classify_gemini_exception(payload)
+                await record_api_error_async(err_code, status_code=502, safety_blocked=(err_code == ErrorCode.CONTENT_BLOCKED))
                 yield _sse_event(
                     {
-                        "code": classify_gemini_exception(payload),
+                        "code": err_code,
                         "message": "Generation failed.",
                     },
                     event="error",
@@ -323,6 +354,7 @@ async def _stream_post(
 
         if not saw_any_output:
             logger.warning("Gemini returned empty stream for model=%s", GEMINI_MODEL)
+            await record_api_error_async(ErrorCode.GENERATION_FAILED, status_code=502)
             yield _sse_event(
                 {
                     "code": ErrorCode.GENERATION_FAILED,
@@ -336,17 +368,36 @@ async def _stream_post(
         logger.info("Client disconnected from stream %s", post_id)
         raise
 
+    if is_disconnected is not None and await is_disconnected():
+        logger.info(
+            "Client disconnected before completion %s; skipping quota deduction",
+            post_id,
+        )
+        return
+
     done_payload: dict[str, Any] = {"id": post_id}
     if on_complete is not None:
         access_snapshot = await on_complete()
         if access_snapshot is not None:
             done_payload["access"] = access_snapshot
+    await record_generation_async(
+        "plate",
+        uid=uid,
+        language=language,
+        model=GEMINI_MODEL,
+        input_tokens=usage_stats.get("input_tokens", 0),
+        output_tokens=usage_stats.get("output_tokens", 0),
+        letterboxd=bool(letterboxd_films),
+        topics=interests[:3],
+    )
     yield _sse_event(done_payload, event="done")
 
 
 async def _stream_deep_dive(
     req: DeepDiveRequest,
     on_complete: Optional[Callable[[], Awaitable[Optional[dict[str, Any]]]]] = None,
+    is_disconnected: Optional[Callable[[], Awaitable[bool]]] = None,
+    uid: Optional[str] = None,
 ) -> AsyncIterator[str]:
     """Yield SSE frames for a deep-dive expansion of an existing post."""
     post_id = str(uuid.uuid4())
@@ -364,6 +415,7 @@ async def _stream_deep_dive(
 
     system = _DEEP_DIVE_SYSTEM + "\n\n" + _deep_dive_language_instruction(req.language)
     prompt = _build_deep_dive_prompt(req)
+    usage_stats: dict[str, int] = {"input_tokens": 0, "output_tokens": 0}
 
     try:
         queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
@@ -384,7 +436,7 @@ async def _stream_deep_dive(
                         safety_settings=SAFETY_SETTINGS,
                     ),
                 )
-                blocked = _feed_tokens_from_stream_chunks(response, queue, loop)
+                blocked = _feed_tokens_from_stream_chunks(response, queue, loop, usage_stats)
                 if not blocked:
                     loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
             except Exception as exc:  # noqa: BLE001
@@ -396,6 +448,12 @@ async def _stream_deep_dive(
         saw_error = False
         while True:
             kind, payload = await queue.get()
+            if is_disconnected is not None and await is_disconnected():
+                logger.info(
+                    "Client disconnected mid-stream %s; skipping quota deduction",
+                    post_id,
+                )
+                return
             if kind == "token":
                 saw_any_output = True
                 yield _sse_event({"text": payload}, event="token")
@@ -412,6 +470,7 @@ async def _stream_deep_dive(
             elif kind == "blocked":
                 saw_error = True
                 logger.warning("Gemini deep-dive blocked by safety filter (post_id=%s)", post_id)
+                await record_api_error_async(ErrorCode.CONTENT_BLOCKED, status_code=422, safety_blocked=True)
                 yield _sse_event(
                     {
                         "code": ErrorCode.CONTENT_BLOCKED,
@@ -423,9 +482,11 @@ async def _stream_deep_dive(
             elif kind == "error":
                 saw_error = True
                 logger.exception("Gemini deep-dive streaming failed", exc_info=payload)
+                err_code = classify_gemini_exception(payload)
+                await record_api_error_async(err_code, status_code=502, safety_blocked=(err_code == ErrorCode.CONTENT_BLOCKED))
                 yield _sse_event(
                     {
-                        "code": classify_gemini_exception(payload),
+                        "code": err_code,
                         "message": "Generation failed.",
                     },
                     event="error",
@@ -442,6 +503,7 @@ async def _stream_deep_dive(
                 "Gemini deep-dive returned empty stream for model=%s",
                 GEMINI_DEEP_DIVE_MODEL,
             )
+            await record_api_error_async(ErrorCode.GENERATION_FAILED, status_code=502)
             yield _sse_event(
                 {
                     "code": ErrorCode.GENERATION_FAILED,
@@ -455,11 +517,26 @@ async def _stream_deep_dive(
         logger.info("Client disconnected from deep-dive stream %s", post_id)
         raise
 
+    if is_disconnected is not None and await is_disconnected():
+        logger.info(
+            "Client disconnected before deep-dive completion %s; skipping quota deduction",
+            post_id,
+        )
+        return
+
     done_payload: dict[str, Any] = {"id": post_id}
     if on_complete is not None:
         access_snapshot = await on_complete()
         if access_snapshot is not None:
             done_payload["access"] = access_snapshot
+    await record_generation_async(
+        "deep_dive",
+        uid=uid,
+        language=req.language,
+        model=GEMINI_DEEP_DIVE_MODEL,
+        input_tokens=usage_stats.get("input_tokens", 0),
+        output_tokens=usage_stats.get("output_tokens", 0),
+    )
     yield _sse_event(done_payload, event="done")
 
 
@@ -588,6 +665,14 @@ async def generate_interest_suggestions(req: SuggestRequest) -> list[str]:
                 code=ErrorCode.GENERATION_FAILED,
                 detail="Could not generate suggestions right now.",
             )
+        in_tok, out_tok = _extract_usage_tokens(response)
+        await record_generation_async(
+            "suggestion",
+            language=req.language,
+            model=GEMINI_SUGGEST_MODEL,
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+        )
         return _parse_suggestion_strings(raw)[:10]
     except OmakaseAPIError:
         raise
@@ -641,6 +726,14 @@ async def generate_category_expansion(req: ExpandCategoryRequest) -> list[str]:
                 code=ErrorCode.GENERATION_FAILED,
                 detail="Could not expand category right now.",
             )
+        in_tok, out_tok = _extract_usage_tokens(response)
+        await record_generation_async(
+            "category_expansion",
+            language=req.language,
+            model=GEMINI_SUGGEST_MODEL,
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+        )
         return _parse_suggestion_strings(raw)[:12]
     except OmakaseAPIError:
         raise

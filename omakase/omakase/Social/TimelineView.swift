@@ -302,7 +302,7 @@ struct TimelineView: View {
                 selectedAuthorId = user.id
             } label: {
                 HStack(spacing: 12) {
-                    avatarView(urlString: user.photoURL)
+                    MonogramAvatarView(name: user.displayName, size: 38)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(user.displayName)
                             .font(.subheadline.bold())
@@ -334,31 +334,6 @@ struct TimelineView: View {
             .disabled(isPending)
         }
         .padding(.vertical, 4)
-    }
-
-    @ViewBuilder
-    private func avatarView(urlString: String?) -> some View {
-        if let s = urlString, let url = URL(string: s) {
-            AsyncImage(url: url) { phase in
-                if let img = phase.image {
-                    img.resizable()
-                        .scaledToFill()
-                        .frame(width: 38, height: 38)
-                        .clipShape(Circle())
-                } else {
-                    defaultAvatar
-                }
-            }
-        } else {
-            defaultAvatar
-        }
-    }
-
-    private var defaultAvatar: some View {
-        Image(systemName: "person.circle.fill")
-            .font(.system(size: 36))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(.secondary)
     }
 
     // MARK: - Subviews

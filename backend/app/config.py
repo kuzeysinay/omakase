@@ -33,9 +33,23 @@ REQUIRE_AUTH: bool = os.getenv("OMAKASE_REQUIRE_AUTH", "true").strip().lower() n
 )
 
 REVENUECAT_SECRET_API_KEY: Optional[str] = os.getenv("REVENUECAT_SECRET_API_KEY")
+REVENUECAT_V2_SECRET_API_KEY: Optional[str] = os.getenv("REVENUECAT_V2_SECRET_API_KEY")
 REVENUECAT_WEBHOOK_SECRET: Optional[str] = os.getenv("REVENUECAT_WEBHOOK_SECRET")
 REVENUECAT_ENTITLEMENT_ID: str = os.getenv("REVENUECAT_ENTITLEMENT_ID", "pro")
+REVENUECAT_PROJECT_ID: str = os.getenv("REVENUECAT_PROJECT_ID", "projfdc295f4")
 NOTIFICATION_CRON_SECRET: Optional[str] = os.getenv("NOTIFICATION_CRON_SECRET")
+ADMIN_ALERT_WEBHOOK_URL: Optional[str] = os.getenv("ADMIN_ALERT_WEBHOOK_URL")
+
+ADMIN_UIDS: set[str] = {
+    uid.strip()
+    for uid in os.getenv("ADMIN_UIDS", "Kp6J1wDQd5huj8FRrp3Vb3EuJ333").split(",")
+    if uid.strip()
+}
+ADMIN_EMAILS: set[str] = {
+    email.strip().lower()
+    for email in os.getenv("ADMIN_EMAILS", "").split(",")
+    if email.strip()
+}
 
 SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "tr", "ja", "de", "fr", "es", "ko")
 
@@ -64,6 +78,11 @@ PRO_DAILY_DEEP_DIVES: int = 40
 SHARE_BONUS_DEEP_DIVES: int = 1
 FREE_DAILY_SUGGESTIONS: int = 10
 PRO_DAILY_SUGGESTIONS: int = 100
+
+# Per-user daily plate limit overrides (e.g., owner/tester accounts without Pro entitlement)
+USER_DAILY_PLATES_OVERRIDES: dict[str, int] = {
+    "Kp6J1wDQd5huj8FRrp3Vb3EuJ333": 50,
+}
 
 ALLOWED_CORS_ORIGINS: list[str] = [
     "https://getomakase.app",

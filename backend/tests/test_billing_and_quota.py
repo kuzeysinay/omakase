@@ -380,6 +380,72 @@ class BillingAndQuotaTests(unittest.TestCase):
         self.assertEqual(body["status"], "active")
         self.assertEqual(body["product_id"], "omakase.pro.yearly")
 
+    def test_per_user_daily_plate_limit_override(self) -> None:
+        with patch.object(access_service, "get_firestore_client", return_value=self.fake_db):
+            owner_snapshot = access_service.build_access_snapshot(
+                "Kp6J1wDQd5huj8FRrp3Vb3EuJ333",
+                "Europe/Istanbul",
+            )
+            regular_snapshot = access_service.build_access_snapshot(
+                "regular-free-user",
+                "Europe/Istanbul",
+            )
+
+        self.assertFalse(owner_snapshot["is_pro"])
+        self.assertEqual(owner_snapshot["plates_limit"], 50)
+        self.assertEqual(owner_snapshot["plates_remaining"], 50)
+
+        self.assertFalse(regular_snapshot["is_pro"])
+        self.assertEqual(regular_snapshot["plates_limit"], 3)
+        self.assertEqual(regular_snapshot["plates_remaining"], 3)
+
+    def test_disconnected_stream_does_not_deduct_quota(self) -> None:
+        async def _run() -> int:
+            completed_calls = 0
+
+            async def _on_complete() -> dict:
+                nonlocal completed_calls
+                completed_calls += 1
+                return {}
+
+            async def _always_disconnected() -> bool:
+                return True
+
+            class _Chunk:
+                def __init__(self, text: str) -> None:
+                    self.text = text
+
+            def _fake_stream(**_kwargs: object):
+                yield _Chunk("Title\nTags: Tech\n\nBody paragraph.")
+
+            with patch.object(gemini_service, "GEMINI_API_KEY", "test-key"), patch.object(
+                gemini_service, "genai_client", object()
+            ):
+                class _FakeModels:
+                    @staticmethod
+                    def generate_content_stream(**kwargs: object):
+                        return _fake_stream(**kwargs)
+
+                fake_client = type("Client", (), {"models": _FakeModels()})()
+                with patch.object(gemini_service, "genai_client", fake_client):
+                    frames = []
+                    async for frame in gemini_service._stream_post(
+                        ["Tech"],
+                        0,
+                        "en",
+                        on_complete=_on_complete,
+                        is_disconnected=_always_disconnected,
+                    ):
+                        frames.append(frame)
+                    self.assertTrue(any("event: start" in f for f in frames))
+                    self.assertFalse(any("event: done" in f for f in frames))
+            return completed_calls
+
+        import asyncio
+
+        calls = asyncio.run(_run())
+        self.assertEqual(calls, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

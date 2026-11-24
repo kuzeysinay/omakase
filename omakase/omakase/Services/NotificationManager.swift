@@ -30,12 +30,40 @@ enum LimitCardRemindResult: Equatable, Sendable {
     case notGranted
 }
 
+struct NotificationPostSeed: Codable, Equatable, Sendable {
+    let id: String
+    let title: String
+    var topic: String
+    var hasDeepDive: Bool
+    var isBookmarked: Bool
+    let createdAt: Date
+}
+
+struct PendingNotificationTopicRequest: Equatable, Sendable {
+    let id: UUID
+    let topic: String?
+    let categoryId: String
+}
+
 @Observable
 @MainActor
 final class NotificationManager: NSObject {
 
     static let shared = NotificationManager()
     static let dailyMenuIdentifier = "omakase.daily-menu"
+    static let dailyMenuIdentifierPrefix = "omakase.daily-menu"
+    static let rollingDailyMenuDays = 7
+    static let dailySlotsPerDay = 3
+    static var allDailyMenuIdentifiers: [String] {
+        var ids = [dailyMenuIdentifier]
+        ids.append(contentsOf: (0..<rollingDailyMenuDays).map { "\(dailyMenuIdentifierPrefix).day-\($0)" })
+        for d in 0..<rollingDailyMenuDays {
+            for s in 0..<dailySlotsPerDay {
+                ids.append("\(dailyMenuIdentifierPrefix).day-\(d)-slot-\(s)")
+            }
+        }
+        return ids
+    }
 
     // MARK: - Observable State
 
@@ -46,6 +74,12 @@ final class NotificationManager: NSObject {
     var commentPushEnabled: Bool
     var dailyDigestEnabled: Bool
     var pendingRoute: NotificationDeepLink?
+    var pendingTopicRequest: PendingNotificationTopicRequest?
+
+    func consumePendingTopicRequest() -> PendingNotificationTopicRequest? {
+        defer { pendingTopicRequest = nil }
+        return pendingTopicRequest
+    }
 
     var reminderDateBinding: Date {
         Calendar.current.date(
@@ -72,6 +106,8 @@ final class NotificationManager: NSObject {
     private var apnsRetryCount: Int = 0
     @ObservationIgnored
     private var apnsRetryTask: Task<Void, Never>?
+    @ObservationIgnored
+    private var recentPostSeeds: [NotificationPostSeed] = []
 
     private enum Keys {
         static let deviceID = "omakase.notification.device_id"
@@ -80,11 +116,13 @@ final class NotificationManager: NSObject {
         static let reminderMinute = "omakase.notification.reminder_minute"
         static let commentPushEnabled = "omakase.notification.comments_enabled"
         static let dailyDigestEnabled = "omakase.notification.digest_enabled"
+        static let recentPostSeeds = "omakase.notification.recent_post_seeds"
     }
 
     private let categoryDailyMenu = "DAILY_MENU"
     private let categoryComment = "COMMENT_NOTIFICATION"
     private let categoryDigest = "SOCIAL_DIGEST"
+    private static let maxStoredPostSeeds = 12
 
     private var deviceId: String {
         if let existing = defaults.string(forKey: Keys.deviceID), !existing.isEmpty {
@@ -102,6 +140,10 @@ final class NotificationManager: NSObject {
         self.reminderMinute = d.object(forKey: Keys.reminderMinute) as? Int ?? 0
         self.commentPushEnabled = d.object(forKey: Keys.commentPushEnabled) as? Bool ?? true
         self.dailyDigestEnabled = d.object(forKey: Keys.dailyDigestEnabled) as? Bool ?? true
+        if let seedData = d.data(forKey: Keys.recentPostSeeds),
+           let decoded = try? JSONDecoder().decode([NotificationPostSeed].self, from: seedData) {
+            self.recentPostSeeds = Array(decoded.prefix(Self.maxStoredPostSeeds))
+        }
         super.init()
     }
 
@@ -322,7 +364,39 @@ final class NotificationManager: NSObject {
         }
     }
 
-    // MARK: - Local Daily Menu Scheduling & Cleanup
+    // MARK: - Post-Seed Memory & 7-Day Rolling Daily Menu Scheduling
+
+    func recordGeneratedPost(_ post: Post, language: AppLanguage) {
+        guard let cleanTitle = Self.sanitizedPostTitle(post.title) else { return }
+        let topic = Self.resolvedTopic(for: post, cleanTitle: cleanTitle, language: language)
+        let hasDeepDive = !(post.deepDiveText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let isBookmarked = BookmarkStore.shared.contains(postId: post.id)
+
+        let seed = NotificationPostSeed(
+            id: post.id.uuidString,
+            title: cleanTitle,
+            topic: topic,
+            hasDeepDive: hasDeepDive,
+            isBookmarked: isBookmarked,
+            createdAt: post.createdAt
+        )
+        upsertPostSeed(seed)
+
+        guard dailyReminderEnabled,
+              authorizationStatus == .authorized || authorizationStatus == .provisional else {
+            return
+        }
+
+        let interests = currentInterests()
+        let completedToday = !AccessManager.shared.isPro && AccessManager.shared.snapshot.platesRemaining == 0
+        Task { @MainActor in
+            await scheduleDailyMenuReminder(
+                interests: interests,
+                language: language,
+                menuCompletedToday: completedToday
+            )
+        }
+    }
 
     func syncDailyReminderOnForeground(
         interests: [String],
@@ -354,50 +428,229 @@ final class NotificationManager: NSObject {
 
         let center = UNUserNotificationCenter.current()
         let l10n = L10n(lang: language)
-        let rotated = Self.pickRotatedInterests(interests)
+        let seeds = await hydrateSeedsIfNeeded(language: language)
+        let cleanInterests = interests
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
 
-        let content = UNMutableNotificationContent()
-        content.title = l10n.dailyMenuNotificationTitle
-        content.body = l10n.dailyMenuNotificationBody(interests: rotated)
-        content.sound = .default
-        content.categoryIdentifier = categoryDailyMenu
-        content.userInfo = ["route": "feed"]
+        // Remove any prior daily-menu requests (including legacy single-slot & 7-slot identifiers)
+        // before installing the fresh 21-slot (3/day × 7 days) rolling schedule (local-notification-scheduling Rule 1).
+        let existingPending = await center.pendingNotificationRequests()
+        let staleIds = existingPending
+            .map(\.identifier)
+            .filter { $0.hasPrefix(Self.dailyMenuIdentifierPrefix) }
+        if !staleIds.isEmpty {
+            center.removePendingNotificationRequests(withIdentifiers: staleIds)
+        }
 
         let now = Date()
         let cal = Calendar.current
-        let todayTarget = cal.date(
-            bySettingHour: reminderHour,
-            minute: reminderMinute,
-            second: 0,
-            of: now
-        )
+        let dayOfYear = cal.ordinality(of: .day, in: .year, for: now) ?? 1
+        let slotTimes = dailySlotTimes()
 
-        let trigger: UNCalendarNotificationTrigger
-        if menuCompletedToday, let todayTarget, todayTarget > now {
-            // Suppress today's reminder when menu is already completed; schedule specifically for tomorrow.
-            let tomorrow = cal.date(byAdding: .day, value: 1, to: now) ?? now
-            var tomorrowComps = cal.dateComponents([.year, .month, .day], from: tomorrow)
-            tomorrowComps.hour = reminderHour
-            tomorrowComps.minute = reminderMinute
-            trigger = UNCalendarNotificationTrigger(dateMatching: tomorrowComps, repeats: false)
-        } else {
-            var dailyComps = DateComponents()
-            dailyComps.hour = reminderHour
-            dailyComps.minute = reminderMinute
-            trigger = UNCalendarNotificationTrigger(dateMatching: dailyComps, repeats: true)
+        struct ScheduledSlot {
+            let identifier: String
+            let targetDate: Date
+            let hour: Int
+            let minute: Int
+            let repeatsWeekly: Bool
         }
 
-        let request = UNNotificationRequest(
-            identifier: Self.dailyMenuIdentifier,
-            content: content,
-            trigger: trigger
+        var upcomingSlots: [ScheduledSlot] = []
+        for dayOffset in 0..<Self.rollingDailyMenuDays {
+            for (slotIndex, time) in slotTimes.enumerated() {
+                let candidateToday = cal.date(byAdding: .day, value: dayOffset, to: now) ?? now
+                let candidateDate = cal.date(
+                    bySettingHour: time.hour,
+                    minute: time.minute,
+                    second: 0,
+                    of: candidateToday
+                ) ?? candidateToday
+
+                // If today's earlier slot has already passed, push this slot one week ahead
+                // so all 21 scheduled deliveries are strictly in the future.
+                let effectiveDate: Date
+                let isWrappedLastDay: Bool
+                if dayOffset == 0 && candidateDate <= now {
+                    effectiveDate = cal.date(byAdding: .day, value: Self.rollingDailyMenuDays, to: candidateDate) ?? candidateDate
+                    isWrappedLastDay = true
+                } else {
+                    effectiveDate = candidateDate
+                    isWrappedLastDay = (dayOffset == Self.rollingDailyMenuDays - 1)
+                }
+
+                upcomingSlots.append(
+                    ScheduledSlot(
+                        identifier: "\(Self.dailyMenuIdentifierPrefix).day-\(dayOffset)-slot-\(slotIndex)",
+                        targetDate: effectiveDate,
+                        hour: time.hour,
+                        minute: time.minute,
+                        repeatsWeekly: isWrappedLastDay
+                    )
+                )
+            }
+        }
+        upcomingSlots.sort { $0.targetDate < $1.targetDate }
+
+        let excludedTitles = Set(
+            seeds.map(\.title)
+                + BookmarkStore.shared.entries.map(\.title)
+                + cleanInterests
+        )
+        let unseenCandidates = SubTopicDiscoveryStore.shared.pickUnseenNotificationCandidates(
+            count: upcomingSlots.count,
+            preferredInterests: cleanInterests,
+            excludedTitles: excludedTitles,
+            language: language,
+            dayOfYear: dayOfYear
         )
 
-        do {
-            try await center.add(request)
-        } catch {
-            ErrorReporter.record(error, mapped: .unknown, area: "notification_schedule_local")
+        var previousArchetype: DailyNotificationArchetype?
+        var previousSeedId: String?
+        var previousSignature: String?
+        var nextUnseenIndex = 0
+
+        for (index, slot) in upcomingSlots.enumerated() {
+            let content = UNMutableNotificationContent()
+            let bucket = Self.rollNotificationBucket()
+
+            if bucket == .unseenHeadline && nextUnseenIndex < unseenCandidates.count {
+                let candidate = unseenCandidates[nextUnseenIndex]
+                nextUnseenIndex += 1
+                let copy = Self.composeUnseenTeaser(
+                    slot: index,
+                    dayOfYear: dayOfYear,
+                    candidate: candidate,
+                    l10n: l10n
+                )
+                content.title = copy.title
+                content.body = copy.body
+                content.userInfo = [
+                    "route": "feed",
+                    "unseenTopic": candidate.topic,
+                    "categoryId": candidate.category.id,
+                    "openPaywallIfOut": true
+                ]
+            } else if bucket == .classicDailyMenu {
+                let topics = Self.rotatedTopics(
+                    from: cleanInterests,
+                    seed: nil,
+                    shift: index + dayOfYear,
+                    l10n: l10n
+                )
+                let topicPair: [String]
+                if cleanInterests.isEmpty {
+                    topicPair = [topics.first, topics.second]
+                } else if cleanInterests.count == 1 {
+                    topicPair = [cleanInterests[0]]
+                } else {
+                    topicPair = [topics.first, topics.second]
+                }
+                content.title = l10n.dailyMenuNotificationTitle
+                content.body = l10n.dailyMenuNotificationBody(interests: topicPair)
+                content.userInfo = [
+                    "route": "feed",
+                    "openPaywallIfOut": true
+                ]
+            } else {
+                let livePlatesCount = Self.effectivePlatesCount(for: slot.targetDate, calendar: cal)
+                let selection = Self.composeDailySlot(
+                    slot: index,
+                    dayOfYear: dayOfYear,
+                    seeds: seeds,
+                    interests: cleanInterests,
+                    platesCount: livePlatesCount,
+                    l10n: l10n,
+                    previousArchetype: previousArchetype,
+                    previousSeedId: previousSeedId,
+                    previousSignature: previousSignature
+                )
+                previousArchetype = selection.archetype
+                previousSeedId = selection.seedId
+                previousSignature = "\(selection.title)|\(selection.body)"
+
+                content.title = selection.title
+                content.body = selection.body
+                content.userInfo = [
+                    "route": "feed",
+                    "seedPostId": selection.seedId ?? "",
+                    "openPaywallIfOut": true
+                ]
+            }
+
+            content.sound = .default
+            content.categoryIdentifier = categoryDailyMenu
+            content.threadIdentifier = Self.dailyMenuIdentifierPrefix
+
+            let trigger: UNCalendarNotificationTrigger
+            if slot.repeatsWeekly {
+                // Keep the 7th day repeating weekly so 3 daily prime-time reminders never stall if the user is away 7+ days.
+                var weeklyComps = cal.dateComponents([.weekday], from: slot.targetDate)
+                weeklyComps.hour = slot.hour
+                weeklyComps.minute = slot.minute
+                trigger = UNCalendarNotificationTrigger(dateMatching: weeklyComps, repeats: true)
+            } else {
+                var dateComps = cal.dateComponents([.year, .month, .day], from: slot.targetDate)
+                dateComps.hour = slot.hour
+                dateComps.minute = slot.minute
+                trigger = UNCalendarNotificationTrigger(dateMatching: dateComps, repeats: false)
+            }
+
+            let request = UNNotificationRequest(
+                identifier: slot.identifier,
+                content: content,
+                trigger: trigger
+            )
+
+            do {
+                try await center.add(request)
+            } catch {
+                ErrorReporter.record(error, mapped: .unknown, area: "notification_schedule_local")
+            }
         }
+    }
+
+    /// Computes 3 well-spaced daily prime-time slots within `08:00–21:45` (never during `22:00–08:00` quiet hours),
+    /// anchored around the user's preferred time, afternoon break (`15:30`), and evening prime time (`21:00`).
+    private func dailySlotTimes() -> [(hour: Int, minute: Int)] {
+        let minAllowed = 8 * 60        // 08:00
+        let maxAllowed = 21 * 60 + 45  // 21:45
+        let minSpacing = 210           // 3.5 hours minimum gap between daily deliveries
+
+        let rawAnchor = reminderHour * 60 + reminderMinute
+        let anchor = min(max(rawAnchor, minAllowed), maxAllowed)
+
+        let preferredPairs: [(Int, Int)] = [
+            (15 * 60 + 30, 21 * 60),       // 15:30 + 21:00 (default with 09:00 anchor)
+            (10 * 60, 21 * 60),            // 10:00 + 21:00 (when user sets afternoon time)
+            (10 * 60, 15 * 60 + 30),       // 10:00 + 15:30 (when user sets evening time)
+            (9 * 60, 21 * 60),             // 09:00 + 21:00 (when user sets ~13:00-14:00)
+            (9 * 60, 21 * 60 + 45),        // 09:00 + 21:45 (when user sets ~18:00)
+            (9 * 60, 15 * 60 + 30),
+            (8 * 60 + 30, 14 * 60),
+            (8 * 60, 18 * 60)
+        ]
+
+        for (p1, p2) in preferredPairs {
+            let sorted = [anchor, p1, p2].sorted()
+            if sorted[1] - sorted[0] >= minSpacing && sorted[2] - sorted[1] >= minSpacing {
+                return sorted.map { ($0 / 60, $0 % 60) }
+            }
+        }
+
+        // Mathematical fallback: pick two evenly spaced points in [08:00, 21:45] respecting minSpacing.
+        var chosen = [anchor]
+        let grid = stride(from: minAllowed, through: maxAllowed, by: 30)
+        for _ in 0..<2 {
+            if let best = grid.max(by: { a, b in
+                let gapA = chosen.map { abs($0 - a) }.min() ?? 0
+                let gapB = chosen.map { abs($0 - b) }.min() ?? 0
+                return gapA < gapB
+            }) {
+                chosen.append(best)
+            }
+        }
+        return chosen.sorted().map { ($0 / 60, $0 % 60) }
     }
 
     func cancelDailyMenuReminder() async {
@@ -405,7 +658,7 @@ final class NotificationManager: NSObject {
         let pending = await center.pendingNotificationRequests()
         let pendingIds = pending
             .map(\.identifier)
-            .filter { $0 == Self.dailyMenuIdentifier }
+            .filter { $0.hasPrefix(Self.dailyMenuIdentifierPrefix) }
         if !pendingIds.isEmpty {
             center.removePendingNotificationRequests(withIdentifiers: pendingIds)
         }
@@ -413,7 +666,7 @@ final class NotificationManager: NSObject {
         let delivered = await center.deliveredNotifications()
         let deliveredIds = delivered
             .map { $0.request.identifier }
-            .filter { $0 == Self.dailyMenuIdentifier }
+            .filter { $0.hasPrefix(Self.dailyMenuIdentifierPrefix) }
         if !deliveredIds.isEmpty {
             center.removeDeliveredNotifications(withIdentifiers: deliveredIds)
         }
@@ -557,7 +810,7 @@ final class NotificationManager: NSObject {
             "commentPushEnabled": commentPushEnabled,
             "dailyDigestEnabled": dailyDigestEnabled,
             "timezone": TimeZone.current.identifier,
-            "language": lang == "tr" ? "tr" : "en",
+            "language": lang,
             "updatedAt": FieldValue.serverTimestamp()
         ]
         do {
@@ -590,7 +843,7 @@ final class NotificationManager: NSObject {
         let payload: [String: Any] = [
             "fcmToken": String(fcmToken.prefix(512)),
             "platform": "ios",
-            "language": lang == "tr" ? "tr" : "en",
+            "language": lang,
             "timezone": String(TimeZone.current.identifier.prefix(64)),
             "updatedAt": FieldValue.serverTimestamp()
         ]
@@ -619,18 +872,420 @@ final class NotificationManager: NSObject {
             .filter { !$0.isEmpty }
     }
 
-    private static func pickRotatedInterests(_ interests: [String]) -> [String] {
-        guard !interests.isEmpty else { return [] }
-        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        let firstIdx = dayOfYear % interests.count
-        if interests.count == 1 {
-            return [interests[firstIdx]]
-        }
-        let secondIdx = (firstIdx + 1) % interests.count
-        return [interests[firstIdx], interests[secondIdx]]
+    // MARK: - Post-Seed Memory & Copy Composition Helpers
+
+    private enum DailyNotificationArchetype: Int, CaseIterable {
+        case unfinishedDeepDive
+        case threadContinuation
+        case unexpectedPairing
+        case archiveEcho
+        case antiAlgorithmRitual
     }
 
-    private func applyTappedNotificationUserInfo(route: String?, postId: String?) {
+    private struct DailySlotComposition {
+        let archetype: DailyNotificationArchetype
+        let title: String
+        let body: String
+        let seedId: String?
+    }
+
+    private func upsertPostSeed(_ seed: NotificationPostSeed) {
+        recentPostSeeds.removeAll {
+            $0.id == seed.id || $0.title.caseInsensitiveCompare(seed.title) == .orderedSame
+        }
+        recentPostSeeds.insert(seed, at: 0)
+        if recentPostSeeds.count > Self.maxStoredPostSeeds {
+            recentPostSeeds = Array(recentPostSeeds.prefix(Self.maxStoredPostSeeds))
+        }
+        persistPostSeeds()
+    }
+
+    private func persistPostSeeds() {
+        guard let data = try? JSONEncoder().encode(recentPostSeeds) else { return }
+        defaults.set(data, forKey: Keys.recentPostSeeds)
+    }
+
+    private func hydrateSeedsIfNeeded(language: AppLanguage) async -> [NotificationPostSeed] {
+        var merged = recentPostSeeds
+        var didChange = false
+
+        for entry in BookmarkStore.shared.entries {
+            let entryDeepDive = !(entry.deepDiveText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let entryId = entry.id.uuidString
+            if let existingIdx = merged.firstIndex(where: { $0.id == entryId }) {
+                if !merged[existingIdx].isBookmarked || (entryDeepDive && !merged[existingIdx].hasDeepDive) {
+                    merged[existingIdx].isBookmarked = true
+                    merged[existingIdx].hasDeepDive = merged[existingIdx].hasDeepDive || entryDeepDive
+                    didChange = true
+                }
+            } else if let cleanTitle = Self.sanitizedPostTitle(entry.title) {
+                let categoryName = InterestCategory.resolveMainCategory(
+                    categoryId: entry.collectionName,
+                    tags: entry.tags,
+                    title: cleanTitle,
+                    text: entry.text
+                ).localizedName(for: language)
+                let topic = entry.tags.first(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+                    ?? categoryName
+                merged.append(
+                    NotificationPostSeed(
+                        id: entryId,
+                        title: cleanTitle,
+                        topic: topic,
+                        hasDeepDive: entryDeepDive,
+                        isBookmarked: true,
+                        createdAt: entry.postCreatedAt
+                    )
+                )
+                didChange = true
+            }
+        }
+
+        if merged.count < 4 {
+            let cachedPosts = await PostCacheService.shared.loadCachedPosts(limit: 10)
+            for post in cachedPosts {
+                let postId = post.id.uuidString
+                guard !merged.contains(where: { $0.id == postId }),
+                      let cleanTitle = Self.sanitizedPostTitle(post.title) else {
+                    continue
+                }
+                let hasDeepDive = !(post.deepDiveText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                merged.append(
+                    NotificationPostSeed(
+                        id: postId,
+                        title: cleanTitle,
+                        topic: Self.resolvedTopic(for: post, cleanTitle: cleanTitle, language: language),
+                        hasDeepDive: hasDeepDive,
+                        isBookmarked: BookmarkStore.shared.contains(postId: post.id),
+                        createdAt: post.createdAt
+                    )
+                )
+                didChange = true
+            }
+        }
+
+        var seenIds = Set<String>()
+        var seenTitles = Set<String>()
+        merged.sort { $0.createdAt > $1.createdAt }
+        let deduped = merged.filter { seed in
+            seenIds.insert(seed.id).inserted && seenTitles.insert(seed.title.lowercased()).inserted
+        }
+        let capped = Array(deduped.prefix(Self.maxStoredPostSeeds))
+        if didChange || capped != recentPostSeeds {
+            recentPostSeeds = capped
+            persistPostSeeds()
+        }
+        return capped
+    }
+
+    private static func sanitizedPostTitle(_ raw: String, maxLength: Int = 54) -> String? {
+        let collapsed = raw
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”«»「」'"))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !collapsed.isEmpty,
+              collapsed.caseInsensitiveCompare("Diving deeper...") != .orderedSame,
+              collapsed != "..." else {
+            return nil
+        }
+
+        guard collapsed.count > maxLength else {
+            return collapsed
+        }
+
+        let cutoff = collapsed.index(collapsed.startIndex, offsetBy: maxLength - 1)
+        let prefix = String(collapsed[..<cutoff])
+        if let lastSpace = prefix.lastIndex(of: " "),
+           prefix.distance(from: prefix.startIndex, to: lastSpace) > maxLength / 2 {
+            return String(prefix[..<lastSpace]).trimmingCharacters(in: .whitespaces) + "…"
+        }
+        return prefix.trimmingCharacters(in: .whitespaces) + "…"
+    }
+
+    private static func resolvedTopic(
+        for post: Post,
+        cleanTitle: String,
+        language: AppLanguage
+    ) -> String {
+        if let tag = post.tags
+            .map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+            .first(where: { !$0.isEmpty }) {
+            return tag
+        }
+        return InterestCategory.resolveMainCategory(
+            categoryId: post.categoryId,
+            tags: post.tags,
+            title: cleanTitle,
+            text: post.text
+        ).localizedName(for: language)
+    }
+
+    private static func rotatedTopics(
+        from interests: [String],
+        seed: NotificationPostSeed?,
+        shift: Int,
+        l10n: L10n
+    ) -> (first: String, second: String) {
+        if interests.count >= 2 {
+            let firstIdx = shift % interests.count
+            let secondIdx = (firstIdx + 1) % interests.count
+            return (interests[firstIdx], interests[secondIdx])
+        }
+        if let only = interests.first {
+            let seedTopic = seed?.topic.trimmingCharacters(in: .whitespacesAndNewlines)
+            let second = (seedTopic?.isEmpty == false && seedTopic?.caseInsensitiveCompare(only) != .orderedSame)
+                ? seedTopic!
+                : l10n.dailyMenuDefaultSecondTopic
+            return (only, second)
+        }
+        let seedTopic = seed?.topic.trimmingCharacters(in: .whitespacesAndNewlines)
+        let first = (seedTopic?.isEmpty == false) ? seedTopic! : l10n.dailyMenuDefaultTopic
+        let second = (first.caseInsensitiveCompare(l10n.dailyMenuDefaultSecondTopic) == .orderedSame)
+            ? l10n.dailyMenuDefaultTopic
+            : l10n.dailyMenuDefaultSecondTopic
+        return (first, second)
+    }
+
+    private static func pickSeed(
+        from seeds: [NotificationPostSeed],
+        slot: Int,
+        previousSeedId: String?,
+        prefer: ((NotificationPostSeed) -> Bool)? = nil
+    ) -> NotificationPostSeed? {
+        guard !seeds.isEmpty else { return nil }
+        let rotated = (0..<seeds.count).map { seeds[(slot + $0) % seeds.count] }
+        if let prefer {
+            if let match = rotated.first(where: { prefer($0) && $0.id != previousSeedId }) {
+                return match
+            }
+            if let match = rotated.first(where: prefer) {
+                return match
+            }
+        }
+        return rotated.first(where: { $0.id != previousSeedId }) ?? rotated.first
+    }
+
+    func refreshScheduledRemindersForQuotaChange() async {
+        guard dailyReminderEnabled,
+              authorizationStatus == .authorized || authorizationStatus == .provisional else {
+            return
+        }
+        let completedToday = !AccessManager.shared.isPro && AccessManager.shared.snapshot.platesRemaining == 0
+        await scheduleDailyMenuReminder(
+            interests: currentInterests(),
+            language: currentLanguage(),
+            menuCompletedToday: completedToday
+        )
+    }
+
+    private static func effectivePlatesCount(for targetDate: Date, calendar: Calendar) -> Int? {
+        if AccessManager.shared.isPro {
+            return nil
+        }
+        if calendar.isDateInToday(targetDate) {
+            let remaining = AccessManager.shared.snapshot.platesRemaining
+            return remaining > 0 ? remaining : nil
+        }
+        let limit = AccessManager.shared.snapshot.platesLimit
+        return limit > 0 ? limit : 3
+    }
+
+    private static func composeDailySlot(
+        slot: Int,
+        dayOfYear: Int,
+        seeds: [NotificationPostSeed],
+        interests: [String],
+        platesCount: Int?,
+        l10n: L10n,
+        previousArchetype: DailyNotificationArchetype?,
+        previousSeedId: String?,
+        previousSignature: String?
+    ) -> DailySlotComposition {
+        let allArchetypes = DailyNotificationArchetype.allCases
+        let offset = (slot + dayOfYear) % allArchetypes.count
+        var ordered = (0..<allArchetypes.count).map { allArchetypes[(offset + $0) % allArchetypes.count] }
+
+        // Lead with an unread Deep Dive hook on the very first day if one is waiting.
+        if slot == 0, seeds.contains(where: { !$0.hasDeepDive }) {
+            ordered.removeAll { $0 == .unfinishedDeepDive }
+            ordered.insert(.unfinishedDeepDive, at: 0)
+        }
+
+        if let previousArchetype, ordered.count > 1 {
+            ordered.removeAll { $0 == previousArchetype }
+            ordered.append(previousArchetype)
+        }
+
+        for archetype in ordered {
+            let composition: DailySlotComposition?
+            switch archetype {
+            case .unfinishedDeepDive:
+                if let seed = pickSeed(from: seeds, slot: slot, previousSeedId: previousSeedId, prefer: { !$0.hasDeepDive }) {
+                    composition = DailySlotComposition(
+                        archetype: .unfinishedDeepDive,
+                        title: l10n.dailyMenuDeepDiveTitle(title: seed.title),
+                        body: l10n.dailyMenuDeepDiveBody(platesCount: platesCount),
+                        seedId: seed.id
+                    )
+                } else {
+                    composition = nil
+                }
+
+            case .threadContinuation:
+                if let seed = pickSeed(from: seeds, slot: slot, previousSeedId: previousSeedId) {
+                    let topics = rotatedTopics(from: interests, seed: seed, shift: slot + dayOfYear, l10n: l10n)
+                    composition = DailySlotComposition(
+                        archetype: .threadContinuation,
+                        title: l10n.dailyMenuThreadTitle,
+                        body: l10n.dailyMenuThreadBody(title: seed.title, topic: topics.first),
+                        seedId: seed.id
+                    )
+                } else {
+                    composition = nil
+                }
+
+            case .unexpectedPairing:
+                let seed = pickSeed(from: seeds, slot: slot, previousSeedId: previousSeedId)
+                let topics = rotatedTopics(from: interests, seed: seed, shift: slot + dayOfYear, l10n: l10n)
+                let body = seed.map {
+                    l10n.dailyMenuPairingWithPostBody(title: $0.title, second: topics.second, platesCount: platesCount)
+                } ?? l10n.dailyMenuPairingEditorialBody
+                composition = DailySlotComposition(
+                    archetype: .unexpectedPairing,
+                    title: l10n.dailyMenuPairingTitle(first: topics.first, second: topics.second),
+                    body: body,
+                    seedId: seed?.id
+                )
+
+            case .archiveEcho:
+                if let seed = pickSeed(from: seeds, slot: slot, previousSeedId: previousSeedId, prefer: { $0.isBookmarked }) {
+                    let topics = rotatedTopics(from: interests, seed: seed, shift: slot + dayOfYear + 1, l10n: l10n)
+                    composition = DailySlotComposition(
+                        archetype: .archiveEcho,
+                        title: l10n.dailyMenuEchoTitle(topic: topics.first),
+                        body: l10n.dailyMenuEchoBody(title: seed.title, topic: topics.first),
+                        seedId: seed.id
+                    )
+                } else {
+                    composition = nil
+                }
+
+            case .antiAlgorithmRitual:
+                let seed = pickSeed(from: seeds, slot: slot, previousSeedId: previousSeedId)
+                let topics = rotatedTopics(from: interests, seed: seed, shift: slot + dayOfYear, l10n: l10n)
+                let body = seed.map {
+                    l10n.dailyMenuRitualWithPostBody(title: $0.title, topic: topics.first)
+                } ?? l10n.dailyMenuRitualEditorialBody(topic: topics.first, platesCount: platesCount)
+                composition = DailySlotComposition(
+                    archetype: .antiAlgorithmRitual,
+                    title: l10n.dailyMenuRitualTitle(platesCount: platesCount),
+                    body: body,
+                    seedId: seed?.id
+                )
+            }
+
+            if let composition {
+                let signature = "\(composition.title)|\(composition.body)"
+                if signature != previousSignature {
+                    return composition
+                }
+            }
+        }
+
+        // Final fallback when a brand-new user has 0 posts and few interests.
+        let topics = rotatedTopics(from: interests, seed: nil, shift: slot + dayOfYear, l10n: l10n)
+        let fallbackInterests = interests.isEmpty ? [topics.first, topics.second] : [topics.first]
+        return DailySlotComposition(
+            archetype: .antiAlgorithmRitual,
+            title: l10n.dailyMenuNotificationTitle,
+            body: l10n.dailyMenuNotificationBody(interests: fallbackInterests),
+            seedId: nil
+        )
+    }
+
+    private static func composeUnseenTeaser(
+        slot: Int,
+        dayOfYear: Int,
+        candidate: (topic: String, category: InterestCategory),
+        l10n: L10n
+    ) -> (title: String, body: String) {
+        let categoryName = candidate.category.localizedName(for: l10n.lang)
+        let cleanTitle = sanitizedPostTitle(candidate.topic) ?? candidate.topic
+        switch (slot + dayOfYear) % 5 {
+        case 0:
+            return (
+                title: l10n.dailyUnseenSpotlightTitle(category: categoryName, title: cleanTitle),
+                body: l10n.dailyUnseenSpotlightBody
+            )
+        case 1:
+            return (
+                title: l10n.dailyUnseenCounterTitle,
+                body: l10n.dailyUnseenCounterBody(title: cleanTitle, category: categoryName)
+            )
+        case 2:
+            return (
+                title: l10n.dailyUnseenBackstageTitle(title: cleanTitle),
+                body: l10n.dailyUnseenBackstageBody(category: categoryName)
+            )
+        case 3:
+            return (
+                title: l10n.dailyUnseenDiscoveryTitle(category: categoryName),
+                body: l10n.dailyUnseenDiscoveryBody(title: cleanTitle)
+            )
+        default:
+            return (
+                title: l10n.dailyUnseenRitualTitle(category: categoryName),
+                body: l10n.dailyUnseenRitualBody(title: cleanTitle)
+            )
+        }
+    }
+
+    private enum NotificationBucket {
+        case unseenHeadline   // 50% chance
+        case richArchetype    // 40% chance
+        case classicDailyMenu // 10% chance
+    }
+
+    private static func rollNotificationBucket() -> NotificationBucket {
+        let roll = Double.random(in: 0..<1)
+        if roll < 0.50 {
+            return .unseenHeadline
+        } else if roll < 0.90 {
+            return .richArchetype
+        } else {
+            return .classicDailyMenu
+        }
+    }
+
+    private func applyTappedNotificationUserInfo(
+        route: String?,
+        postId: String?,
+        unseenTopic: String?,
+        categoryId: String?,
+        openPaywallIfOut: Bool
+    ) {
+        let cleanTopic = unseenTopic?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let cleanTopic, !cleanTopic.isEmpty {
+            pendingTopicRequest = PendingNotificationTopicRequest(
+                id: UUID(),
+                topic: cleanTopic,
+                categoryId: categoryId ?? ""
+            )
+            pendingRoute = .feed
+            return
+        }
+        if openPaywallIfOut {
+            pendingTopicRequest = PendingNotificationTopicRequest(
+                id: UUID(),
+                topic: nil,
+                categoryId: ""
+            )
+            pendingRoute = .feed
+            return
+        }
         if let postId, !postId.isEmpty {
             pendingRoute = .sharedPost(postId: postId)
         } else if route == "community" {
@@ -667,8 +1322,17 @@ extension NotificationManager: UNUserNotificationCenterDelegate, MessagingDelega
             let userInfo = response.notification.request.content.userInfo
             let route = userInfo["route"] as? String
             let postId = userInfo["postId"] as? String
+            let unseenTopic = userInfo["unseenTopic"] as? String
+            let categoryId = userInfo["categoryId"] as? String
+            let openPaywallIfOut = (userInfo["openPaywallIfOut"] as? Bool) ?? false
             Task { @MainActor in
-                NotificationManager.shared.applyTappedNotificationUserInfo(route: route, postId: postId)
+                NotificationManager.shared.applyTappedNotificationUserInfo(
+                    route: route,
+                    postId: postId,
+                    unseenTopic: unseenTopic,
+                    categoryId: categoryId,
+                    openPaywallIfOut: openPaywallIfOut
+                )
             }
         case UNNotificationDismissActionIdentifier:
             break

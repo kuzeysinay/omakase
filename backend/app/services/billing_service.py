@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
+import time
 from typing import Any, Optional
 from urllib.parse import quote
 
@@ -11,13 +12,19 @@ import httpx
 
 from app.config import (
     REVENUECAT_ENTITLEMENT_ID,
+    REVENUECAT_PROJECT_ID,
     REVENUECAT_SECRET_API_KEY,
+    REVENUECAT_V2_SECRET_API_KEY,
     logger,
 )
 from app.errors import ErrorCode, OmakaseAPIError
 from app.services.access_service import parse_iso_datetime, set_entitlement
+from app.services.metrics_service import record_billing_event_async, send_admin_alert
 
 _REVENUECAT_BASE_URL = "https://api.revenuecat.com/v1"
+_REVENUECAT_V2_BASE_URL = "https://api.revenuecat.com/v2"
+_RC_OVERVIEW_CACHE: dict[str, Any] = {"expires_at": 0.0, "data": None}
+_RC_OVERVIEW_TTL_SECONDS = 300.0
 
 
 def _ms_to_iso(ms_val: Any) -> Optional[str]:
@@ -262,4 +269,114 @@ async def handle_revenuecat_webhook(payload: dict[str, Any]) -> dict[str, Any]:
 
     state = _entitlement_from_webhook_event(event, event_type)
     await asyncio.to_thread(set_entitlement, uid, state)
+
+    period_type = str(event.get("period_type") or "").upper()
+    raw_price = event.get("price_in_purchased_currency")
+    if raw_price is None:
+        raw_price = event.get("price")
+    try:
+        revenue_usd = float(event.get("price") or 0.0)
+    except (TypeError, ValueError):
+        revenue_usd = 0.0
+
+    await record_billing_event_async(
+        event_type,
+        is_trial=(period_type == "TRIAL"),
+        revenue_usd=revenue_usd,
+    )
+    if event_type in ("INITIAL_PURCHASE", "RENEWAL", "BILLING_ISSUE"):
+        await send_admin_alert(
+            f"RevenueCat: {event_type}",
+            f"UID: {uid[:12]}… · Plan: {state.get('product_id') or '-'} · Durum: {state.get('status')} · Tutar: ${revenue_usd:.2f}",
+        )
     return {"status": "ok", "uid": uid, "event_type": event_type}
+
+
+async def fetch_revenuecat_overview_metrics(force_refresh: bool = False) -> dict[str, Any]:
+    """Fetch 28-day RevenueCat v2 overview metrics with 5-minute TTL cache and graceful fallback."""
+    now_mono = time.monotonic()
+    cached_data = _RC_OVERVIEW_CACHE.get("data")
+    if not force_refresh and cached_data is not None and now_mono < float(_RC_OVERVIEW_CACHE.get("expires_at") or 0.0):
+        return cached_data
+
+    api_key = (REVENUECAT_V2_SECRET_API_KEY or REVENUECAT_SECRET_API_KEY or "").strip()
+    if not api_key:
+        result = {
+            "connected": False,
+            "mode": "firestore_fallback",
+            "project_id": REVENUECAT_PROJECT_ID,
+            "currency": "USD",
+            "reason": "REVENUECAT_V2_SECRET_API_KEY tanımlı değil; Firestore abonelikleri kullanılıyor.",
+            "metrics": {},
+        }
+        _RC_OVERVIEW_CACHE["data"] = result
+        _RC_OVERVIEW_CACHE["expires_at"] = now_mono + 60.0
+        return result
+
+    url = f"{_REVENUECAT_V2_BASE_URL}/projects/{quote(REVENUECAT_PROJECT_ID, safe='')}/metrics/overview?currency=USD"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            resp = await client.get(url, headers=headers)
+    except httpx.HTTPError as exc:
+        logger.warning("RevenueCat v2 overview fetch failed: %s", exc)
+        return {
+            "connected": False,
+            "mode": "firestore_fallback",
+            "project_id": REVENUECAT_PROJECT_ID,
+            "currency": "USD",
+            "reason": f"RevenueCat API ağ hatası: {type(exc).__name__}",
+            "metrics": {},
+        }
+
+    if not (200 <= resp.status_code < 300):
+        reason = (
+            "v2 API anahtarı yetkisi yok (REVENUECAT_V2_SECRET_API_KEY gerekir); Firestore abonelikleri kullanılıyor."
+            if resp.status_code in (401, 403)
+            else f"RevenueCat HTTP {resp.status_code}"
+        )
+        result = {
+            "connected": False,
+            "mode": "firestore_fallback",
+            "project_id": REVENUECAT_PROJECT_ID,
+            "currency": "USD",
+            "reason": reason,
+            "metrics": {},
+        }
+        _RC_OVERVIEW_CACHE["data"] = result
+        _RC_OVERVIEW_CACHE["expires_at"] = now_mono + 120.0
+        return result
+
+    body = resp.json()
+    raw_items = body.get("metrics") if isinstance(body, dict) else []
+    parsed: dict[str, dict[str, Any]] = {}
+    if isinstance(raw_items, list):
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            mid = str(item.get("id") or "")
+            if not mid:
+                continue
+            parsed[mid] = {
+                "name": item.get("name"),
+                "description": item.get("description"),
+                "unit": item.get("unit"),
+                "period": item.get("period"),
+                "value": item.get("value", 0),
+                "last_updated_at_iso8601": item.get("last_updated_at_iso8601"),
+            }
+
+    result = {
+        "connected": True,
+        "mode": "live_v2",
+        "project_id": REVENUECAT_PROJECT_ID,
+        "currency": str((body or {}).get("currency") or "USD"),
+        "fetched_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "metrics": parsed,
+    }
+    _RC_OVERVIEW_CACHE["data"] = result
+    _RC_OVERVIEW_CACHE["expires_at"] = now_mono + _RC_OVERVIEW_TTL_SECONDS
+    return result

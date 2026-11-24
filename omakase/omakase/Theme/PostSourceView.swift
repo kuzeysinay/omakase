@@ -58,6 +58,7 @@ struct PostSourceView: View {
     var body: some View {
         Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            TelemetryService.shared.track("source_tapped")
             showSourcePopover = true
         } label: {
             HStack(spacing: 6) {
@@ -116,6 +117,7 @@ struct PostSourceView: View {
             if let url = browserSearchURL {
                 Button {
                     showSourcePopover = false
+                    TelemetryService.shared.track("source_opened_browser")
                     openURL(url)
                 } label: {
                     HStack(spacing: 6) {

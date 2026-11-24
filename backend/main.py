@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from app.config import ALLOWED_CORS_ORIGINS
 from app.errors import ErrorCode, OmakaseAPIError
 from app.prompts import _build_deep_dive_prompt, _build_user_prompt
-from app.routers import billing, feed, interests, letterboxd, notifications
+from app.routers import admin, billing, feed, interests, letterboxd, notifications, telemetry
 from app.schemas import (
     DeepDiveRequest,
     ExpandCategoryRequest,
@@ -25,6 +25,7 @@ from app.schemas import (
 )
 from app.security import _check_rate_limit, verify_firebase_user
 from app.services.letterboxd_service import _parse_letterboxd_rss
+from app.services.metrics_service import record_api_error_background
 
 app = FastAPI(title="Omakase", version="0.1.0")
 
@@ -32,15 +33,25 @@ app = FastAPI(title="Omakase", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_CORS_ORIGINS,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "X-Omakase-Timezone"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Omakase-Timezone",
+        "X-Omakase-Device-Id",
+        "X-Omakase-App-Version",
+        "X-Omakase-OS-Version",
+    ],
 )
 
+app.include_router(admin.router)
 app.include_router(billing.router)
 app.include_router(feed.router)
 app.include_router(interests.router)
 app.include_router(letterboxd.router)
 app.include_router(notifications.router)
+app.include_router(telemetry.router)
 
 
 @app.exception_handler(OmakaseAPIError)
@@ -49,6 +60,7 @@ async def omakase_api_error_handler(
     exc: OmakaseAPIError,
 ) -> JSONResponse:
     """Serialize structured API errors with canonical `code` and optional headers."""
+    record_api_error_background(exc.code, exc.status_code)
     body: dict[str, object] = {"code": exc.code, "detail": exc.detail}
     if exc.extra:
         body.update(exc.extra)

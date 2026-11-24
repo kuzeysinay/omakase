@@ -50,6 +50,7 @@ struct OnboardingView: View {
 
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        TelemetryService.shared.track("onboarding_skipped")
                         completeOnboarding()
                     } label: {
                         Text(l10n.introSkip)
@@ -117,6 +118,9 @@ struct OnboardingView: View {
                 .padding(.horizontal, 22)
                 .padding(.bottom, 22)
             }
+        }
+        .onAppear {
+            TelemetryService.shared.track("onboarding_started")
         }
     }
 
@@ -324,6 +328,7 @@ struct OnboardingView: View {
     // MARK: - Actions
 
     private func completeOnboarding() {
+        TelemetryService.shared.track("onboarding_completed")
         hasOnboarded = true
     }
 }

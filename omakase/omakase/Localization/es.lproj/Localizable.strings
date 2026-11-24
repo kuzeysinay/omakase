@@ -380,3 +380,19 @@
 "dailyUnseenDiscoveryBody" = "El plato sin abrir de hoy: «{title}». El chef empieza a escribir en cuanto tocas.";
 "dailyUnseenRitualTitle" = "Selección sin algoritmos · {category}";
 "dailyUnseenRitualBody" = "«{title}» — deja que el chef te sirva ahora esta historia que aún no has leído. Toca para abrir.";
+
+"feedbackRowLabel" = "Enviar comentarios";
+"feedbackTitle" = "Enviar comentarios";
+"feedbackSubtitle" = "Comparte un error, una idea o una nota sobre el contenido directamente con el creador.";
+"feedbackCategoryLabel" = "Categoría";
+"feedbackCategoryBug" = "Error";
+"feedbackCategoryIdea" = "Idea";
+"feedbackCategoryContent" = "Contenido";
+"feedbackCategoryOther" = "Otro";
+"feedbackRatingLabel" = "Experiencia (opcional)";
+"feedbackMessageLabel" = "Tu nota";
+"feedbackMessagePlaceholder" = "¿Qué funciona genial, qué falló o qué te gustaría ver después?";
+"feedbackMetaFootnote" = "La versión de la app, la versión de iOS y el idioma se incluyen automáticamente.";
+"feedbackSubmitButton" = "Enviar";
+"feedbackSending" = "Enviando…";
+"feedbackSentToast" = "¡Gracias! Tus comentarios llegaron al chef.";

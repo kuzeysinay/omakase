@@ -169,6 +169,7 @@ struct OmakasePaywallView: View {
             .padding(.bottom, 6)
         }
         .task {
+            TelemetryService.shared.track("paywall_viewed", properties: ["source": source.rawValue])
             if accessManager.currentOffering == nil {
                 await accessManager.loadOfferings()
             }
@@ -638,16 +639,28 @@ struct OmakasePaywallView: View {
             return
         }
 
+        let planName = selectedPlan == .yearly ? "yearly" : "monthly"
+        TelemetryService.shared.track(
+            "paywall_purchase_started",
+            properties: ["source": source.rawValue, "plan": planName]
+        )
         let outcome = await accessManager.purchase(package: pkg)
         switch outcome {
         case .purchased:
+            TelemetryService.shared.track(
+                "paywall_purchase_completed",
+                properties: ["source": source.rawValue, "plan": planName]
+            )
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             onToast?(l10n.proPurchaseSuccess)
             dismiss()
         case .pending:
             localToastMessage = l10n.proPaymentPending
         case .cancelled:
-            break
+            TelemetryService.shared.track(
+                "paywall_purchase_cancelled",
+                properties: ["source": source.rawValue, "plan": planName]
+            )
         case .failed(let err):
             localToastMessage = err.message(l10n: l10n)
         }

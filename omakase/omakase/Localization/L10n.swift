@@ -1068,4 +1068,28 @@ struct L10n {
     var exploreDiscoverCTA: String { tr("exploreDiscoverCTA", fallback: "Explore Discover Feed") }
     var postSourceLabel: String { tr("postSourceLabel", fallback: "Source") }
     var searchSourceInBrowser: String { tr("searchSourceInBrowser", fallback: "Search in Browser") }
+
+    // MARK: - In-App Feedback
+
+    var feedbackRowLabel: String { tr("feedbackRowLabel", fallback: "Send Feedback") }
+    var feedbackTitle: String { tr("feedbackTitle", fallback: "Send Feedback") }
+    var feedbackSubtitle: String {
+        tr("feedbackSubtitle", fallback: "Share a bug, idea, or content note directly with the maker.")
+    }
+    var feedbackCategoryLabel: String { tr("feedbackCategoryLabel", fallback: "Category") }
+    var feedbackCategoryBug: String { tr("feedbackCategoryBug", fallback: "Bug") }
+    var feedbackCategoryIdea: String { tr("feedbackCategoryIdea", fallback: "Idea") }
+    var feedbackCategoryContent: String { tr("feedbackCategoryContent", fallback: "Content") }
+    var feedbackCategoryOther: String { tr("feedbackCategoryOther", fallback: "Other") }
+    var feedbackRatingLabel: String { tr("feedbackRatingLabel", fallback: "Experience (optional)") }
+    var feedbackMessageLabel: String { tr("feedbackMessageLabel", fallback: "Your note") }
+    var feedbackMessagePlaceholder: String {
+        tr("feedbackMessagePlaceholder", fallback: "What feels great, what broke, or what would you love next?")
+    }
+    var feedbackMetaFootnote: String {
+        tr("feedbackMetaFootnote", fallback: "App version, iOS version, and language are included automatically to help debug.")
+    }
+    var feedbackSubmitButton: String { tr("feedbackSubmitButton", fallback: "Send") }
+    var feedbackSending: String { tr("feedbackSending", fallback: "Sending…") }
+    var feedbackSentToast: String { tr("feedbackSentToast", fallback: "Thanks! Your feedback reached the chef.") }
 }

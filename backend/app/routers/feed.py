@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Optional
 
 from fastapi import APIRouter, Body, Depends, Header, Request
@@ -16,6 +17,7 @@ from app.services.access_service import (
     record_quota_usage,
 )
 from app.services.gemini_service import _stream_deep_dive, _stream_post
+from app.services.metrics_service import record_share_bonus_sync
 
 router = APIRouter(prefix="/feed", tags=["feed"])
 
@@ -54,6 +56,7 @@ async def feed_stream(
             letterboxd_films=req.letterboxd_films,
             on_complete=(lambda: record_quota_usage(uid, "plate", tz, device_id=x_omakase_device_id)) if uid else None,
             is_disconnected=request.is_disconnected,
+            uid=uid,
         ),
         media_type="text/event-stream",
         headers=headers,
@@ -79,6 +82,7 @@ async def deep_dive(
             req,
             on_complete=(lambda: record_quota_usage(uid, "deep_dive", tz, device_id=x_omakase_device_id)) if uid else None,
             is_disconnected=request.is_disconnected,
+            uid=uid,
         ),
         media_type="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
@@ -102,4 +106,7 @@ async def reward_share(
             detail="Authentication required.",
         )
     tz = req.timezone or x_omakase_timezone
-    return await claim_share_bonus(uid, tz, device_id=x_omakase_device_id)
+    result = await claim_share_bonus(uid, tz, device_id=x_omakase_device_id)
+    if result.get("granted"):
+        await asyncio.to_thread(record_share_bonus_sync, uid)
+    return result

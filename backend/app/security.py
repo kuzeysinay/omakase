@@ -8,19 +8,27 @@ import hashlib
 import math
 import re
 import time
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import Header, Request as FastAPIRequest
 from google.auth.transport import requests as google_auth_requests
 from google.oauth2 import id_token
 
-from app.config import FIREBASE_PROJECT_ID, REQUIRE_AUTH, logger
+from app.config import (
+    ADMIN_EMAILS,
+    ADMIN_UIDS,
+    FIREBASE_PROJECT_ID,
+    REQUIRE_AUTH,
+    logger,
+)
 from app.errors import ErrorCode, OmakaseAPIError
 
 _GOOGLE_AUTH_REQUEST = google_auth_requests.Request()
 _RATE_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
 # Short-lived in-memory cache of verified Firebase token hashes -> (uid, expiry_epoch)
 _VERIFIED_TOKEN_CACHE: dict[str, tuple[str, float]] = {}
+# Short-lived cache for admin claims -> (uid, email, email_verified, expiry_epoch)
+_VERIFIED_ADMIN_CACHE: dict[str, tuple[str, str, bool, float]] = {}
 _TOKEN_CACHE_TTL_SECONDS = 300.0
 
 # ---------------------------------------------------------------------------
@@ -137,6 +145,93 @@ def extract_uid(caller_id: str) -> Optional[str]:
         uid = caller_id[4:].strip()
         return uid or None
     return None
+
+
+def _is_authorized_admin_claims(uid: str, email: str, email_verified: bool) -> bool:
+    if uid and uid in ADMIN_UIDS:
+        return True
+    if email_verified and email and email.lower() in ADMIN_EMAILS:
+        return True
+    return False
+
+
+async def verify_admin_user(
+    request: FastAPIRequest,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
+    """Strictly verify a Firebase ID token and ensure the caller is in ADMIN_UIDS/ADMIN_EMAILS."""
+    client_host = request.client.host if request.client else "unknown"
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise OmakaseAPIError(
+            status_code=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail="Admin authentication required.",
+        )
+
+    token = authorization[7:].strip()
+    if not token:
+        raise OmakaseAPIError(
+            status_code=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail="Admin authentication required.",
+        )
+
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    now_wall = time.time()
+    cached = _VERIFIED_ADMIN_CACHE.get(token_hash)
+    if cached is not None:
+        c_uid, c_email, c_verified, c_exp = cached
+        if now_wall < c_exp:
+            if not _is_authorized_admin_claims(c_uid, c_email, c_verified):
+                raise OmakaseAPIError(
+                    status_code=403,
+                    code=ErrorCode.FORBIDDEN,
+                    detail="Admin access required.",
+                )
+            return {"uid": c_uid, "email": c_email, "caller_id": f"uid:{c_uid}"}
+        _VERIFIED_ADMIN_CACHE.pop(token_hash, None)
+
+    try:
+        claims = await asyncio.to_thread(
+            id_token.verify_firebase_token,
+            token,
+            _GOOGLE_AUTH_REQUEST,
+            FIREBASE_PROJECT_ID,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Invalid admin Firebase token from %s: %s", client_host, exc)
+        raise OmakaseAPIError(
+            status_code=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail="Invalid or expired authentication token.",
+        ) from exc
+
+    uid = str(claims.get("user_id") or claims.get("sub") or "").strip()
+    email = str(claims.get("email") or "").strip().lower()
+    email_verified = bool(claims.get("email_verified", False))
+    if not uid:
+        raise OmakaseAPIError(
+            status_code=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail="Invalid authentication token.",
+        )
+
+    exp_claim = float(claims.get("exp") or (now_wall + _TOKEN_CACHE_TTL_SECONDS))
+    cache_until = min(exp_claim - 10.0, now_wall + _TOKEN_CACHE_TTL_SECONDS)
+    if cache_until > now_wall:
+        if len(_VERIFIED_ADMIN_CACHE) > 256:
+            _VERIFIED_ADMIN_CACHE.clear()
+        _VERIFIED_ADMIN_CACHE[token_hash] = (uid, email, email_verified, cache_until)
+
+    if not _is_authorized_admin_claims(uid, email, email_verified):
+        logger.warning("Unauthorized admin access attempt uid=%s email=%s", uid, email or "-")
+        raise OmakaseAPIError(
+            status_code=403,
+            code=ErrorCode.FORBIDDEN,
+            detail="Admin access required.",
+        )
+
+    return {"uid": uid, "email": email, "caller_id": f"uid:{uid}"}
 
 
 def _sanitize_single_line(value: str, max_len: int) -> str:

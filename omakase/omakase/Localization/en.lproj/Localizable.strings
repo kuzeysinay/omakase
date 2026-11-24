@@ -441,3 +441,19 @@
 "profileSavedToast" = "Profile updated.";
 "profileSetupContinue" = "Continue";
 "authUsernameInvalid" = "Username must be at least 3 characters (a-z, 0-9, _ or .).";
+
+"feedbackRowLabel" = "Send Feedback";
+"feedbackTitle" = "Send Feedback";
+"feedbackSubtitle" = "Share a bug, idea, or content note directly with the maker.";
+"feedbackCategoryLabel" = "Category";
+"feedbackCategoryBug" = "Bug";
+"feedbackCategoryIdea" = "Idea";
+"feedbackCategoryContent" = "Content";
+"feedbackCategoryOther" = "Other";
+"feedbackRatingLabel" = "Experience (optional)";
+"feedbackMessageLabel" = "Your note";
+"feedbackMessagePlaceholder" = "What feels great, what broke, or what would you love next?";
+"feedbackMetaFootnote" = "App version, iOS version, and language are included automatically to help debug.";
+"feedbackSubmitButton" = "Send";
+"feedbackSending" = "Sending…";
+"feedbackSentToast" = "Thanks! Your feedback reached the chef.";

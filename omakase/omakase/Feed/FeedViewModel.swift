@@ -7,6 +7,7 @@ import Foundation
 import Network
 import Observation
 import SwiftUI
+import UIKit
 
 @Observable
 @MainActor
@@ -36,6 +37,7 @@ final class FeedViewModel {
 
     private var interests: [String]
     private var streamingTask: Task<Void, Never>?
+    private var streamBackgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     /// The post the current `streamingTask` is filling; only that task may clear `isGenerating`.
     private var activeStreamPostID: UUID?
     private var activeStreamHasError: Bool = false
@@ -89,6 +91,7 @@ final class FeedViewModel {
                     readingCooldownRemaining = 0
                     readingCooldownStartDate = nil
                     readingCooldownEndDate = nil
+                    TelemetryService.shared.track("cooldown_completed")
                     if !AccessManager.shared.isPro,
                        !UserDefaults.standard.bool(forKey: "omakase.hasShownFirstPlatePaywall"),
                        posts.contains(where: { $0.isComplete && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
@@ -172,6 +175,37 @@ final class FeedViewModel {
     /// without mutating the user's persistent interests list in memory.
     func requestDedicatedPost(topic: String, categoryId: String? = nil) {
         guard !isGenerating && !isCooldownActive else { return }
+        startDedicatedPostStream(
+            topic: topic,
+            categoryId: categoryId,
+            prefillTitle: false,
+            area: "feed_dedicated"
+        )
+    }
+
+    /// Generate a post immediately after the user taps a daily notification headline.
+    /// Clears any reading cooldown and presents the Paywall when free plates are exhausted.
+    func requestDedicatedPostFromNotification(topic: String, categoryId: String?) {
+        clearReadingCooldown()
+        streamingTask?.cancel()
+        if AccessManager.shared.isPlateLimitReached {
+            requestedPaywallSource = .plateLimit
+            return
+        }
+        startDedicatedPostStream(
+            topic: topic,
+            categoryId: categoryId,
+            prefillTitle: true,
+            area: "feed_notification"
+        )
+    }
+
+    private func startDedicatedPostStream(
+        topic: String,
+        categoryId: String?,
+        prefillTitle: Bool,
+        area: String
+    ) {
         if isOffline {
             pendingToastError = .offline
             return
@@ -185,8 +219,14 @@ final class FeedViewModel {
         activeError = nil
         lastRetryAction = .dedicated(topic: topic, categoryId: categoryId)
 
-        let resolvedCategoryId = categoryId ?? InterestCategory.resolveMainCategory(tags: [topic], title: topic).id
-        let post = Post(tags: [topic], categoryId: resolvedCategoryId)
+        let trimmedCat = categoryId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedCategoryId = (trimmedCat?.isEmpty == false ? trimmedCat : nil)
+            ?? InterestCategory.resolveMainCategory(tags: [topic], title: topic).id
+        let post = Post(
+            title: prefillTitle ? topic : "",
+            tags: [topic],
+            categoryId: resolvedCategoryId
+        )
         posts.append(post)
         let postID = post.id
         isGenerating = true
@@ -203,7 +243,7 @@ final class FeedViewModel {
             requestBody["letterboxd_films"] = letterboxdFilms.map { $0.asDictionary }
         }
 
-        streamPost(postID: postID, requestBody: requestBody, area: "feed_dedicated")
+        streamPost(postID: postID, requestBody: requestBody, area: area)
     }
 
     /// Shared SSE post-streaming helper used by feed, dedicated topic, and Letterboxd posts.
@@ -214,6 +254,7 @@ final class FeedViewModel {
 
         // `Task { }` created here would inherit MainActor and block the UI on
         // URLSession; use `detached` and hop back per event.
+        beginStreamBackgroundTask(name: "omakase.streamPost")
         streamingTask = Task.detached(priority: .userInitiated) {
             let stream = SSEClient.events(
                 from: streamURL,
@@ -275,6 +316,7 @@ final class FeedViewModel {
                     let self,
                     self.activeStreamPostID == streamPostID
                 else { return }
+                self.endStreamBackgroundTask()
                 self.isGenerating = false
                 if !self.activeStreamHasError,
                    let post = self.posts.first(where: { $0.id == streamPostID }),
@@ -319,6 +361,7 @@ final class FeedViewModel {
     func reset() {
         streamingTask?.cancel()
         streamingTask = nil
+        endStreamBackgroundTask()
         clearReadingCooldown()
         activeStreamPostID = nil
         activeStreamHasError = false
@@ -563,6 +606,7 @@ final class FeedViewModel {
         let streamURL = url
         let streamBody = bodyData
         let streamPostID = deepDiveId
+        beginStreamBackgroundTask(name: "omakase.streamDeepDive")
         streamingTask = Task.detached(priority: .userInitiated) {
             let stream = SSEClient.events(
                 from: streamURL,
@@ -623,12 +667,30 @@ final class FeedViewModel {
                     let self,
                     self.activeStreamPostID == streamPostID
                 else { return }
+                self.endStreamBackgroundTask()
                 self.isGenerating = false
             }
         }
     }
 
     // MARK: - Private
+
+    private func beginStreamBackgroundTask(name: String) {
+        endStreamBackgroundTask()
+        streamBackgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.streamingTask?.cancel()
+                self?.endStreamBackgroundTask()
+            }
+        }
+    }
+
+    private func endStreamBackgroundTask() {
+        guard streamBackgroundTaskID != .invalid else { return }
+        let taskID = streamBackgroundTaskID
+        streamBackgroundTaskID = .invalid
+        UIApplication.shared.endBackgroundTask(taskID)
+    }
 
     private func handle(event: SSEEvent, for postID: UUID) {
         // Each event's `data` is a JSON object. Parse defensively so a single
@@ -658,8 +720,11 @@ final class FeedViewModel {
                 AccessManager.shared.applySSEAccessPayload(accessDict)
             }
             if let idx = posts.firstIndex(where: { $0.id == postID }) {
+                let completedPost = posts[idx]
+                let lang = contentLanguage
+                NotificationManager.shared.recordGeneratedPost(completedPost, language: lang)
                 Task {
-                    await PostCacheService.shared.cachePost(posts[idx])
+                    await PostCacheService.shared.cachePost(completedPost)
                     await PostCacheService.shared.clearOldPosts()
                 }
             }
@@ -735,8 +800,9 @@ final class FeedViewModel {
     private func setTitle(_ title: String, for postID: UUID) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let post = posts.first(where: { $0.id == postID }) else { return }
-        // Only set title if it's empty to prevent overwriting existing post titles during deep dives
-        if post.title.isEmpty || post.title == "Diving deeper..." {
+        // Accept model title while generating an initial plate (including pre-filled notification topics),
+        // while keeping the existing title intact during Deep Dive expansions.
+        if post.deepDiveText == nil || post.title.isEmpty || post.title == "Diving deeper..." {
             post.title = trimmed
         }
     }

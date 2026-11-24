@@ -233,31 +233,8 @@ struct TimelinePostCard: View {
 
     // MARK: - Avatar
 
-    @ViewBuilder
     private var authorAvatar: some View {
-        if let urlStr = post.authorPhotoURL, let url = URL(string: urlStr) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 36, height: 36)
-                        .clipShape(Circle())
-                default:
-                    avatarPlaceholder
-                }
-            }
-        } else {
-            avatarPlaceholder
-        }
-    }
-
-    private var avatarPlaceholder: some View {
-        Image(systemName: "person.circle.fill")
-            .font(.system(size: 32))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(.secondary)
+        MonogramAvatarView(name: post.authorName, size: 36)
     }
 
     // MARK: - Tags
