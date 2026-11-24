@@ -37,6 +37,17 @@ REVENUECAT_WEBHOOK_SECRET: Optional[str] = os.getenv("REVENUECAT_WEBHOOK_SECRET"
 REVENUECAT_ENTITLEMENT_ID: str = os.getenv("REVENUECAT_ENTITLEMENT_ID", "pro")
 NOTIFICATION_CRON_SECRET: Optional[str] = os.getenv("NOTIFICATION_CRON_SECRET")
 
+SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "tr", "ja", "de", "fr", "es", "ko")
+
+
+def normalize_language(value: Optional[str]) -> str:
+    """Normalize a BCP-47 language tag to one of `SUPPORTED_LANGUAGES`, defaulting to `'en'`."""
+    raw = (value or "").strip().lower().replace("_", "-")
+    if not raw:
+        return "en"
+    base = raw.split("-", 1)[0]
+    return base if base in SUPPORTED_LANGUAGES else "en"
+
 # Push notification policy constants (v1.0 social notifications)
 COMMENT_COOLDOWN_MINUTES: int = 30
 QUIET_HOURS_START: int = 22

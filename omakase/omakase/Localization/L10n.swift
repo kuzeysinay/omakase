@@ -2,2011 +2,676 @@
 //  L10n.swift
 //  omakase
 //
+//  UI strings keyed by ``AppLanguage`` via per-language `.lproj/Localizable.strings`
+//  bundles (keeps onboarding, feed, and notifications in sync with API `language`).
+//
 
 import Foundation
 
-/// UI strings keyed by ``AppLanguage`` (keeps onboarding + feed in sync with API `language`).
 struct L10n {
     let lang: AppLanguage
+
+    private static let bundles: [AppLanguage: Bundle] = {
+        var map: [AppLanguage: Bundle] = [:]
+        for language in AppLanguage.allCases {
+            if let path = Bundle.main.path(forResource: language.rawValue, ofType: "lproj"),
+               let bundle = Bundle(path: path) {
+                map[language] = bundle
+            }
+        }
+        return map
+    }()
+
+    private func tr(_ key: String, fallback: String) -> String {
+        if let bundle = Self.bundles[lang] {
+            let value = bundle.localizedString(forKey: key, value: "__MISSING__", table: nil)
+            if value != "__MISSING__" {
+                return value
+            }
+        }
+        if let enBundle = Self.bundles[.english] {
+            let value = enBundle.localizedString(forKey: key, value: "__MISSING__", table: nil)
+            if value != "__MISSING__" {
+                return value
+            }
+        }
+        return fallback
+    }
+
+    private func tr(_ key: String, fallback: String, _ replacements: (String, String)...) -> String {
+        var result = tr(key, fallback: fallback)
+        for (placeholder, replacement) in replacements {
+            result = result.replacingOccurrences(of: "{\(placeholder)}", with: replacement)
+        }
+        return result
+    }
 
     // MARK: - Shared chrome
 
     var appTitle: String { "omakase" }
-
-    var languageMenuAccessibility: String {
-        switch lang {
-        case .english: "Language"
-        case .turkish: "Dil"
-        }
-    }
+    var languageMenuAccessibility: String { tr("languageMenuAccessibility", fallback: "Language") }
+    var backA11y: String { tr("backA11y", fallback: "Back") }
+    var closeLabel: String { tr("closeLabel", fallback: "Close") }
+    var clearTextA11y: String { tr("clearTextA11y", fallback: "Clear text") }
+    var passwordVisibilityA11y: String { tr("passwordVisibilityA11y", fallback: "Password visibility") }
+    var loadingLabel: String { tr("loadingLabel", fallback: "Loading…") }
+    var loadingMoreLabel: String { tr("loadingMoreLabel", fallback: "Loading more…") }
 
     // MARK: - Onboarding
 
     var onboardingTagline: String {
-        switch lang {
-        case .english:
-            "Tell us what you love. Your feed is generated fresh, just for you."
-        case .turkish:
-            "Sevdiğin şeyleri söyle. Akışın sana özel, taptaze üretilir."
-        }
+        tr("onboardingTagline", fallback: "Tell us what you love. Your feed is generated fresh, just for you.")
     }
-
-    var onboardingNeedInterest: String {
-        switch lang {
-        case .english: "Add at least one interest"
-        case .turkish: "En az bir ilgi ekle"
-        }
-    }
-
-    var onboardingStartFeed: String {
-        switch lang {
-        case .english: "Start my feed"
-        case .turkish: "Akışıma başla"
-        }
-    }
+    var onboardingNeedInterest: String { tr("onboardingNeedInterest", fallback: "Add at least one interest") }
+    var onboardingStartFeed: String { tr("onboardingStartFeed", fallback: "Start my feed") }
 
     // MARK: - Feed
 
-    var shareSheetA11y: String {
-        switch lang {
-        case .english: "Share post"
-        case .turkish: "Gönderiyi paylaş"
-        }
-    }
-
-    var deepDiveA11y: String {
-        switch lang {
-        case .english: "Deep dive"
-        case .turkish: "Derin incele"
-        }
-    }
-
-    var noPostsYet: String {
-        switch lang {
-        case .english: "No posts yet"
-        case .turkish: "Henüz post yok"
-        }
-    }
-
-    var offlineBanner: String {
-        switch lang {
-        case .english: "You're offline. Showing cached posts."
-        case .turkish: "Çevrimdışısın. Önbellekteki gönderiler gösteriliyor."
-        }
-    }
-
-    var internetRequired: String {
-        switch lang {
-        case .english: "Internet required"
-        case .turkish: "İnternet gerekli"
-        }
-    }
-
-    var clearFeed: String {
-        switch lang {
-        case .english: "Clear feed"
-        case .turkish: "Akışı temizle"
-        }
-    }
-
-    var clearSearch: String {
-        switch lang {
-        case .english: "Clear search"
-        case .turkish: "Aramayı temizle"
-        }
-    }
-
-    var feedMoreActionsA11y: String {
-        switch lang {
-        case .english: "More actions"
-        case .turkish: "Diğer işlemler"
-        }
-    }
-
-    var errorSomethingWrong: String {
-        switch lang {
-        case .english: "Something went wrong"
-        case .turkish: "Bir şeyler ters gitti"
-        }
-    }
-
-    var ok: String {
-        switch lang {
-        case .english: "OK"
-        case .turkish: "Tamam"
-        }
-    }
+    var shareSheetA11y: String { tr("shareSheetA11y", fallback: "Share post") }
+    var deepDiveA11y: String { tr("deepDiveA11y", fallback: "Deep dive") }
+    var noPostsYet: String { tr("noPostsYet", fallback: "No posts yet") }
+    var offlineBanner: String { tr("offlineBanner", fallback: "You're offline. Showing cached posts.") }
+    var internetRequired: String { tr("internetRequired", fallback: "Internet required") }
+    var clearFeed: String { tr("clearFeed", fallback: "Clear feed") }
+    var clearSearch: String { tr("clearSearch", fallback: "Clear search") }
+    var feedMoreActionsA11y: String { tr("feedMoreActionsA11y", fallback: "More actions") }
+    var errorSomethingWrong: String { tr("errorSomethingWrong", fallback: "Something went wrong") }
+    var ok: String { tr("ok", fallback: "OK") }
 
     func editTastesA11y(_ tasteSummary: String) -> String {
-        switch lang {
-        case .english: "Edit tastes, \(tasteSummary)"
-        case .turkish: "Tatları düzenle, \(tasteSummary)"
-        }
+        tr("editTastesA11y", fallback: "Edit tastes, {summary}", ("summary", tasteSummary))
     }
 
-    func tastesNoneA11y() -> String {
-        switch lang {
-        case .english: "none selected"
-        case .turkish: "hiçbiri seçilmedi"
-        }
-    }
+    func tastesNoneA11y() -> String { tr("tastesNoneA11y", fallback: "none selected") }
 
     func tastesCountA11y(_ count: Int) -> String {
-        switch lang {
-        case .english: "\(count) selected"
-        case .turkish: "\(count) seçildi"
-        }
+        tr("tastesCountA11y", fallback: "{count} selected", ("count", "\(count)"))
     }
 
-    var addTastes: String {
-        switch lang {
-        case .english: "Add tastes"
-        case .turkish: "Tat ekle"
-        }
-    }
+    var addTastes: String { tr("addTastes", fallback: "Add tastes") }
 
     func tastesShortLabel(count: Int, singleName: String) -> String {
-        switch lang {
-        case .english:
-            if count == 0 { return addTastes }
-            if count == 1 {
-                return singleName.count > 16 ? String(singleName.prefix(14)) + "…" : singleName
-            }
-            return "\(count) tastes"
-        case .turkish:
-            if count == 0 { return addTastes }
-            if count == 1 {
-                return singleName.count > 16 ? String(singleName.prefix(14)) + "…" : singleName
-            }
-            return "\(count) tat"
+        if count == 0 { return addTastes }
+        if count == 1 {
+            return singleName.count > 16 ? String(singleName.prefix(14)) + "…" : singleName
         }
+        return tr("tastesShortLabelCount", fallback: "{count} tastes", ("count", "\(count)"))
     }
 
     func savedPostsA11y(count: Int) -> String {
-        switch lang {
-        case .english:
-            count > 0 ? "Saved posts, \(count)" : "Saved posts"
-        case .turkish:
-            count > 0 ? "Kaydedilen gönderiler, \(count)" : "Kaydedilen gönderiler"
+        if count > 0 {
+            return tr("savedPostsA11yCount", fallback: "Saved posts, {count}", ("count", "\(count)"))
         }
+        return tr("savedPostsA11yEmpty", fallback: "Saved posts")
     }
 
-    var emptyFeedHeadline: String {
-        switch lang {
-        case .english: "Your feed is warming up…"
-        case .turkish: "Akışın ısınıyor…"
-        }
-    }
-
-    var emptyFeedDetail: String {
-        switch lang {
-        case .english: "Tap the button below to taste the first post."
-        case .turkish: "İlk gönderiyi görmek için aşağıdaki düğmeye dokun."
-        }
-    }
-
-    var generating: String {
-        switch lang {
-        case .english: "Generating…"
-        case .turkish: "Üretiliyor…"
-        }
-    }
+    var emptyFeedHeadline: String { tr("emptyFeedHeadline", fallback: "Your feed is warming up…") }
+    var emptyFeedDetail: String { tr("emptyFeedDetail", fallback: "Tap the button below to taste the first post.") }
+    var generating: String { tr("generating", fallback: "Generating…") }
 
     /// Rotates while a post streams in; paired with ``FeedViewModel/loadingQuipIndex``.
     var cookingQuips: [String] {
-        switch lang {
-        case .english:
-            [
-                "Simmering…",
-                "Chef absolutely knows which knife.",
-                "Reducing your interests into a sauce…",
-                "Tasting the draft so you don't have to.",
-                "Quietly sharpening the punchlines…",
-                "Plating commas and confidence…",
-                "One more swirl of personality…",
-                "Almost too hot to subtitle.",
-            ]
-        case .turkish:
-            [
-                "Kelimeler marine ediliyor…",
-                "İlgi alanların harmanlanıyor…",
-                "Tat profili çıkarılıyor…",
-                "İçerik kısık ateşte demleniyor…",
-                "Taze fikirler doğranıyor…",
-                "Cümleler özenle diziliyor…",
-                "Lezzet dengesi kuruluyor…",
-                "Son bir tutam ilham ekleniyor…",
-            ]
-        }
+        let fallback = [
+            "Simmering…",
+            "Chef absolutely knows which knife.",
+            "Reducing your interests into a sauce…",
+            "Tasting the draft so you don't have to.",
+            "Quietly sharpening the punchlines…",
+            "Plating commas and confidence…",
+            "One more swirl of personality…",
+            "Almost too hot to subtitle.",
+        ]
+        let raw = tr("cookingQuips", fallback: fallback.joined(separator: "\n"))
+        let lines = raw.components(separatedBy: "\n").filter { !$0.isEmpty }
+        return lines.isEmpty ? fallback : lines
     }
 
-    var serveNextPost: String {
-        switch lang {
-        case .english: "Serve next post"
-        case .turkish: "Sonraki gönderiyi sun"
-        }
-    }
+    var serveNextPost: String { tr("serveNextPost", fallback: "Serve next post") }
 
     func readingCooldownTitle(seconds: Int) -> String {
-        switch lang {
-        case .english: "Reading cooldown: \(seconds)s"
-        case .turkish: "Okuma süresi: \(seconds) sn"
-        }
+        tr("readingCooldownTitle", fallback: "Reading cooldown: {seconds}s", ("seconds", "\(seconds)"))
     }
 
     var readingCooldownDetail: String {
-        switch lang {
-        case .english: "Take your time with this post. Next dish unlocks shortly."
-        case .turkish: "Gönderiyi sindirmen için bekleniyor. Yeni post az sonra açılacak."
-        }
+        tr("readingCooldownDetail", fallback: "Take your time with this post. Next dish unlocks shortly.")
     }
-
-    var removeBookmarkA11y: String {
-        switch lang {
-        case .english: "Remove bookmark"
-        case .turkish: "Yer imini kaldır"
-        }
-    }
-
-    var bookmarkPostA11y: String {
-        switch lang {
-        case .english: "Bookmark post"
-        case .turkish: "Gönderiyi kaydet"
-        }
-    }
-
-    var liveBadge: String {
-        switch lang {
-        case .english: "LIVE"
-        case .turkish: "CANLI"
-        }
-    }
-
-    var composingTitle: String {
-        switch lang {
-        case .english: "Composing…"
-        case .turkish: "Yazılıyor…"
-        }
-    }
-
-    var untitledBite: String {
-        switch lang {
-        case .english: "Untitled bite"
-        case .turkish: "Başlıksız lokma"
-        }
-    }
-
+    var removeBookmarkA11y: String { tr("removeBookmarkA11y", fallback: "Remove bookmark") }
+    var bookmarkPostA11y: String { tr("bookmarkPostA11y", fallback: "Bookmark post") }
+    var liveBadge: String { tr("liveBadge", fallback: "LIVE") }
+    var composingTitle: String { tr("composingTitle", fallback: "Composing…") }
+    var untitledBite: String { tr("untitledBite", fallback: "Untitled bite") }
     var streamEndedNoText: String {
-        switch lang {
-        case .english:
-            "Could not generate the post right now. Please check your internet connection and try again."
-        case .turkish:
-            "Gönderi şu anda üretilemedi. Lütfen internet bağlantını kontrol edip tekrar dene."
-        }
+        tr("streamEndedNoText", fallback: "Could not generate the post right now. Please check your internet connection and try again.")
     }
 
     func couldNotConnect(apiBase: String) -> String {
-        switch lang {
-        case .english:
-            "Could not connect to Omakase servers. Please check your internet connection and try again."
-        case .turkish:
-            "Omakase sunucularına bağlanılamadı. Lütfen internet bağlantını kontrol edip tekrar dene."
-        }
+        _ = apiBase
+        return tr("couldNotConnect", fallback: "Could not connect to Omakase servers. Please check your internet connection and try again.")
     }
+
+    var writingDeepDive: String { tr("writingDeepDive", fallback: "Writing deep dive…") }
+    var scrollDownForNewPost: String { tr("scrollDownForNewPost", fallback: "Scroll down for a new post") }
+    var actionReRead: String { tr("actionReRead", fallback: "Re-read") }
+    var deepDiveTitle: String { tr("deepDiveTitle", fallback: "Deep Dive") }
+    var deepDiveShortLabel: String { tr("deepDiveShortLabel", fallback: "Deep Dive") }
+    var readDeepDiveA11y: String { tr("readDeepDiveA11y", fallback: "Read deep dive") }
+    var hideKeyboard: String { tr("hideKeyboard", fallback: "Hide keyboard") }
 
     // MARK: - Interests editor
 
-    var addTastePlaceholder: String {
-        switch lang {
-        case .english: "Add a taste…"
-        case .turkish: "Bir tat ekle…"
-        }
-    }
-
-    var ideasToTry: String {
-        switch lang {
-        case .english: "Ideas to try"
-        case .turkish: "Denebilecek fikirler"
-        }
-    }
-
-    var thinking: String {
-        switch lang {
-        case .english: "Thinking…"
-        case .turkish: "Düşünüyor…"
-        }
-    }
-
-    var refreshIdeasA11y: String {
-        switch lang {
-        case .english: "Refresh ideas"
-        case .turkish: "Fikirleri yenile"
-        }
-    }
-
-    var couldNotLoadIdeas: String {
-        switch lang {
-        case .english: "Could not load ideas."
-        case .turkish: "Fikirler yüklenemedi."
-        }
-    }
+    var addTastePlaceholder: String { tr("addTastePlaceholder", fallback: "Add a taste…") }
+    var ideasToTry: String { tr("ideasToTry", fallback: "Ideas to try") }
+    var thinking: String { tr("thinking", fallback: "Thinking…") }
+    var refreshIdeasA11y: String { tr("refreshIdeasA11y", fallback: "Refresh ideas") }
+    var couldNotLoadIdeas: String { tr("couldNotLoadIdeas", fallback: "Could not load ideas.") }
 
     // MARK: - Adjust tastes sheet
 
     var adjustTastesBlurb: String {
-        switch lang {
-        case .english:
-            "Tune what Omakase cooks for you. Add, remove, or steal ideas below — your feed updates right away."
-        case .turkish:
-            "Omakase senin için ne pişireceğini buradan ayarla. Aşağıdan ekle, çıkar veya fikir çal — akışın hemen güncellenir."
-        }
+        tr("adjustTastesBlurb", fallback: "Tune what Omakase cooks for you. Add, remove, or steal ideas below — your feed updates right away.")
     }
-
-    var yourTastes: String {
-        switch lang {
-        case .english: "Your tastes"
-        case .turkish: "Tatların"
-        }
-    }
-
-    var cancel: String {
-        switch lang {
-        case .english: "Cancel"
-        case .turkish: "İptal"
-        }
-    }
-
-    var save: String {
-        switch lang {
-        case .english: "Save"
-        case .turkish: "Kaydet"
-        }
-    }
+    var yourTastes: String { tr("yourTastes", fallback: "Your tastes") }
+    var cancel: String { tr("cancel", fallback: "Cancel") }
+    var save: String { tr("save", fallback: "Save") }
 
     // MARK: - Bookmarks
 
-    var noBookmarks: String {
-        switch lang {
-        case .english: "No bookmarks"
-        case .turkish: "Yer imi yok"
-        }
-    }
-
+    var noBookmarks: String { tr("noBookmarks", fallback: "No bookmarks") }
     var bookmarksHint: String {
-        switch lang {
-        case .english: "Save a finished post from your feed to read it again here."
-        case .turkish: "Akıştaki tamamlanmış bir gönderiyi kaydederek burada yeniden oku."
-        }
+        tr("bookmarksHint", fallback: "Save a finished post from your feed to read it again here.")
     }
-
-    var savedPostFallbackTitle: String {
-        switch lang {
-        case .english: "Saved post"
-        case .turkish: "Kaydedilen gönderi"
-        }
-    }
-
-    var remove: String {
-        switch lang {
-        case .english: "Remove"
-        case .turkish: "Kaldır"
-        }
-    }
-
-    var savedTitle: String {
-        switch lang {
-        case .english: "Saved"
-        case .turkish: "Kaydedilenler"
-        }
-    }
-
-    var done: String {
-        switch lang {
-        case .english: "Done"
-        case .turkish: "Bitti"
-        }
-    }
-
-    var removeAllSaved: String {
-        switch lang {
-        case .english: "Remove all saved"
-        case .turkish: "Tüm kayıtlıları sil"
-        }
-    }
-
-    var selectEdit: String {
-        switch lang {
-        case .english: "Select"
-        case .turkish: "Seç"
-        }
-    }
+    var savedPostFallbackTitle: String { tr("savedPostFallbackTitle", fallback: "Saved post") }
+    var savedPostsLabel: String { tr("savedPostsLabel", fallback: "Saved Posts") }
+    var bookmarkAllCategory: String { tr("bookmarkAllCategory", fallback: "All") }
+    var moveToCategory: String { tr("moveToCategory", fallback: "Move to Category…") }
+    var remove: String { tr("remove", fallback: "Remove") }
+    var savedTitle: String { tr("savedTitle", fallback: "Saved") }
+    var done: String { tr("done", fallback: "Done") }
+    var removeAllSaved: String { tr("removeAllSaved", fallback: "Remove all saved") }
+    var selectEdit: String { tr("selectEdit", fallback: "Select") }
 
     func deleteSelectedCount(_ count: Int) -> String {
-        switch lang {
-        case .english: "Delete \(count) selected"
-        case .turkish: "\(count) seçili gönderiyi sil"
-        }
+        tr("deleteSelectedCount", fallback: "Delete {count} selected", ("count", "\(count)"))
     }
 
     // MARK: - Delete confirmations
 
-    var confirmDeleteTitle: String {
-        switch lang {
-        case .english: "Delete bookmark?"
-        case .turkish: "Yer imi silinsin mi?"
-        }
-    }
-
+    var confirmDeleteTitle: String { tr("confirmDeleteTitle", fallback: "Delete bookmark?") }
     var confirmDeleteMessage: String {
-        switch lang {
-        case .english: "This saved post will be removed permanently."
-        case .turkish: "Bu kaydedilen gönderi kalıcı olarak silinecek."
-        }
+        tr("confirmDeleteMessage", fallback: "This saved post will be removed permanently.")
     }
 
     func confirmDeleteSelectedTitle(_ count: Int) -> String {
-        switch lang {
-        case .english: "Delete \(count) bookmarks?"
-        case .turkish: "\(count) yer imi silinsin mi?"
-        }
+        tr("confirmDeleteSelectedTitle", fallback: "Delete {count} bookmarks?", ("count", "\(count)"))
     }
 
     func confirmDeleteSelectedMessage(_ count: Int) -> String {
-        switch lang {
-        case .english: "The \(count) selected posts will be removed permanently."
-        case .turkish: "Seçilen \(count) gönderi kalıcı olarak silinecek."
-        }
+        tr("confirmDeleteSelectedMessage", fallback: "The {count} selected posts will be removed permanently.", ("count", "\(count)"))
     }
 
-    var confirmDeleteAllTitle: String {
-        switch lang {
-        case .english: "Delete all bookmarks?"
-        case .turkish: "Tüm yer imleri silinsin mi?"
-        }
-    }
-
+    var confirmDeleteAllTitle: String { tr("confirmDeleteAllTitle", fallback: "Delete all bookmarks?") }
     var confirmDeleteAllMessage: String {
-        switch lang {
-        case .english: "All saved posts will be removed permanently."
-        case .turkish: "Tüm kaydedilen gönderiler kalıcı olarak silinecek."
-        }
+        tr("confirmDeleteAllMessage", fallback: "All saved posts will be removed permanently.")
     }
-
-    var confirmDeletePostTitle: String {
-        switch lang {
-        case .english: "Delete post?"
-        case .turkish: "Gönderi silinsin mi?"
-        }
-    }
-
+    var confirmDeletePostTitle: String { tr("confirmDeletePostTitle", fallback: "Delete post?") }
     var confirmDeletePostMessage: String {
-        switch lang {
-        case .english: "This post will be removed from your feed."
-        case .turkish: "Bu gönderi akışından kaldırılacak."
-        }
+        tr("confirmDeletePostMessage", fallback: "This post will be removed from your feed.")
     }
 
     // MARK: - Auth
 
     var authTagline: String {
-        switch lang {
-        case .english: "Sign in to discover and share curated bites with people who get it."
-        case .turkish: "Keşfetmek ve küratörlüğünü yaptığın lokmaları paylaşmak için giriş yap."
-        }
+        tr("authTagline", fallback: "Sign in to discover and share curated bites with people who get it.")
     }
-
-    var signInWithGoogle: String {
-        switch lang {
-        case .english: "Continue with Google"
-        case .turkish: "Google ile devam et"
-        }
-    }
-
-    var signInWithApple: String {
-        switch lang {
-        case .english: "Continue with Apple"
-        case .turkish: "Apple ile devam et"
-        }
-    }
-
-    var authSignUpTab: String {
-        switch lang {
-        case .english: "Sign Up"
-        case .turkish: "Kayıt Ol"
-        }
-    }
-
-    var authSignInTab: String {
-        switch lang {
-        case .english: "Sign In"
-        case .turkish: "Giriş Yap"
-        }
-    }
-
-    var authNameLabel: String {
-        switch lang {
-        case .english: "Full Name"
-        case .turkish: "Ad Soyad"
-        }
-    }
-
-    var authNamePlaceholder: String {
-        switch lang {
-        case .english: "Your name"
-        case .turkish: "Adın Soyadın"
-        }
-    }
-
-    var authEmailLabel: String {
-        switch lang {
-        case .english: "Email"
-        case .turkish: "E-posta"
-        }
-    }
-
-    var authEmailPlaceholder: String {
-        switch lang {
-        case .english: "name@example.com"
-        case .turkish: "ornek@eposta.com"
-        }
-    }
-
-    var authPasswordLabel: String {
-        switch lang {
-        case .english: "Password"
-        case .turkish: "Şifre"
-        }
-    }
-
-    var authPasswordPlaceholder: String {
-        switch lang {
-        case .english: "At least 6 characters"
-        case .turkish: "En az 6 karakter"
-        }
-    }
-
-    var authConfirmPasswordLabel: String {
-        switch lang {
-        case .english: "Confirm Password"
-        case .turkish: "Şifre Tekrar"
-        }
-    }
-
-    var authConfirmPasswordPlaceholder: String {
-        switch lang {
-        case .english: "Re-enter your password"
-        case .turkish: "Şifreni tekrar gir"
-        }
-    }
-
-    var authSignUpWithEmailButton: String {
-        switch lang {
-        case .english: "Sign up with Email"
-        case .turkish: "E-posta ile Kayıt Ol"
-        }
-    }
-
-    var authSignInWithEmailButton: String {
-        switch lang {
-        case .english: "Sign in with Email"
-        case .turkish: "E-posta ile Giriş Yap"
-        }
-    }
-
-    var authOrDivider: String {
-        switch lang {
-        case .english: "or"
-        case .turkish: "veya"
-        }
-    }
-
-    var authOrWithEmail: String {
-        switch lang {
-        case .english: "or with email"
-        case .turkish: "veya e-posta ile"
-        }
-    }
-
-    var authForgotPassword: String {
-        switch lang {
-        case .english: "Forgot password?"
-        case .turkish: "Şifremi unuttum"
-        }
-    }
-
+    var signInWithGoogle: String { tr("signInWithGoogle", fallback: "Continue with Google") }
+    var signInWithApple: String { tr("signInWithApple", fallback: "Continue with Apple") }
+    var authSignUpTab: String { tr("authSignUpTab", fallback: "Sign Up") }
+    var authSignInTab: String { tr("authSignInTab", fallback: "Sign In") }
+    var authNameLabel: String { tr("authNameLabel", fallback: "Full Name") }
+    var authNamePlaceholder: String { tr("authNamePlaceholder", fallback: "Your name") }
+    var authEmailLabel: String { tr("authEmailLabel", fallback: "Email") }
+    var authEmailPlaceholder: String { tr("authEmailPlaceholder", fallback: "name@example.com") }
+    var authPasswordLabel: String { tr("authPasswordLabel", fallback: "Password") }
+    var authPasswordPlaceholder: String { tr("authPasswordPlaceholder", fallback: "At least 6 characters") }
+    var authConfirmPasswordLabel: String { tr("authConfirmPasswordLabel", fallback: "Confirm Password") }
+    var authConfirmPasswordPlaceholder: String { tr("authConfirmPasswordPlaceholder", fallback: "Re-enter your password") }
+    var authSignUpWithEmailButton: String { tr("authSignUpWithEmailButton", fallback: "Sign up with Email") }
+    var authSignInWithEmailButton: String { tr("authSignInWithEmailButton", fallback: "Sign in with Email") }
+    var authOrDivider: String { tr("authOrDivider", fallback: "or") }
+    var authOrWithEmail: String { tr("authOrWithEmail", fallback: "or with email") }
+    var authForgotPassword: String { tr("authForgotPassword", fallback: "Forgot password?") }
     var authResetPasswordSent: String {
-        switch lang {
-        case .english: "Password reset link sent to your email."
-        case .turkish: "Şifre sıfırlama bağlantısı e-posta adresine gönderildi."
-        }
+        tr("authResetPasswordSent", fallback: "Password reset link sent to your email.")
     }
-
     var authSwitchToSignInPrompt: String {
-        switch lang {
-        case .english: "Already have an account? Sign in"
-        case .turkish: "Zaten hesabın var mı? Giriş yap"
-        }
+        tr("authSwitchToSignInPrompt", fallback: "Already have an account? Sign in")
     }
-
     var authSwitchToSignUpPrompt: String {
-        switch lang {
-        case .english: "Don't have an account? Sign up with email"
-        case .turkish: "Hesabın yok mu? E-posta ile kayıt ol"
-        }
+        tr("authSwitchToSignUpPrompt", fallback: "Don't have an account? Sign up with email")
     }
-
-    var authErrorNameRequired: String {
-        switch lang {
-        case .english: "Please enter your name."
-        case .turkish: "Lütfen adınızı girin."
-        }
-    }
-
+    var authErrorNameRequired: String { tr("authErrorNameRequired", fallback: "Please enter your name.") }
     var authErrorInvalidEmail: String {
-        switch lang {
-        case .english: "Please enter a valid email address."
-        case .turkish: "Lütfen geçerli bir e-posta adresi girin."
-        }
+        tr("authErrorInvalidEmail", fallback: "Please enter a valid email address.")
     }
-
     var authErrorWeakPassword: String {
-        switch lang {
-        case .english: "Password must be at least 8 characters."
-        case .turkish: "Şifre en az 8 karakter olmalıdır."
-        }
+        tr("authErrorWeakPassword", fallback: "Password must be at least 8 characters.")
     }
-
-    var authErrorPasswordMismatch: String {
-        switch lang {
-        case .english: "Passwords do not match."
-        case .turkish: "Şifreler eşleşmiyor."
-        }
-    }
-
+    var authErrorPasswordMismatch: String { tr("authErrorPasswordMismatch", fallback: "Passwords do not match.") }
     var authErrorEmailInUse: String {
-        switch lang {
-        case .english: "This email address is already registered."
-        case .turkish: "Bu e-posta adresiyle zaten bir hesap var."
-        }
+        tr("authErrorEmailInUse", fallback: "This email address is already registered.")
     }
-
-    var authErrorInvalidCredential: String {
-        switch lang {
-        case .english: "Incorrect email or password."
-        case .turkish: "E-posta veya şifre hatalı."
-        }
-    }
-
+    var authErrorInvalidCredential: String { tr("authErrorInvalidCredential", fallback: "Incorrect email or password.") }
     var authErrorEnterEmailForReset: String {
-        switch lang {
-        case .english: "Enter your email address above first to reset your password."
-        case .turkish: "Şifre sıfırlamak için önce yukarıya e-posta adresini gir."
-        }
+        tr("authErrorEnterEmailForReset", fallback: "Enter your email address above first to reset your password.")
     }
-
-    var authCreateAccountButton: String {
-        switch lang {
-        case .english: "Create account with Email"
-        case .turkish: "E-posta ile Hesap Oluştur"
-        }
-    }
-
-    var authContinueButton: String {
-        switch lang {
-        case .english: "Continue"
-        case .turkish: "Devam Et"
-        }
-    }
-
-    var authCompleteSignUpButton: String {
-        switch lang {
-        case .english: "Create Account"
-        case .turkish: "Hesabı Oluştur"
-        }
-    }
-
-    var authStep1Title: String {
-        switch lang {
-        case .english: "Create your account"
-        case .turkish: "Hesabını oluştur"
-        }
-    }
-
+    var authCreateAccountButton: String { tr("authCreateAccountButton", fallback: "Create account with Email") }
+    var authContinueButton: String { tr("authContinueButton", fallback: "Continue") }
+    var authCompleteSignUpButton: String { tr("authCompleteSignUpButton", fallback: "Create Account") }
+    var authStep1Title: String { tr("authStep1Title", fallback: "Create your account") }
     var authStep1Subtitle: String {
-        switch lang {
-        case .english: "Start with your email and a secure password."
-        case .turkish: "E-posta adresin ve güvenli bir şifre ile başla."
-        }
+        tr("authStep1Subtitle", fallback: "Start with your email and a secure password.")
     }
-
-    var authStep2Title: String {
-        switch lang {
-        case .english: "What should we call you?"
-        case .turkish: "Görünür ismin ne olsun?"
-        }
-    }
-
+    var authStep2Title: String { tr("authStep2Title", fallback: "What should we call you?") }
     var authStep2Subtitle: String {
-        switch lang {
-        case .english: "This is your display name shown on your profile and shared bites."
-        case .turkish: "Profilinde ve paylaştığın lokmalarda herkesin göreceği ismin."
-        }
+        tr("authStep2Subtitle", fallback: "This is your display name shown on your profile and shared bites.")
     }
-
     var authDisplayNamePlaceholder: String {
-        switch lang {
-        case .english: "Display Name (e.g. Kuzey Sınay)"
-        case .turkish: "Görünür İsim (örn. Kuzey Sınay)"
-        }
+        tr("authDisplayNamePlaceholder", fallback: "Display Name (e.g. Kuzey Sınay)")
     }
-
-    var authStep3Title: String {
-        switch lang {
-        case .english: "Pick your @username"
-        case .turkish: "Bir @kullanıcı adı seç"
-        }
-    }
-
+    var authStep3Title: String { tr("authStep3Title", fallback: "Pick your @username") }
     var authStep3Subtitle: String {
-        switch lang {
-        case .english: "Your unique handle makes it easy for others to find and follow you."
-        case .turkish: "Toplulukta seni benzersiz kılacak ve kolayca bulunmanı sağlayacak kullanıcı adın."
-        }
+        tr("authStep3Subtitle", fallback: "Your unique handle makes it easy for others to find and follow you.")
     }
-
-    var authUsernamePlaceholder: String {
-        switch lang {
-        case .english: "username"
-        case .turkish: "kullanici_adi"
-        }
-    }
-
-    var authSuggestedUsernames: String {
-        switch lang {
-        case .english: "Suggestions"
-        case .turkish: "Öneriler"
-        }
-    }
-
-    var authUsernameAvailable: String {
-        switch lang {
-        case .english: "Available"
-        case .turkish: "Kullanılabilir"
-        }
-    }
-
-    var authUsernameTaken: String {
-        switch lang {
-        case .english: "This username is already taken."
-        case .turkish: "Bu kullanıcı adı zaten alınmış."
-        }
-    }
-
+    var authUsernamePlaceholder: String { tr("authUsernamePlaceholder", fallback: "username") }
+    var authSuggestedUsernames: String { tr("authSuggestedUsernames", fallback: "Suggestions") }
+    var authUsernameAvailable: String { tr("authUsernameAvailable", fallback: "Available") }
+    var authUsernameTaken: String { tr("authUsernameTaken", fallback: "This username is already taken.") }
     var authUsernameTooShort: String {
-        switch lang {
-        case .english: "Username must be at least 3 characters."
-        case .turkish: "Kullanıcı adı en az 3 karakter olmalıdır."
-        }
+        tr("authUsernameTooShort", fallback: "Username must be at least 3 characters.")
     }
-
-    var authWelcomeBackTitle: String {
-        switch lang {
-        case .english: "Welcome back"
-        case .turkish: "Tekrar hoş geldin"
-        }
-    }
-
+    var authWelcomeBackTitle: String { tr("authWelcomeBackTitle", fallback: "Welcome back") }
     var authWelcomeBackSubtitle: String {
-        switch lang {
-        case .english: "Sign in with your email and password."
-        case .turkish: "E-posta adresin ve şifrenle giriş yap."
-        }
+        tr("authWelcomeBackSubtitle", fallback: "Sign in with your email and password.")
     }
-
-    var authPasswordHintValid: String {
-        switch lang {
-        case .english: "8+ characters"
-        case .turkish: "8+ karakter tamam"
-        }
-    }
-
-    var authPasswordHintRequirement: String {
-        switch lang {
-        case .english: "Minimum 8 characters"
-        case .turkish: "En az 8 karakter"
-        }
-    }
-
-    var authProfilePreviewLabel: String {
-        switch lang {
-        case .english: "PROFILE PREVIEW"
-        case .turkish: "PROFİL ÖNİZLEMESİ"
-        }
-    }
-
-    var signOut: String {
-        switch lang {
-        case .english: "Sign out"
-        case .turkish: "Çıkış yap"
-        }
-    }
+    var authPasswordHintValid: String { tr("authPasswordHintValid", fallback: "8+ characters") }
+    var authPasswordHintRequirement: String { tr("authPasswordHintRequirement", fallback: "Minimum 8 characters") }
+    var authProfilePreviewLabel: String { tr("authProfilePreviewLabel", fallback: "PROFILE PREVIEW") }
+    var signOut: String { tr("signOut", fallback: "Sign out") }
 
     // MARK: - Tabs
 
-    var tabMyFeed: String {
-        switch lang {
-        case .english: "My Feed"
-        case .turkish: "Akışım"
-        }
-    }
+    var tabMyFeed: String { tr("tabMyFeed", fallback: "My Feed") }
+    var tabTimeline: String { tr("tabTimeline", fallback: "Community") }
+    var tabProfile: String { tr("tabProfile", fallback: "Profile") }
 
-    var tabTimeline: String {
-        switch lang {
-        case .english: "Community"
-        case .turkish: "Topluluk"
-        }
-    }
+    // MARK: - Timeline / Community & Comments
 
-    var tabProfile: String {
-        switch lang {
-        case .english: "Profile"
-        case .turkish: "Profil"
-        }
-    }
-
-    // MARK: - Timeline / Community
-
-    var loadingTimeline: String {
-        switch lang {
-        case .english: "Loading community…"
-        case .turkish: "Topluluk yükleniyor…"
-        }
-    }
-
-    var timelineEmptyHeadline: String {
-        switch lang {
-        case .english: "No community posts yet"
-        case .turkish: "Henüz paylaşım yok"
-        }
-    }
-
+    var loadingTimeline: String { tr("loadingTimeline", fallback: "Loading community…") }
+    var timelineEmptyHeadline: String { tr("timelineEmptyHeadline", fallback: "No community posts yet") }
     var timelineEmptyDetail: String {
-        switch lang {
-        case .english: "Follow people to see the posts they share from their AI feeds."
-        case .turkish: "Yapay zeka akışlarından paylaştıkları gönderileri görmek için insanları takip et."
-        }
+        tr("timelineEmptyDetail", fallback: "Follow people to see the posts they share from their AI feeds.")
     }
-
     var communitySearchPlaceholder: String {
-        switch lang {
-        case .english: "Search people or posts…"
-        case .turkish: "Kişi veya gönderi ara…"
-        }
+        tr("communitySearchPlaceholder", fallback: "Search people or posts…")
     }
-
-    var discoverBannerTitle: String {
-        switch lang {
-        case .english: "Discover"
-        case .turkish: "Keşfet"
-        }
-    }
-
+    var searchPeopleSection: String { tr("searchPeopleSection", fallback: "People") }
+    var noSearchResults: String { tr("noSearchResults", fallback: "No results found") }
+    var discoverBannerTitle: String { tr("discoverBannerTitle", fallback: "Discover") }
     var discoverBannerDetail: String {
-        switch lang {
-        case .english: "You're not following anyone yet. Here's what people are sharing."
-        case .turkish: "Henüz kimseyi takip etmiyorsun. İnsanların paylaştıkları burada."
-        }
+        tr("discoverBannerDetail", fallback: "You're not following anyone yet. Here's what people are sharing.")
     }
+    var deletePost: String { tr("deletePost", fallback: "Delete Post") }
+    var likeA11y: String { tr("likeA11y", fallback: "Like") }
+    var commentsA11y: String { tr("commentsA11y", fallback: "Comments") }
+
+    func commentsCountTitle(_ count: Int) -> String {
+        tr("commentsCountTitle", fallback: "{count} Comments", ("count", "\(count)"))
+    }
+
+    var noCommentsYet: String { tr("noCommentsYet", fallback: "No comments yet") }
+    var addCommentPlaceholder: String { tr("addCommentPlaceholder", fallback: "Add a comment…") }
+    var sendCommentA11y: String { tr("sendCommentA11y", fallback: "Send comment") }
 
     // MARK: - Follow system
 
-    var findPeople: String {
-        switch lang {
-        case .english: "Find people"
-        case .turkish: "Kişi bul"
-        }
-    }
-
-    var follow: String {
-        switch lang {
-        case .english: "Follow"
-        case .turkish: "Takip et"
-        }
-    }
-
-    var following: String {
-        switch lang {
-        case .english: "Following"
-        case .turkish: "Takip ediliyor"
-        }
-    }
-
-    var followers: String {
-        switch lang {
-        case .english: "Followers"
-        case .turkish: "Takipçi"
-        }
-    }
-
-    var followingLabel: String {
-        switch lang {
-        case .english: "Following"
-        case .turkish: "Takip"
-        }
-    }
-
-    var searchUsersPlaceholder: String {
-        switch lang {
-        case .english: "Search by name…"
-        case .turkish: "İsme göre ara…"
-        }
-    }
-
-    var searchUsersHint: String {
-        switch lang {
-        case .english: "Search for people to follow"
-        case .turkish: "Takip etmek için kişi ara"
-        }
-    }
-
-    var noUsersFound: String {
-        switch lang {
-        case .english: "No users found"
-        case .turkish: "Kullanıcı bulunamadı"
-        }
-    }
+    var findPeople: String { tr("findPeople", fallback: "Find people") }
+    var follow: String { tr("follow", fallback: "Follow") }
+    var following: String { tr("following", fallback: "Following") }
+    var followers: String { tr("followers", fallback: "Followers") }
+    var followingLabel: String { tr("followingLabel", fallback: "Following") }
+    var searchUsersPlaceholder: String { tr("searchUsersPlaceholder", fallback: "Search by name…") }
+    var searchUsersHint: String { tr("searchUsersHint", fallback: "Search for people to follow") }
+    var noUsersFound: String { tr("noUsersFound", fallback: "No users found") }
 
     // MARK: - Profile
 
-    var myProfile: String {
-        switch lang {
-        case .english: "My Profile"
-        case .turkish: "Profilim"
-        }
-    }
+    var myProfile: String { tr("myProfile", fallback: "My Profile") }
+    var profilePreferences: String { tr("profilePreferences", fallback: "Preferences") }
+    var profilePosts: String { tr("profilePosts", fallback: "Posts") }
+    var profileAccount: String { tr("profileAccount", fallback: "Account") }
 
-    var profilePreferences: String {
-        switch lang {
-        case .english: "Preferences"
-        case .turkish: "Tercihler"
-        }
-    }
+    // MARK: - Share & Reels Actions
 
-    var profilePosts: String {
-        switch lang {
-        case .english: "Posts"
-        case .turkish: "Gönderiler"
-        }
-    }
-
-    var profileAccount: String {
-        switch lang {
-        case .english: "Account"
-        case .turkish: "Hesap"
-        }
-    }
-
-    // MARK: - Share
-
-    var sharePost: String {
-        switch lang {
-        case .english: "Share to community"
-        case .turkish: "Toplulukta paylaş"
-        }
-    }
-
-    var unsharePost: String {
-        switch lang {
-        case .english: "Remove from community"
-        case .turkish: "Topluluktan kaldır"
-        }
-    }
-
-    // MARK: - Reels Actions
-
-    var actionDive: String {
-        switch lang {
-        case .english: "Dive"
-        case .turkish: "İncele"
-        }
-    }
-
-    var actionShare: String {
-        switch lang {
-        case .english: "Share"
-        case .turkish: "Paylaş"
-        }
-    }
-
-    var actionShared: String {
-        switch lang {
-        case .english: "Shared"
-        case .turkish: "Paylaşıldı"
-        }
-    }
-
-    var actionExport: String {
-        switch lang {
-        case .english: "Export"
-        case .turkish: "Dışa Aktar"
-        }
-    }
-
-    var actionSave: String {
-        switch lang {
-        case .english: "Save"
-        case .turkish: "Kaydet"
-        }
-    }
-
-    var actionSaved: String {
-        switch lang {
-        case .english: "Saved"
-        case .turkish: "Kaydedildi"
-        }
-    }
-
-    var toastBookmarked: String {
-        switch lang {
-        case .english: "Post bookmarked"
-        case .turkish: "Gönderi kaydedildi"
-        }
-    }
-
-    var toastBookmarkRemoved: String {
-        switch lang {
-        case .english: "Bookmark removed"
-        case .turkish: "Yer imi kaldırıldı"
-        }
-    }
-
-    var toastPostShared: String {
-        switch lang {
-        case .english: "Post shared to Community"
-        case .turkish: "Gönderi toplulukta paylaşıldı"
-        }
-    }
-
-    var toastPostUnshared: String {
-        switch lang {
-        case .english: "Post unshared"
-        case .turkish: "Paylaşım kaldırıldı"
-        }
-    }
-
+    var sharePost: String { tr("sharePost", fallback: "Share to community") }
+    var unsharePost: String { tr("unsharePost", fallback: "Remove from community") }
+    var actionDive: String { tr("actionDive", fallback: "Dive") }
+    var actionShare: String { tr("actionShare", fallback: "Share") }
+    var actionShared: String { tr("actionShared", fallback: "Shared") }
+    var actionExport: String { tr("actionExport", fallback: "Export") }
+    var actionSave: String { tr("actionSave", fallback: "Save") }
+    var actionSaved: String { tr("actionSaved", fallback: "Saved") }
+    var toastBookmarked: String { tr("toastBookmarked", fallback: "Post bookmarked") }
+    var toastBookmarkRemoved: String { tr("toastBookmarkRemoved", fallback: "Bookmark removed") }
+    var toastPostShared: String { tr("toastPostShared", fallback: "Post shared to Community") }
+    var toastPostUnshared: String { tr("toastPostUnshared", fallback: "Post unshared") }
     var toastInappropriateInterest: String {
-        switch lang {
-        case .english: "Inappropriate interest cannot be added"
-        case .turkish: "Uygunsuz ilgi alanı eklenemez"
-        }
+        tr("toastInappropriateInterest", fallback: "Inappropriate interest cannot be added")
     }
 
-    // MARK: - Interest Discovery
+    // MARK: - Interest Discovery & Bento Box
 
-    var orTypeYourOwn: String {
-        switch lang {
-        case .english: "Or type your own…"
-        case .turkish: "Ya da kendi ilgini yaz…"
-        }
+    var orTypeYourOwn: String { tr("orTypeYourOwn", fallback: "Or type your own…") }
+    var exploreCategoriesTitle: String { tr("exploreCategoriesTitle", fallback: "Explore") }
+    var tapToExplore: String { tr("tapToExplore", fallback: "Tap to explore") }
+    var bentoAllCategories: String { tr("bentoAllCategories", fallback: "All Topics") }
+    var bentoAiSynthesizing: String { tr("bentoAiSynthesizing", fallback: "AI is synthesizing…") }
+    var bentoShuffle: String { tr("bentoShuffle", fallback: "Spin") }
+    var bentoAdded: String { tr("bentoAdded", fallback: "Added") }
+    var bentoDeepDive: String { tr("bentoDeepDive", fallback: "Deep dive") }
+    var bentoTapToSelect: String { tr("bentoTapToSelect", fallback: "Tap to pick") }
+    var bentoCollapse: String { tr("bentoCollapse", fallback: "Collapse") }
+    var bentoExpand: String { tr("bentoExpand", fallback: "Explore") }
+    var collectionsTitle: String { tr("collectionsTitle", fallback: "Collections") }
+    var bentoReturnToLastPost: String {
+        tr("bentoReturnToLastPost", fallback: "Swipe up or tap to return to last post")
+    }
+    var bentoCategoriesTitle: String { tr("bentoCategoriesTitle", fallback: "Categories") }
+    var bentoCategoriesSubtitle: String {
+        tr("bentoCategoriesSubtitle", fallback: "Select a category and tap a subtopic to craft a new post")
+    }
+    var bentoRefreshing: String { tr("bentoRefreshing", fallback: "Refreshing…") }
+    var bentoRefresh: String { tr("bentoRefresh", fallback: "Refresh") }
+
+    func bentoCooldownHint(seconds: Int) -> String {
+        tr("bentoCooldownHint", fallback: "Once reading cooldown ({seconds}s) ends, tap any subtopic to generate a post.", ("seconds", "\(seconds)"))
     }
 
-    var exploreCategoriesTitle: String {
-        switch lang {
-        case .english: "Explore"
-        case .turkish: "Keşfet"
-        }
+    var bentoSubtopicHint: String {
+        tr("bentoSubtopicHint", fallback: "Tap any subtopic below to generate a dedicated post")
+    }
+    var bentoCooking: String { tr("bentoCooking", fallback: "Cooking…") }
+
+    func shortSeconds(_ seconds: Int) -> String {
+        tr("shortSeconds", fallback: "{seconds}s", ("seconds", "\(seconds)"))
     }
 
-    var tapToExplore: String {
-        switch lang {
-        case .english: "Tap to explore"
-        case .turkish: "Keşfetmek için dokun"
-        }
+    func bentoScrollCategoriesHint(count: Int) -> String {
+        tr("bentoScrollCategoriesHint", fallback: "Scroll down to browse all {count} categories", ("count", "\(count)"))
     }
 
-    // MARK: - Bento Box Interest Discovery
-
-    var bentoAllCategories: String {
-        switch lang {
-        case .english: "All Topics"
-        case .turkish: "Tüm Konular"
-        }
+    var bentoScrollSubtopicsHint: String {
+        tr("bentoScrollSubtopicsHint", fallback: "Scroll down for more subtopics")
     }
-
-    var bentoAiSynthesizing: String {
-        switch lang {
-        case .english: "AI is synthesizing…"
-        case .turkish: "Gemini üretiyor…"
-        }
+    var bentoManualPlaceholder: String {
+        tr("bentoManualPlaceholder", fallback: "Type a custom topic or add taste…")
     }
-
-    var bentoShuffle: String {
-        switch lang {
-        case .english: "Spin"
-        case .turkish: "Döndür"
-        }
-    }
-
-    var bentoAdded: String {
-        switch lang {
-        case .english: "Added"
-        case .turkish: "Eklendi"
-        }
-    }
-
-    var bentoDeepDive: String {
-        switch lang {
-        case .english: "Deep dive"
-        case .turkish: "Derine in"
-        }
-    }
-
-    var bentoTapToSelect: String {
-        switch lang {
-        case .english: "Tap to pick"
-        case .turkish: "Seçmek için dokun"
-        }
-    }
-
-    var bentoCollapse: String {
-        switch lang {
-        case .english: "Collapse"
-        case .turkish: "Daralt"
-        }
-    }
-
-    var bentoExpand: String {
-        switch lang {
-        case .english: "Explore"
-        case .turkish: "Keşfet"
-        }
-    }
-
-    var collectionsTitle: String {
-        switch lang {
-        case .english: "Collections"
-        case .turkish: "Yer İşaretleri"
-        }
-    }
+    var bentoCreateButton: String { tr("bentoCreateButton", fallback: "Create") }
 
     // MARK: - Appearance
 
-    var appearanceLabel: String {
-        switch lang {
-        case .english: "Appearance"
-        case .turkish: "Görünüm"
-        }
-    }
+    var appearanceLabel: String { tr("appearanceLabel", fallback: "Appearance") }
 
     func appearanceName(_ mode: AppAppearance) -> String {
         switch mode {
-        case .system:
-            switch lang {
-            case .english: "System"
-            case .turkish: "Sistem"
-            }
-        case .light:
-            switch lang {
-            case .english: "Light"
-            case .turkish: "Açık"
-            }
-        case .dark:
-            switch lang {
-            case .english: "Dark"
-            case .turkish: "Koyu"
-            }
+        case .system: tr("appearanceSystem", fallback: "System")
+        case .light: tr("appearanceLight", fallback: "Light")
+        case .dark: tr("appearanceDark", fallback: "Dark")
         }
     }
 
     // MARK: - Letterboxd
 
-    var letterboxdMode: String {
-        switch lang {
-        case .english: "Letterboxd Mode"
-        case .turkish: "Letterboxd Modu"
-        }
-    }
-
+    var letterboxdMode: String { tr("letterboxdMode", fallback: "Letterboxd Mode") }
     var updateLetterboxdButton: String {
-        switch lang {
-        case .english: "Update Letterboxd Username"
-        case .turkish: "Letterboxd Kullanıcı Adını Güncelle"
-        }
+        tr("updateLetterboxdButton", fallback: "Update Letterboxd Username")
     }
-
     var letterboxdUsernamePromptTitle: String {
-        switch lang {
-        case .english: "Letterboxd Username"
-        case .turkish: "Letterboxd Kullanıcı Adı"
-        }
+        tr("letterboxdUsernamePromptTitle", fallback: "Letterboxd Username")
     }
-
     var letterboxdUsernamePromptMessage: String {
-        switch lang {
-        case .english:
-            "Enter your Letterboxd username to personalize posts with your recently watched films."
-        case .turkish:
-            "Son izlediğin filmlerle gönderileri kişiselleştirmek için Letterboxd kullanıcı adını gir."
-        }
+        tr("letterboxdUsernamePromptMessage", fallback: "Enter your Letterboxd username to personalize posts with your recently watched films.")
     }
-
-    var letterboxdUsernamePlaceholder: String {
-        switch lang {
-        case .english: "username"
-        case .turkish: "kullanıcı adı"
-        }
-    }
-
-    var letterboxdActive: String {
-        switch lang {
-        case .english: "Letterboxd active"
-        case .turkish: "Letterboxd aktif"
-        }
-    }
-
-    var letterboxdFetchError: String {
-        switch lang {
-        case .english: "Could not load Letterboxd data."
-        case .turkish: "Letterboxd verileri yüklenemedi."
-        }
-    }
-
-    var letterboxdRecentFilms: String {
-        switch lang {
-        case .english: "Recent Diary"
-        case .turkish: "Son İzlediklerin"
-        }
-    }
-
-    var letterboxdConnectDiary: String {
-        switch lang {
-        case .english: "Connect Diary"
-        case .turkish: "Günlüğü Bağla"
-        }
-    }
+    var letterboxdUsernamePlaceholder: String { tr("letterboxdUsernamePlaceholder", fallback: "username") }
+    var letterboxdActive: String { tr("letterboxdActive", fallback: "Letterboxd active") }
+    var letterboxdFetchError: String { tr("letterboxdFetchError", fallback: "Could not load Letterboxd data.") }
+    var letterboxdRecentFilms: String { tr("letterboxdRecentFilms", fallback: "Recent Diary") }
+    var letterboxdConnectDiary: String { tr("letterboxdConnectDiary", fallback: "Connect Diary") }
+    var letterboxdChangeUsername: String { tr("letterboxdChangeUsername", fallback: "Change Username") }
+    var letterboxdConnectAction: String { tr("letterboxdConnectAction", fallback: "Connect Letterboxd") }
+    var disconnectAction: String { tr("disconnectAction", fallback: "Disconnect") }
 
     // MARK: - Account Deletion, UGC Moderation & Legal
 
-    var deleteAccount: String {
-        switch lang {
-        case .english: "Delete account"
-        case .turkish: "Hesabı sil"
-        }
-    }
-
+    var deleteAccount: String { tr("deleteAccount", fallback: "Delete account") }
     var confirmDeleteAccountTitle: String {
-        switch lang {
-        case .english: "Delete Account Permanently?"
-        case .turkish: "Hesap Kalıcı Olarak Silinsin mi?"
-        }
+        tr("confirmDeleteAccountTitle", fallback: "Delete Account Permanently?")
     }
-
     var confirmDeleteAccountMessage: String {
-        switch lang {
-        case .english:
-            "Your profile, shared posts, comments, and account data will be permanently deleted. This action cannot be undone."
-        case .turkish:
-            "Profilin, toplulukta paylaştığın gönderiler, yorumların ve hesap verilerin kalıcı olarak silinecektir. Bu işlem geri alınamaz."
-        }
+        tr("confirmDeleteAccountMessage", fallback: "Your profile, shared posts, comments, and account data will be permanently deleted. This action cannot be undone.")
     }
-
     var deleteAccountConfirmButton: String {
-        switch lang {
-        case .english: "Delete Permanently"
-        case .turkish: "Kalıcı Olarak Sil"
-        }
+        tr("deleteAccountConfirmButton", fallback: "Delete Permanently")
     }
-
     var accountDeleteRequiresReauth: String {
-        switch lang {
-        case .english:
-            "For your security, please sign out and sign in again to complete account deletion."
-        case .turkish:
-            "Güvenliğin için hesabını silmeden önce lütfen çıkış yapıp tekrar giriş yap."
-        }
+        tr("accountDeleteRequiresReauth", fallback: "For your security, please sign out and sign in again to complete account deletion.")
     }
-
     var moderationErrorInappropriateText: String {
-        switch lang {
-        case .english: "This text contains inappropriate language and cannot be used."
-        case .turkish: "Bu metin uygunsuz ifadeler içerdiği için kullanılamaz."
-        }
+        tr("moderationErrorInappropriateText", fallback: "This text contains inappropriate language and cannot be used.")
     }
-
-    var reportPost: String {
-        switch lang {
-        case .english: "Report Post"
-        case .turkish: "Gönderiyi Bildir"
-        }
-    }
-
-    var reportUser: String {
-        switch lang {
-        case .english: "Report User"
-        case .turkish: "Kullanıcıyı Bildir"
-        }
-    }
-
-    var reportComment: String {
-        switch lang {
-        case .english: "Report Comment"
-        case .turkish: "Yorumu Bildir"
-        }
-    }
-
+    var reportPost: String { tr("reportPost", fallback: "Report Post") }
+    var reportUser: String { tr("reportUser", fallback: "Report User") }
+    var reportComment: String { tr("reportComment", fallback: "Report Comment") }
     var reportSubmittedToast: String {
-        switch lang {
-        case .english: "Report received. Our team will review it within 24 hours."
-        case .turkish: "Bildiriminiz alındı. Ekibimiz 24 saat içinde inceleyecektir."
-        }
+        tr("reportSubmittedToast", fallback: "Report received. Our team will review it within 24 hours.")
     }
-
-    var blockUser: String {
-        switch lang {
-        case .english: "Block User"
-        case .turkish: "Kullanıcıyı Engelle"
-        }
-    }
-
-    var unblockUser: String {
-        switch lang {
-        case .english: "Unblock User"
-        case .turkish: "Engeli Kaldır"
-        }
-    }
-
-    var confirmBlockUserTitle: String {
-        switch lang {
-        case .english: "Block User?"
-        case .turkish: "Kullanıcı Engellensin mi?"
-        }
-    }
-
+    var blockUser: String { tr("blockUser", fallback: "Block User") }
+    var unblockUser: String { tr("unblockUser", fallback: "Unblock User") }
+    var confirmBlockUserTitle: String { tr("confirmBlockUserTitle", fallback: "Block User?") }
     var confirmBlockUserMessage: String {
-        switch lang {
-        case .english:
-            "They will no longer be able to reach you, and their posts and comments will be removed from your feed immediately."
-        case .turkish:
-            "Bu kullanıcı artık seninle etkileşime geçemeyecek ve gönderileri ile yorumları akışından anında kaldırılacak."
-        }
+        tr("confirmBlockUserMessage", fallback: "They will no longer be able to reach you, and their posts and comments will be removed from your feed immediately.")
     }
-
-    var userBlockedToast: String {
-        switch lang {
-        case .english: "User blocked"
-        case .turkish: "Kullanıcı engellendi"
-        }
-    }
-
-    var profileSupportAndLegal: String {
-        switch lang {
-        case .english: "Support & Legal"
-        case .turkish: "Destek ve Yasal"
-        }
-    }
-
-    var contactSupport: String {
-        switch lang {
-        case .english: "Contact Support"
-        case .turkish: "Destek ve İletişim"
-        }
-    }
-
-    var privacyPolicy: String {
-        switch lang {
-        case .english: "Privacy Policy"
-        case .turkish: "Gizlilik Politikası"
-        }
-    }
-
-    var termsOfUse: String {
-        switch lang {
-        case .english: "Terms of Use (EULA)"
-        case .turkish: "Kullanım Koşulları (EULA)"
-        }
-    }
-
-    var blockedUsersTitle: String {
-        switch lang {
-        case .english: "Blocked Users"
-        case .turkish: "Engellenen Kullanıcılar"
-        }
-    }
-
-    var noBlockedUsers: String {
-        switch lang {
-        case .english: "No blocked users"
-        case .turkish: "Engellenen kullanıcı yok"
-        }
-    }
+    var userBlockedToast: String { tr("userBlockedToast", fallback: "User blocked") }
+    var profileSupportAndLegal: String { tr("profileSupportAndLegal", fallback: "Support & Legal") }
+    var contactSupport: String { tr("contactSupport", fallback: "Contact Support") }
+    var privacyPolicy: String { tr("privacyPolicy", fallback: "Privacy Policy") }
+    var termsOfUse: String { tr("termsOfUse", fallback: "Terms of Use (EULA)") }
+    var blockedUsersTitle: String { tr("blockedUsersTitle", fallback: "Blocked Users") }
+    var noBlockedUsers: String { tr("noBlockedUsers", fallback: "No blocked users") }
 
     // MARK: - Error Handling & Status
 
-    var tryAgain: String {
-        switch lang {
-        case .english: "Try Again"
-        case .turkish: "Tekrar Dene"
-        }
-    }
-
-    var signInAgain: String {
-        switch lang {
-        case .english: "Sign In"
-        case .turkish: "Giriş Yap"
-        }
-    }
-
-    var editUsername: String {
-        switch lang {
-        case .english: "Edit Username"
-        case .turkish: "Kullanıcı Adını Düzenle"
-        }
-    }
-
-    var dismissLabel: String {
-        switch lang {
-        case .english: "Dismiss"
-        case .turkish: "Kapat"
-        }
-    }
-
+    var tryAgain: String { tr("tryAgain", fallback: "Try Again") }
+    var signInAgain: String { tr("signInAgain", fallback: "Sign In") }
+    var editUsername: String { tr("editUsername", fallback: "Edit Username") }
+    var dismissLabel: String { tr("dismissLabel", fallback: "Dismiss") }
     var errorOfflineMessage: String {
-        switch lang {
-        case .english: "You're offline. You can still read saved plates."
-        case .turkish: "Çevrimdışısın. Kaydedilen tabakları okuyabilirsin."
-        }
+        tr("errorOfflineMessage", fallback: "You're offline. You can still read saved plates.")
     }
-
-    var errorTimeoutTitle: String {
-        switch lang {
-        case .english: "Request Timed Out"
-        case .turkish: "Bağlantı Zaman Aşımına Uğradı"
-        }
-    }
-
+    var errorTimeoutTitle: String { tr("errorTimeoutTitle", fallback: "Request Timed Out") }
     var errorTimeoutMessage: String {
-        switch lang {
-        case .english: "The kitchen took too long to respond. Please try again."
-        case .turkish: "Mutfaktan yanıt gelmesi uzun sürdü. Lütfen tekrar dene."
-        }
+        tr("errorTimeoutMessage", fallback: "The kitchen took too long to respond. Please try again.")
     }
-
-    var errorServerUnreachableTitle: String {
-        switch lang {
-        case .english: "Couldn't Connect"
-        case .turkish: "Bağlantı Kurulamadı"
-        }
-    }
-
+    var errorServerUnreachableTitle: String { tr("errorServerUnreachableTitle", fallback: "Couldn't Connect") }
     var errorServerUnreachableMessage: String {
-        switch lang {
-        case .english: "Could not reach Omakase servers. Check your internet connection and try again."
-        case .turkish: "Omakase sunucularına ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene."
-        }
+        tr("errorServerUnreachableMessage", fallback: "Could not reach Omakase servers. Check your internet connection and try again.")
     }
-
-    var errorUnauthorizedTitle: String {
-        switch lang {
-        case .english: "Session Expired"
-        case .turkish: "Oturumun Sona Erdi"
-        }
-    }
-
+    var errorUnauthorizedTitle: String { tr("errorUnauthorizedTitle", fallback: "Session Expired") }
     var errorUnauthorizedMessage: String {
-        switch lang {
-        case .english: "Please sign in again to continue."
-        case .turkish: "Devam etmek için lütfen tekrar giriş yap."
-        }
+        tr("errorUnauthorizedMessage", fallback: "Please sign in again to continue.")
     }
 
     func errorRateLimitedMessage(seconds: Int?) -> String {
         if let seconds, seconds > 0 {
-            switch lang {
-            case .english: return "Let's slow down a little. Try again in \(seconds) seconds."
-            case .turkish: return "Biraz yavaşlayalım. \(seconds) saniye sonra tekrar dene."
-            }
+            return tr("errorRateLimitedSeconds", fallback: "Let's slow down a little. Try again in {seconds} seconds.", ("seconds", "\(seconds)"))
         }
-        switch lang {
-        case .english: return "Let's slow down a little. Try again in a moment."
-        case .turkish: return "Biraz yavaşlayalım. Biraz bekleyip tekrar dene."
-        }
+        return tr("errorRateLimitedMoment", fallback: "Let's slow down a little. Try again in a moment.")
     }
 
-    var errorQuotaExceededTitle: String {
-        switch lang {
-        case .english: "Today's Menu Is Complete"
-        case .turkish: "Bugünkü Menü Tamamlandı"
-        }
-    }
-
+    var errorQuotaExceededTitle: String { tr("errorQuotaExceededTitle", fallback: "Today's Menu Is Complete") }
     var errorQuotaExceededMessage: String {
-        switch lang {
-        case .english: "You've reached today's tasting limit. New plates will be ready tomorrow."
-        case .turkish: "Bugünkü tadım hakkını tamamladın. Yeni tabaklar yarın hazır olacak."
-        }
+        tr("errorQuotaExceededMessage", fallback: "You've reached today's tasting limit. New plates will be ready tomorrow.")
     }
-
     var errorContentBlockedMessage: String {
-        switch lang {
-        case .english: "We can't prepare a plate on this topic. Try another one."
-        case .turkish: "Bu konuda tabak hazırlayamıyoruz. Başka bir konu dene."
-        }
+        tr("errorContentBlockedMessage", fallback: "We can't prepare a plate on this topic. Try another one.")
     }
-
-    var errorGenerationFailedTitle: String {
-        switch lang {
-        case .english: "Couldn't Prepare Plate"
-        case .turkish: "Tabak Hazırlanamadı"
-        }
-    }
-
+    var errorGenerationFailedTitle: String { tr("errorGenerationFailedTitle", fallback: "Couldn't Prepare Plate") }
     var errorGenerationFailedMessage: String {
-        switch lang {
-        case .english: "The chef couldn't finish this one. It didn't count toward your limit."
-        case .turkish: "Şef bu tabağı tamamlayamadı. Hakkından düşülmedi."
-        }
+        tr("errorGenerationFailedMessage", fallback: "The chef couldn't finish this one. It didn't count toward your limit.")
     }
-
     var errorServiceUnavailableTitle: String {
-        switch lang {
-        case .english: "Kitchen on a Short Break"
-        case .turkish: "Mutfak Kısa Bir Mola Verdi"
-        }
+        tr("errorServiceUnavailableTitle", fallback: "Kitchen on a Short Break")
     }
-
     var errorServiceUnavailableMessage: String {
-        switch lang {
-        case .english: "The kitchen is taking a short break. Try again in a few minutes."
-        case .turkish: "Mutfak şu an kısa bir mola verdi. Birkaç dakika sonra tekrar dene."
-        }
+        tr("errorServiceUnavailableMessage", fallback: "The kitchen is taking a short break. Try again in a few minutes.")
     }
-
     var errorLetterboxdMissingUsername: String {
-        switch lang {
-        case .english: "Enter your Letterboxd username to load recent films."
-        case .turkish: "Son filmlerini yüklemek için Letterboxd kullanıcı adını gir."
-        }
+        tr("errorLetterboxdMissingUsername", fallback: "Enter your Letterboxd username to load recent films.")
     }
-
     var errorLetterboxdNotFoundMessage: String {
-        switch lang {
-        case .english: "No public films found for this Letterboxd username."
-        case .turkish: "Bu Letterboxd kullanıcı adında herkese açık film bulunamadı."
-        }
+        tr("errorLetterboxdNotFoundMessage", fallback: "No public films found for this Letterboxd username.")
     }
-
     var errorLetterboxdPrivateMessage: String {
-        switch lang {
-        case .english: "This Letterboxd diary is private. Update your privacy settings or username."
-        case .turkish: "Bu Letterboxd günlüğü gizli. Gizlilik ayarlarını veya kullanıcı adını kontrol et."
-        }
+        tr("errorLetterboxdPrivateMessage", fallback: "This Letterboxd diary is private. Update your privacy settings or username.")
     }
-
     var errorBillingSyncFailedMessage: String {
-        switch lang {
-        case .english: "Couldn't verify your subscription yet. Try Restore Purchases."
-        case .turkish: "Aboneliğin henüz doğrulanamadı. Satın Alımları Geri Yükle'yi dene."
-        }
+        tr("errorBillingSyncFailedMessage", fallback: "Couldn't verify your subscription yet. Try Restore Purchases.")
     }
-
     var authErrorNetwork: String {
-        switch lang {
-        case .english: "You appear to be offline. Check your connection and try again."
-        case .turkish: "İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol edip tekrar dene."
-        }
+        tr("authErrorNetwork", fallback: "You appear to be offline. Check your connection and try again.")
     }
-
     var authErrorTooManyRequests: String {
-        switch lang {
-        case .english: "Too many attempts. Wait a moment and try again."
-        case .turkish: "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene."
-        }
+        tr("authErrorTooManyRequests", fallback: "Too many attempts. Wait a moment and try again.")
     }
-
     var authErrorUserDisabled: String {
-        switch lang {
-        case .english: "This account is currently unavailable. Please contact support."
-        case .turkish: "Bu hesap şu anda kullanılamıyor. Lütfen destek ile iletişime geç."
-        }
+        tr("authErrorUserDisabled", fallback: "This account is currently unavailable. Please contact support.")
     }
-
     var authErrorProviderFailed: String {
-        switch lang {
-        case .english: "Sign-in couldn't be completed. Please try again."
-        case .turkish: "Giriş tamamlanamadı. Lütfen tekrar dene."
-        }
+        tr("authErrorProviderFailed", fallback: "Sign-in couldn't be completed. Please try again.")
     }
-
     var authErrorSignOutFailed: String {
-        switch lang {
-        case .english: "Could not sign out right now. Please try again."
-        case .turkish: "Şu anda çıkış yapılamadı. Lütfen tekrar dene."
-        }
+        tr("authErrorSignOutFailed", fallback: "Could not sign out right now. Please try again.")
     }
-
-    var errorShareFailed: String {
-        switch lang {
-        case .english: "Couldn't share this plate. Please try again."
-        case .turkish: "Paylaşım tamamlanamadı. Lütfen tekrar dene."
-        }
-    }
-
+    var errorShareFailed: String { tr("errorShareFailed", fallback: "Couldn't share this plate. Please try again.") }
     var errorUnshareFailed: String {
-        switch lang {
-        case .english: "Couldn't remove from community. Please try again."
-        case .turkish: "Paylaşım kaldırılamadı. Lütfen tekrar dene."
-        }
+        tr("errorUnshareFailed", fallback: "Couldn't remove from community. Please try again.")
     }
-
     var errorCommentSendFailed: String {
-        switch lang {
-        case .english: "Your comment wasn't sent. Your text is saved so you can try again."
-        case .turkish: "Yorumun gönderilemedi. Metnin duruyor, tekrar deneyebilirsin."
-        }
+        tr("errorCommentSendFailed", fallback: "Your comment wasn't sent. Your text is saved so you can try again.")
     }
-
-    var errorCommentLoadFailed: String {
-        switch lang {
-        case .english: "Couldn't load comments right now."
-        case .turkish: "Yorumlar şu an yüklenemedi."
-        }
-    }
-
+    var errorCommentLoadFailed: String { tr("errorCommentLoadFailed", fallback: "Couldn't load comments right now.") }
     var errorCommentDeleteFailed: String {
-        switch lang {
-        case .english: "Couldn't delete the comment. Please try again."
-        case .turkish: "Yorum silinemedi. Lütfen tekrar dene."
-        }
+        tr("errorCommentDeleteFailed", fallback: "Couldn't delete the comment. Please try again.")
     }
-
-    var errorReportFailed: String {
-        switch lang {
-        case .english: "Your report wasn't sent. Please try again."
-        case .turkish: "Bildirimin gönderilemedi. Lütfen tekrar dene."
-        }
-    }
-
-    var errorBlockFailed: String {
-        switch lang {
-        case .english: "Couldn't block this user. Please try again."
-        case .turkish: "Kullanıcı engellenemedi. Lütfen tekrar dene."
-        }
-    }
-
-    var errorUnblockFailed: String {
-        switch lang {
-        case .english: "Couldn't unblock this user. Please try again."
-        case .turkish: "Engel kaldırılamadı. Lütfen tekrar dene."
-        }
-    }
-
-    var errorFollowFailed: String {
-        switch lang {
-        case .english: "Couldn't follow right now. Try again."
-        case .turkish: "Şu an takip edilemiyor. Tekrar dene."
-        }
-    }
-
-    var errorUnfollowFailed: String {
-        switch lang {
-        case .english: "Couldn't unfollow right now. Try again."
-        case .turkish: "Takipten çıkılamadı. Tekrar dene."
-        }
-    }
-
-    var errorReactionFailed: String {
-        switch lang {
-        case .english: "Couldn't update reaction. Please try again."
-        case .turkish: "Tepki güncellenemedi. Lütfen tekrar dene."
-        }
-    }
-
-    var errorTimelineLoadFailed: String {
-        switch lang {
-        case .english: "Couldn't load the community feed."
-        case .turkish: "Topluluk akışı yüklenemedi."
-        }
-    }
-
+    var errorReportFailed: String { tr("errorReportFailed", fallback: "Your report wasn't sent. Please try again.") }
+    var errorBlockFailed: String { tr("errorBlockFailed", fallback: "Couldn't block this user. Please try again.") }
+    var errorUnblockFailed: String { tr("errorUnblockFailed", fallback: "Couldn't unblock this user. Please try again.") }
+    var errorFollowFailed: String { tr("errorFollowFailed", fallback: "Couldn't follow right now. Try again.") }
+    var errorUnfollowFailed: String { tr("errorUnfollowFailed", fallback: "Couldn't unfollow right now. Try again.") }
+    var errorReactionFailed: String { tr("errorReactionFailed", fallback: "Couldn't update reaction. Please try again.") }
+    var errorTimelineLoadFailed: String { tr("errorTimelineLoadFailed", fallback: "Couldn't load the community feed.") }
     var errorUserSearchFailed: String {
-        switch lang {
-        case .english: "Couldn't search users right now. Please try again."
-        case .turkish: "Kullanıcı araması şu an yapılamadı. Lütfen tekrar dene."
-        }
+        tr("errorUserSearchFailed", fallback: "Couldn't search users right now. Please try again.")
     }
-
-    var errorProfileLoadFailed: String {
-        switch lang {
-        case .english: "Couldn't load this profile right now."
-        case .turkish: "Bu profil şu an yüklenemedi."
-        }
-    }
-
+    var errorProfileLoadFailed: String { tr("errorProfileLoadFailed", fallback: "Couldn't load this profile right now.") }
     var errorPostDeleteFailed: String {
-        switch lang {
-        case .english: "Couldn't delete this post. Please try again."
-        case .turkish: "Gönderi silinemedi. Lütfen tekrar dene."
-        }
+        tr("errorPostDeleteFailed", fallback: "Couldn't delete this post. Please try again.")
     }
-
     var errorUnknownMessage: String {
-        switch lang {
-        case .english: "An unexpected situation occurred. Please try again."
-        case .turkish: "Beklenmeyen bir durum oluştu. Lütfen tekrar dene."
-        }
+        tr("errorUnknownMessage", fallback: "An unexpected situation occurred. Please try again.")
     }
 
     // MARK: - Monetization, Omakase Pro & Daily Limit
 
     var proTitle: String { "Omakase Pro" }
-
-    var proHeadline: String {
-        switch lang {
-        case .english: "Unlimited tasting, zero noise."
-        case .turkish: "Sınırsız tadım, sıfır gürültü."
-        }
-    }
-
+    var proHeadline: String { tr("proHeadline", fallback: "Unlimited tasting, zero noise.") }
     var proSubtitle: String {
-        switch lang {
-        case .english: "3 free plates a day is just a taste. Unlock unlimited plates, primary-source Deep Dives, and full Letterboxd synthesis."
-        case .turkish: "Günde 3 ücretsiz tabak sadece tadımlık. Sınırsız tabak, birincil kaynakçalı Deep Dive ve tam Letterboxd sentezini aç."
-        }
+        tr("proSubtitle", fallback: "3 free plates a day is just a taste. Unlock unlimited plates, primary-source Deep Dives, and full Letterboxd synthesis.")
     }
-
     var proFeatureUnlimitedPlates: String {
-        switch lang {
-        case .english: "Unlimited daily plates & Letterboxd behind-the-scenes"
-        case .turkish: "Her gün sınırsız şef tabağı ve Letterboxd kamera arkası"
-        }
+        tr("proFeatureUnlimitedPlates", fallback: "Unlimited daily plates & Letterboxd behind-the-scenes")
     }
-
     var proFeatureUnlimitedDeepDive: String {
-        switch lang {
-        case .english: "Unlimited Deep Dives with verified primary sources"
-        case .turkish: "Birincil kaynakçalı sınırsız Derin İnceleme"
-        }
+        tr("proFeatureUnlimitedDeepDive", fallback: "Unlimited Deep Dives with verified primary sources")
     }
-
     var proFeatureUnlimitedSubtopics: String {
-        switch lang {
-        case .english: "Unlimited subtopic refreshes"
-        case .turkish: "Sınırsız alt konu yenileme"
-        }
+        tr("proFeatureUnlimitedSubtopics", fallback: "Unlimited subtopic refreshes")
     }
-
     var proFeatureProBadge: String {
-        switch lang {
-        case .english: "Pro badge on your Community profile"
-        case .turkish: "Topluluk profilinde Pro rozeti"
-        }
+        tr("proFeatureProBadge", fallback: "Pro badge on your Community profile")
     }
-
-    var proBestValueBadge: String {
-        switch lang {
-        case .english: "Best Value"
-        case .turkish: "En Avantajlı"
-        }
-    }
-
-    var proFreeTrialBadge: String {
-        switch lang {
-        case .english: "7-day free trial · Only ~$2.49/mo (Save 37%)"
-        case .turkish: "7 gün ücretsiz · Ayda yalnızca ~$2.49 (%37 avantaj)"
-        }
-    }
-
-    var proPlanYearly: String {
-        switch lang {
-        case .english: "Yearly"
-        case .turkish: "Yıllık"
-        }
-    }
-
-    var proPlanMonthly: String {
-        switch lang {
-        case .english: "Monthly"
-        case .turkish: "Aylık"
-        }
-    }
-
-    var proPerYearSuffix: String {
-        switch lang {
-        case .english: "/ year"
-        case .turkish: "/ yıl"
-        }
-    }
-
-    var proPerMonthSuffix: String {
-        switch lang {
-        case .english: "/ month"
-        case .turkish: "/ ay"
-        }
-    }
-
-    var proStartTrialCTA: String {
-        switch lang {
-        case .english: "Start 7-Day Free Trial"
-        case .turkish: "7 Gün Ücretsiz Dene"
-        }
-    }
-
-    var proSubscribeCTA: String {
-        switch lang {
-        case .english: "Continue with Omakase Pro"
-        case .turkish: "Omakase Pro ile Devam Et"
-        }
-    }
-
-    var proRestorePurchases: String {
-        switch lang {
-        case .english: "Restore Purchases"
-        case .turkish: "Satın Alımları Geri Yükle"
-        }
-    }
-
+    var proBestValueBadge: String { tr("proBestValueBadge", fallback: "Best Value") }
+    var proFreeTrialBadge: String { tr("proFreeTrialBadge", fallback: "7-day free trial · Save 37%") }
+    var proPlanYearly: String { tr("proPlanYearly", fallback: "Yearly") }
+    var proPlanMonthly: String { tr("proPlanMonthly", fallback: "Monthly") }
+    var proPerYearSuffix: String { tr("proPerYearSuffix", fallback: "/ year") }
+    var proPerMonthSuffix: String { tr("proPerMonthSuffix", fallback: "/ month") }
+    var proStartTrialCTA: String { tr("proStartTrialCTA", fallback: "Start 7-Day Free Trial") }
+    var proSubscribeCTA: String { tr("proSubscribeCTA", fallback: "Continue with Omakase Pro") }
+    var proRestorePurchases: String { tr("proRestorePurchases", fallback: "Restore Purchases") }
     var proRestoreSuccess: String {
-        switch lang {
-        case .english: "Your Omakase Pro subscription is restored."
-        case .turkish: "Omakase Pro aboneliğin geri yüklendi."
-        }
+        tr("proRestoreSuccess", fallback: "Your Omakase Pro subscription is restored.")
     }
-
     var proRestoreEmpty: String {
-        switch lang {
-        case .english: "No active subscription was found to restore."
-        case .turkish: "Geri yüklenecek aktif bir abonelik bulunamadı."
-        }
+        tr("proRestoreEmpty", fallback: "No active subscription was found to restore.")
     }
-
-    var proPurchaseSuccess: String {
-        switch lang {
-        case .english: "Welcome to Omakase Pro."
-        case .turkish: "Omakase Pro'ya hoş geldin."
-        }
-    }
-
+    var proPurchaseSuccess: String { tr("proPurchaseSuccess", fallback: "Welcome to Omakase Pro.") }
     var proPaymentPending: String {
-        switch lang {
-        case .english: "Your purchase is pending approval and will activate once confirmed."
-        case .turkish: "Satın alma onayı bekleniyor; onaylandığında aboneliğin otomatik açılacak."
-        }
+        tr("proPaymentPending", fallback: "Your purchase is pending approval and will activate once confirmed.")
     }
-
     var proSubscriptionDisclosure: String {
-        switch lang {
-        case .english:
-            "Payment is charged to your Apple ID account at confirmation (or after the 7-day trial ends). Subscription renews automatically unless canceled at least 24 hours before the end of the current period."
-        case .turkish:
-            "Ödeme onay anında (veya 7 günlük deneme bittiğinde) Apple ID hesabından tahsil edilir. Dönem bitiminden en az 24 saat önce iptal edilmedikçe abonelik otomatik yenilenir."
-        }
+        tr("proSubscriptionDisclosure", fallback: "Payment is charged to your Apple ID account at confirmation (or after the 7-day trial ends). Subscription renews automatically unless canceled at least 24 hours before the end of the current period.")
     }
-
-    var proManageSubscription: String {
-        switch lang {
-        case .english: "Manage Subscription"
-        case .turkish: "Aboneliği Yönet"
-        }
-    }
-
-    var proActiveStatus: String {
-        switch lang {
-        case .english: "Active"
-        case .turkish: "Aktif"
-        }
-    }
-
-    var proTrialStatus: String {
-        switch lang {
-        case .english: "Free Trial"
-        case .turkish: "Ücretsiz Deneme"
-        }
-    }
-
+    var proManageSubscription: String { tr("proManageSubscription", fallback: "Manage Subscription") }
+    var proActiveStatus: String { tr("proActiveStatus", fallback: "Active") }
+    var proTrialStatus: String { tr("proTrialStatus", fallback: "Free Trial") }
     var proBillingIssueStatus: String {
-        switch lang {
-        case .english: "Billing issue — update payment method"
-        case .turkish: "Ödeme sorunu — ödeme yöntemini güncelle"
-        }
+        tr("proBillingIssueStatus", fallback: "Billing issue — update payment method")
     }
 
     func proRenewsOn(_ dateText: String) -> String {
-        switch lang {
-        case .english: "Renews on \(dateText)"
-        case .turkish: "Yenilenme tarihi: \(dateText)"
-        }
+        tr("proRenewsOn", fallback: "Renews on {date}", ("date", dateText))
     }
 
     func proExpiresOn(_ dateText: String) -> String {
-        switch lang {
-        case .english: "Expires on \(dateText)"
-        case .turkish: "Bitiş tarihi: \(dateText)"
-        }
+        tr("proExpiresOn", fallback: "Expires on {date}", ("date", dateText))
     }
 
     var proProductsUnavailable: String {
-        switch lang {
-        case .english: "Subscription options are loading from the App Store. Try again shortly."
-        case .turkish: "Abonelik paketleri App Store'dan yükleniyor. Kısa süre sonra tekrar dene."
-        }
+        tr("proProductsUnavailable", fallback: "Subscription options are loading from the App Store. Try again shortly.")
     }
-
     var proShareForDeepDiveCTA: String {
-        switch lang {
-        case .english: "Tip: Share any plate today to unlock +1 bonus Deep Dive for free."
-        case .turkish: "İpucu: Bugün bir tabak paylaşarak ücretsiz +1 ekstra Derin İnceleme kazanabilirsin."
-        }
+        tr("proShareForDeepDiveCTA", fallback: "Tip: Share any plate today to unlock +1 bonus Deep Dive for free.")
     }
-
-    var limitCardTitle: String {
-        switch lang {
-        case .english: "Today's Menu Is Complete"
-        case .turkish: "Bugünkü Menü Tamamlandı"
-        }
-    }
-
+    var limitCardTitle: String { tr("limitCardTitle", fallback: "Today's Menu Is Complete") }
     var limitCardSubtitle: String {
-        switch lang {
-        case .english: "The chef has served all 3 free plates for today. Unlock Omakase Pro for unlimited reading or wait for tomorrow's menu."
-        case .turkish: "Şef bugünlük 3 ücretsiz tabağı sundu. Sınırsız okuma için Omakase Pro'ya geç veya yarının menüsünü bekle."
-        }
+        tr("limitCardSubtitle", fallback: "The chef has served all 3 free plates for today. Unlock Omakase Pro for unlimited reading or wait for tomorrow's menu.")
     }
 
     func limitCardNextMenuIn(_ countdown: String) -> String {
-        switch lang {
-        case .english: "Next menu in \(countdown)"
-        case .turkish: "Yeni menüye \(countdown)"
-        }
+        tr("limitCardNextMenuIn", fallback: "Next menu in {countdown}", ("countdown", countdown))
     }
 
-    var limitCardUpgradeCTA: String {
-        switch lang {
-        case .english: "Continue with Omakase Pro"
-        case .turkish: "Omakase Pro ile Devam Et"
-        }
-    }
-
-    var limitCardRemindCTA: String {
-        switch lang {
-        case .english: "Remind Me Tomorrow"
-        case .turkish: "Yarın Hatırlat"
-        }
-    }
-
+    var limitCardUpgradeCTA: String { tr("limitCardUpgradeCTA", fallback: "Continue with Omakase Pro") }
+    var limitCardRemindCTA: String { tr("limitCardRemindCTA", fallback: "Remind Me Tomorrow") }
     var limitCardRemindPendingToast: String {
-        switch lang {
-        case .english: "Daily menu reminders are coming in the next step."
-        case .turkish: "Günlük menü hatırlatıcısı bir sonraki adımda aktif edilecek."
-        }
+        tr("limitCardRemindPendingToast", fallback: "Daily menu reminders are coming in the next step.")
     }
-
-    var limitCardBackToPlates: String {
-        switch lang {
-        case .english: "Re-read today's plates"
-        case .turkish: "Bugünkü tabaklara dön"
-        }
-    }
-
+    var limitCardBackToPlates: String { tr("limitCardBackToPlates", fallback: "Re-read today's plates") }
     var toastShareBonusGranted: String {
-        switch lang {
-        case .english: "+1 bonus Deep Dive unlocked for today!"
-        case .turkish: "Bugün için +1 ekstra Derin İnceleme açıldı!"
-        }
+        tr("toastShareBonusGranted", fallback: "+1 bonus Deep Dive unlocked for today!")
     }
-
-    var profileMembershipSection: String {
-        switch lang {
-        case .english: "Membership"
-        case .turkish: "Üyelik"
-        }
-    }
-
-    var profileUpgradeToPro: String {
-        switch lang {
-        case .english: "Upgrade to Omakase Pro"
-        case .turkish: "Omakase Pro'ya Geç"
-        }
-    }
+    var profileMembershipSection: String { tr("profileMembershipSection", fallback: "Membership") }
+    var profileUpgradeToPro: String { tr("profileUpgradeToPro", fallback: "Upgrade to Omakase Pro") }
 
     func profileDailyQuotaSummary(
         platesRemaining: Int,
@@ -2014,241 +679,111 @@ struct L10n {
         deepDivesRemaining: Int,
         deepDivesLimit: Int
     ) -> String {
-        switch lang {
-        case .english:
-            "Today: \(platesRemaining)/\(platesLimit) plates · \(deepDivesRemaining)/\(deepDivesLimit) deep dives left"
-        case .turkish:
-            "Bugün: \(platesRemaining)/\(platesLimit) tabak · \(deepDivesRemaining)/\(deepDivesLimit) inceleme kaldı"
-        }
+        tr(
+            "profileDailyQuotaSummary",
+            fallback: "Today: {platesRemaining}/{platesLimit} plates · {deepDivesRemaining}/{deepDivesLimit} deep dives left",
+            ("platesRemaining", "\(platesRemaining)"),
+            ("platesLimit", "\(platesLimit)"),
+            ("deepDivesRemaining", "\(deepDivesRemaining)"),
+            ("deepDivesLimit", "\(deepDivesLimit)")
+        )
     }
 
-    // MARK: - Notifications (Phase 3)
+    // MARK: - Notifications
 
-    var notificationsSectionTitle: String {
-        switch lang {
-        case .english: "Notifications"
-        case .turkish: "Bildirimler"
-        }
-    }
-
+    var notificationsSectionTitle: String { tr("notificationsSectionTitle", fallback: "Notifications") }
     var notificationsDailyMenuToggle: String {
-        switch lang {
-        case .english: "Daily Menu Reminder"
-        case .turkish: "Günlük Menü Hatırlatıcısı"
-        }
+        tr("notificationsDailyMenuToggle", fallback: "Daily Menu Reminder")
     }
-
-    var notificationsReminderTime: String {
-        switch lang {
-        case .english: "Reminder Time"
-        case .turkish: "Hatırlatma Saati"
-        }
-    }
-
+    var notificationsReminderTime: String { tr("notificationsReminderTime", fallback: "Reminder Time") }
     var notificationsCommentsToggle: String {
-        switch lang {
-        case .english: "Comment Notifications"
-        case .turkish: "Yorum Bildirimleri"
-        }
+        tr("notificationsCommentsToggle", fallback: "Comment Notifications")
     }
-
     var notificationsDigestToggle: String {
-        switch lang {
-        case .english: "Daily Follower & Reaction Digest"
-        case .turkish: "Günlük Takipçi & Tepki Özeti"
-        }
+        tr("notificationsDigestToggle", fallback: "Daily Follower & Reaction Digest")
     }
-
     var notificationsDeniedBanner: String {
-        switch lang {
-        case .english: "Notifications are off — Open Settings"
-        case .turkish: "Bildirimler kapalı — Ayarlar'da aç"
-        }
+        tr("notificationsDeniedBanner", fallback: "Notifications are off — Open Settings")
     }
-
     var notificationsProvisionalHint: String {
-        switch lang {
-        case .english: "Notifications are currently delivered quietly to Notification Center."
-        case .turkish: "Bildirimler şu anda Bildirim Merkezi'ne sessiz teslim ediliyor."
-        }
+        tr("notificationsProvisionalHint", fallback: "Notifications are currently delivered quietly to Notification Center.")
     }
-
     var notificationsQuietHoursFooter: String {
-        switch lang {
-        case .english: "Social updates pause between 22:00 and 08:00. Followers and reactions arrive once daily."
-        case .turkish: "Sosyal bildirimler 22:00–08:00 arası duraklatılır. Takipçi ve tepkiler günde tek özet olarak gelir."
-        }
+        tr("notificationsQuietHoursFooter", fallback: "Social updates pause between 22:00 and 08:00. Followers and reactions arrive once daily.")
     }
-
     var notificationsDeniedAlertTitle: String {
-        switch lang {
-        case .english: "Notifications Disabled"
-        case .turkish: "Bildirim İzni Kapalı"
-        }
+        tr("notificationsDeniedAlertTitle", fallback: "Notifications Disabled")
     }
-
     var notificationsDeniedAlertMessage: String {
-        switch lang {
-        case .english: "Allow notifications in iOS Settings so Omakase can let you know when tomorrow's menu is ready."
-        case .turkish: "Yarının menüsü hazır olduğunda haber verebilmemiz için iOS Ayarlar'dan bildirimlere izin ver."
-        }
+        tr("notificationsDeniedAlertMessage", fallback: "Allow notifications in iOS Settings so Omakase can let you know when tomorrow's menu is ready.")
     }
-
-    var openSettingsCTA: String {
-        switch lang {
-        case .english: "Open Settings"
-        case .turkish: "Ayarları Aç"
-        }
-    }
+    var openSettingsCTA: String { tr("openSettingsCTA", fallback: "Open Settings") }
 
     func limitCardRemindScheduledToast(timeText: String) -> String {
-        switch lang {
-        case .english: "Reminder set for \(timeText)."
-        case .turkish: "Hatırlatıcı \(timeText) için ayarlandı."
-        }
+        tr("limitCardRemindScheduledToast", fallback: "Reminder set for {time}.", ("time", timeText))
     }
 
     var notificationsNotGrantedToast: String {
-        switch lang {
-        case .english: "Notifications weren't enabled. You can turn them on anytime in Profile."
-        case .turkish: "Bildirimler açılmadı. İstediğin zaman Profil ekranından açabilirsin."
-        }
+        tr("notificationsNotGrantedToast", fallback: "Notifications weren't enabled. You can turn them on anytime in Profile.")
     }
-
     var commentNotificationPromptTitle: String {
-        switch lang {
-        case .english: "Get notified about new comments on your plates"
-        case .turkish: "Paylaşımlarına yorum geldiğinde haber al"
-        }
+        tr("commentNotificationPromptTitle", fallback: "Get notified about new comments on your plates")
     }
-
-    var turnOnCTA: String {
-        switch lang {
-        case .english: "Turn On"
-        case .turkish: "Aç"
-        }
-    }
-
-    var dailyMenuNotificationTitle: String {
-        switch lang {
-        case .english: "Today's Menu"
-        case .turkish: "Günün Menüsü"
-        }
-    }
+    var turnOnCTA: String { tr("turnOnCTA", fallback: "Turn On") }
+    var dailyMenuNotificationTitle: String { tr("dailyMenuNotificationTitle", fallback: "Today's Menu") }
 
     func dailyMenuNotificationBody(interests: [String]) -> String {
-        switch lang {
-        case .english:
-            if interests.count >= 2 {
-                return "\(interests[0]) and \(interests[1]) are on the menu today."
-            } else if let first = interests.first, !first.isEmpty {
-                return "\(first) is featured on today's menu."
-            } else {
-                return "Fresh plates curated for your taste are ready today."
-            }
-        case .turkish:
-            if interests.count >= 2 {
-                return "Bugün mutfakta \(interests[0]) ve \(interests[1]) var."
-            } else if let first = interests.first, !first.isEmpty {
-                return "Bugün mutfakta \(first) öne çıkıyor."
-            } else {
-                return "Şefin bugünkü tabakları hazır."
-            }
+        if interests.count >= 2 {
+            return tr(
+                "dailyMenuBodyTwo",
+                fallback: "{first} and {second} are on the menu today.",
+                ("first", interests[0]),
+                ("second", interests[1])
+            )
+        } else if let first = interests.first, !first.isEmpty {
+            return tr("dailyMenuBodyOne", fallback: "{first} is featured on today's menu.", ("first", first))
+        } else {
+            return tr("dailyMenuBodyEmpty", fallback: "Fresh plates curated for your taste are ready today.")
         }
     }
 
-    var hiddenPreviewDailyMenu: String {
-        switch lang {
-        case .english: "Today's Menu"
-        case .turkish: "Günün Menüsü"
-        }
-    }
-
-    var hiddenPreviewComment: String {
-        switch lang {
-        case .english: "New comment"
-        case .turkish: "Yeni yorum"
-        }
-    }
-
-    var hiddenPreviewDigest: String {
-        switch lang {
-        case .english: "Community summary"
-        case .turkish: "Topluluk özeti"
-        }
-    }
+    var hiddenPreviewDailyMenu: String { tr("hiddenPreviewDailyMenu", fallback: "Today's Menu") }
+    var hiddenPreviewComment: String { tr("hiddenPreviewComment", fallback: "New comment") }
+    var hiddenPreviewDigest: String { tr("hiddenPreviewDigest", fallback: "Community summary") }
 
     // MARK: - Daily Plate Quota Stress Pill & Social Discover Mode
 
     func feedQuotaPlatesRemaining(remaining: Int, limit: Int) -> String {
-        switch lang {
-        case .english:
-            if remaining <= 0 {
-                return "Limit · 0/\(limit)"
-            } else if remaining == 1 {
-                return "Last 1 · 1/\(limit)"
-            } else {
-                return "\(remaining)/\(limit) Left"
-            }
-        case .turkish:
-            if remaining <= 0 {
-                return "Doldu · 0/\(limit)"
-            } else if remaining == 1 {
-                return "Son 1 Hak · 1/\(limit)"
-            } else {
-                return "Kalan: \(remaining)/\(limit)"
-            }
+        if remaining <= 0 {
+            return tr("feedQuotaEmpty", fallback: "Limit · 0/{limit}", ("limit", "\(limit)"))
+        } else if remaining == 1 {
+            return tr("feedQuotaLastOne", fallback: "Last 1 · 1/{limit}", ("limit", "\(limit)"))
+        } else {
+            return tr("feedQuotaRemaining", fallback: "{remaining}/{limit} Left", ("remaining", "\(remaining)"), ("limit", "\(limit)"))
         }
     }
 
     func feedQuotaAccessibilityLabel(remaining: Int, limit: Int) -> String {
-        switch lang {
-        case .english:
-            "Daily free plates remaining: \(remaining) of \(limit). Tap to upgrade to Omakase Pro."
-        case .turkish:
-            "Günlük ücretsiz tabak hakkı: \(limit) üzerinden \(remaining) kaldı. Omakase Pro'ya geçmek için dokun."
-        }
+        tr(
+            "feedQuotaAccessibilityLabel",
+            fallback: "Daily free plates remaining: {remaining} of {limit}. Tap to upgrade to Omakase Pro.",
+            ("remaining", "\(remaining)"),
+            ("limit", "\(limit)")
+        )
     }
 
-    var timelineModeDiscover: String {
-        switch lang {
-        case .english: "Discover"
-        case .turkish: "Keşfet"
-        }
-    }
-
-    var timelineModeFollowing: String {
-        switch lang {
-        case .english: "Following"
-        case .turkish: "Takip Edilenler"
-        }
-    }
-
+    var timelineModeDiscover: String { tr("timelineModeDiscover", fallback: "Discover") }
+    var timelineModeFollowing: String { tr("timelineModeFollowing", fallback: "Following") }
     var discoverFeedSubheader: String {
-        switch lang {
-        case .english: "Fresh plates shared by readers across the community."
-        case .turkish: "Topluluktaki farklı okurların paylaştığı seçme tabaklar."
-        }
+        tr("discoverFeedSubheader", fallback: "Fresh plates shared by readers across the community.")
     }
-
     var followingEmptyHeadline: String {
-        switch lang {
-        case .english: "No posts from people you follow yet"
-        case .turkish: "Takip ettiğin kişilerden henüz paylaşım yok"
-        }
+        tr("followingEmptyHeadline", fallback: "No posts from people you follow yet")
     }
-
     var followingEmptyDetail: String {
-        switch lang {
-        case .english: "Switch to Discover to see random readers and follow tastes you like."
-        case .turkish: "Farklı okurları görmek ve zevkine uyanları takip etmek için Keşfet sekmesine geç."
-        }
+        tr("followingEmptyDetail", fallback: "Switch to Discover to see random readers and follow tastes you like.")
     }
-
-    var exploreDiscoverCTA: String {
-        switch lang {
-        case .english: "Explore Discover Feed"
-        case .turkish: "Keşfet Akışına Geç"
-        }
-    }
+    var exploreDiscoverCTA: String { tr("exploreDiscoverCTA", fallback: "Explore Discover Feed") }
+    var postSourceLabel: String { tr("postSourceLabel", fallback: "Source") }
+    var searchSourceInBrowser: String { tr("searchSourceInBrowser", fallback: "Search in Browser") }
 }

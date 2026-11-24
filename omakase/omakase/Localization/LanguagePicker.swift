@@ -9,8 +9,8 @@ import SwiftUI
 struct LanguagePicker: View {
     var isSubmenu: Bool = false
 
-    @AppStorage("omakase.language") private var languageCode: String = AppLanguage.english.rawValue
-    private var resolved: AppLanguage { AppLanguage(rawValue: languageCode) ?? .english }
+    @AppStorage("omakase.language") private var languageCode: String = AppLanguage.systemDefault.rawValue
+    private var resolved: AppLanguage { AppLanguage(rawValue: languageCode) ?? .systemDefault }
 
     var body: some View {
         Menu {

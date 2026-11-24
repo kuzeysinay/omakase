@@ -1,6 +1,6 @@
 # 📈 Omakase — Ürün Analizi, Product-Market Fit (PMF) & Pazarlama Raporu
 
-> **Son Güncelleme:** 12 Kasım 2026  
+> **Son Güncelleme:** 24 Kasım 2026  
 > **Dayanak:** Kod Tabanı (`omakase/`, `backend/`, `web/`) + Apple Agent Kit — `skill.app-store-product-page.foundations` (`header-and-search-result-messaging`, `asset-sequencing-and-story`, `image-asset-design`, `screenshot-specifications`, `creative-assets`, `in-app-event-media`)  
 > **Kapsam:** Problem-çözüm uyumu, Product-Market Fit (PMF) hipotezi ve ölçüm metrikleri, ideal kullanıcı personaları (ICP), AARRR büyüme hunisi, birim ekonomisi (Unit Economics), App Store ürün sayfası (ASO) tasarım kuralları ve Go-To-Market (GTM) lansman stratejisi.
 
@@ -120,15 +120,15 @@ Bu "ürün destekli edinim" (Product-Led Acquisition) yaklaşımı, ziyaretçini
 
 ### 5.2. Freemium & Omakase Pro Katman Kurgusu
 
-| Özellik | Ücretsiz (Giriş Katmanı) | Omakase Pro (\$3.99/ay • \$29.99/yıl) |
+| Özellik | Ücretsiz (Giriş Katmanı) | Omakase Pro (\$3.99/ay • \$29.99/yıl ≈ \$2.49/ay, 7 gün deneme) |
 |---------|--------------------------|---------------------------------------|
-| **12 Kültür Kategorisi & Özel Konu** | Günlük 5 Şef Tabağı | **Sınırsız** Şef Tabağı |
-| **Deep Dive (Derinlemesine İnceleme)** | Günlük 1 Deep Dive | **Sınırsız** Deep Dive Modal |
-| **Letterboxd RSS Entegrasyonu** | ✅ Açık (Kural 5.2.2 uyumu için ücretsizde de açık) | ✅ Öncelikli Senkronizasyon & Derin Analiz |
-| **Topluluk (`Community`) & Arama** | ✅ Sınırsız Okuma, Paylaşım & Yorum | ✅ Sınırsız + Profil Rozeti |
-| **Çevrimdışı Yer İmleri (`BookmarkStore`)** | ✅ Açık | ✅ Sınırsız Arşivleme |
+| **12 Kültür Kategorisi & Özel Konu** | Günlük **3 Şef Tabağı** (`Kalan: X/3` stres sayacı) | **Sınırsız** Şef Tabağı |
+| **Derin İnceleme (Deep Dive)** | Günlük **1 Derin İnceleme** (+ paylaşımda `+1` bonus) | **Sınırsız** Birincil Kaynakçalı Derin İnceleme |
+| **Letterboxd RSS Entegrasyonu** | ✅ Açık (Kural 5.2.2 uyumu için ücretsizde de açık) | ✅ Sınırsız & Birincil Kaynakçalı Kamera Arkası |
+| **Topluluk (Keşfet/Takip) & Arama** | ✅ Sınırsız Okuma, Paylaşım & Yorum | ✅ Sınırsız + Profil Rozeti |
+| **Çevrimdışı Yer İmleri (`BookmarkStore`)** | ✅ Açık (7 Dil Destekli) | ✅ Sınırsız Arşivleme |
 
-* **Birim Karlılık (Gross Margin):** \$3.99 aylık abonelikte Apple Small Business Program (%15 komisyon) sonrası net gelir **\$3.39**, kullanıcı başı bulut/AI maliyeti **~$0.12** olduğunda **Brüt Kar Marjı ≈ %96** seviyesindedir.
+* **Birim Karlılık & 100 Müşteri Doğrulaması:** \$3.99 aylık (\$3.39 net) veya \$29.99 yıllık planda kullanıcı başı bulut/AI maliyeti **~\$0.12** olduğundan **Brüt Kar Marjı ≈ %96** seviyesindedir. [`founder_100_musteri_raporu.md`](file:///Users/kuzey/projects/omakase/docs/founder_100_musteri_raporu.md) simülasyonunda ücretsiz sınırın 5'ten **3 tabağa** çekilmesi, her karta **birincil kaynakça** eklenmesi ve yıllık planın **ayda ~\$2.49** olarak konumlandırılması Pro satın alma isteğini `%1` → `%72` bandına taşımıştır (Van Westendorp `IPP: $2.53`).
 
 ---
 

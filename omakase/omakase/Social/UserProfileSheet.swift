@@ -348,7 +348,7 @@ struct MyProfileSheet: View {
 
     @AppStorage("omakase.interests") private var storedInterests: String = ""
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
-    @AppStorage("omakase.language") private var languageCode: String = AppLanguage.english.rawValue
+    @AppStorage("omakase.language") private var languageCode: String = AppLanguage.systemDefault.rawValue
     @AppStorage("omakase.appearance") private var appearanceCode: String = AppAppearance.system.rawValue
     @State private var isShowingLetterboxdPrompt = false
     @State private var tempLetterboxdUsername = ""
@@ -435,11 +435,11 @@ struct MyProfileSheet: View {
                 .listRowInsets(EdgeInsets())
 
                 // MARK: - Saved Posts
-                Section(l10n.lang == .turkish ? "Kaydedilenler" : "Saved") {
+                Section(l10n.savedTitle) {
                     NavigationLink(value: BookmarksNavigationRoute.collections) {
                         HStack(spacing: 10) {
                             Label {
-                                Text(l10n.lang == .turkish ? "Kaydedilmiş Gönderiler" : "Saved Posts")
+                                Text(l10n.savedPostsLabel)
                                     .foregroundStyle(.primary)
                             } icon: {
                                 Image(systemName: "bookmark.fill")

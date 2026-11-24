@@ -6,6 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.config import normalize_language
 from app.security import (
     _BLOCKLIST_RE,
     _LETTERBOXD_USERNAME_RE,
@@ -31,7 +32,7 @@ class FeedRequest(BaseModel):
     )
     language: str = Field(
         default="en",
-        description="BCP-47 language tag for model output (e.g. en, tr). Unknown values fall back to English.",
+        description="BCP-47 language tag for model output (en, tr, ja, de, fr, es, ko). Unknown values fall back to English.",
     )
     letterboxd_films: Optional[list[dict]] = Field(
         default=None,
@@ -49,10 +50,7 @@ class FeedRequest(BaseModel):
     @field_validator("language")
     @classmethod
     def _normalize_language(cls, v: str) -> str:
-        s = (v or "en").strip().lower()
-        if s not in ("en", "tr"):
-            return "en"
-        return s
+        return normalize_language(v)
 
     @field_validator("interests")
     @classmethod
@@ -82,17 +80,14 @@ class SuggestRequest(BaseModel):
     )
     language: str = Field(
         default="en",
-        description="BCP-47 language tag for suggestion strings (en or tr).",
+        description="BCP-47 language tag for suggestion strings (en, tr, ja, de, fr, es, ko).",
     )
     timezone: Optional[str] = Field(default=None, max_length=64)
 
     @field_validator("language")
     @classmethod
     def _normalize_language_suggest(cls, v: str) -> str:
-        s = (v or "en").strip().lower()
-        if s not in ("en", "tr"):
-            return "en"
-        return s
+        return normalize_language(v)
 
     @field_validator("interests")
     @classmethod
@@ -131,17 +126,14 @@ class ExpandCategoryRequest(BaseModel):
     )
     language: str = Field(
         default="en",
-        description="BCP-47 language tag for suggestion strings (en or tr).",
+        description="BCP-47 language tag for suggestion strings (en, tr, ja, de, fr, es, ko).",
     )
     timezone: Optional[str] = Field(default=None, max_length=64)
 
     @field_validator("language")
     @classmethod
     def _normalize_language_expand(cls, v: str) -> str:
-        s = (v or "en").strip().lower()
-        if s not in ("en", "tr"):
-            return "en"
-        return s
+        return normalize_language(v)
 
     @field_validator("category")
     @classmethod
@@ -201,10 +193,7 @@ class DeepDiveRequest(BaseModel):
     @field_validator("language")
     @classmethod
     def _check_lang(cls, v: str) -> str:
-        s = (v or "en").strip().lower()
-        if s not in ("en", "tr"):
-            return "en"
-        return s
+        return normalize_language(v)
 
 
 class LetterboxdFilmsRequest(BaseModel):

@@ -1,7 +1,7 @@
 # 📊 Omakase — Proje Durum ve Teknik Mimari Raporu
 
-> **Güncelleme Tarihi:** 22 Kasım 2026 · **Kapsam:** iOS İstemci ([omakase/](file:///Users/kuzey/projects/omakase/omakase)), Cloud Run Backend ([backend/](file:///Users/kuzey/projects/omakase/backend)), Firestore Güvenlik Kuralları ([firestore.rules](file:///Users/kuzey/projects/omakase/firestore.rules)) ve App Store / RevenueCat / Firebase Konsol Entegrasyonları
-> **Amaç:** Omakase v1.0 uygulamasının güncel mimarisini, tamamlanan geliştirme fazlarını (Faz 1–3), canlı altyapı envanterini ve App Store yayını öncesi kalan son doğrulama adımlarını tek dokümanda toplamak.
+> **Güncelleme Tarihi:** 24 Kasım 2026 · **Kapsam:** iOS İstemci ([omakase/](file:///Users/kuzey/projects/omakase/omakase)), Cloud Run Backend ([backend/](file:///Users/kuzey/projects/omakase/backend)), Firestore Güvenlik Kuralları ([firestore.rules](file:///Users/kuzey/projects/omakase/firestore.rules)) ve App Store / RevenueCat / Firebase Konsol Entegrasyonları
+> **Amaç:** Omakase v1.0 uygulamasının güncel mimarisini, tamamlanan geliştirme fazlarını (Faz 1–4 kod/web), 7 dil & birincil kaynakça sistemini, canlı altyapı envanterini ve App Store yayını öncesi kalan dış panel adımlarını tek dokümanda toplamak.
 
 ---
 
@@ -9,19 +9,19 @@
 
 | Alan / Sistem | Durum | Özet & Kanıt |
 |---|---|---|
-| **Çekirdek AI Akış, Keşif, Letterboxd & Önbellek** | ✅ **Tamamlandı** | Bento ilgi matrisi ([BentoTasteBox.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Interests/BentoTasteBox.swift)), Gemini SSE stream akışı (`feed`, `deep-dive`), 15–25 sn okuma ritüeli, Letterboxd RSS entegrasyonu ve SwiftData çevrimdışı önbelleği (`CachedPost` / [PostCacheService.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/PostCacheService.swift)) çalışıyor. |
-| **Kimlik Doğrulama, Sosyal Katman & UGC Moderasyonu** | ✅ **Tamamlandı** | Firebase Auth + Sign in with Apple (Keychain + `getCredentialState` + revocation dinleyicisi) + Google Sign-In ([AuthService.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift)), Topluluk akışı, yorumlar, tepkiler, takipçi ağı, içerik filtresi, raporlama/engelleme ve hesap/veri silme ([FirestoreService.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift)) canlı. |
-| **Faz 1 — Hata Yönetimi & Firebase Crashlytics** | ✅ **Tamamlandı & Doğrulandı** | Canonical backend `code` + `Retry-After` sözleşmesi ([errors.py](file:///Users/kuzey/projects/omakase/backend/app/errors.py)), iOS [OmakaseError.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/OmakaseError.swift) + [L10n.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Localization/L10n.swift) (TR/EN), 3 katmanlı sunum (satır içi / toast / Tekrar Dene uyarısı) ve Firebase Crashlytics non-fatal telemetri devreye alındı; teknik metin sızıntısı sıfırlandı. |
-| **Faz 2 — Monetizasyon (RevenueCat) & Erişim Kotası** | ✅ **Kod & Canlı Altyapı Tamamlandı** | `RevenueCat` SDK `5.103.2` (StoreKit 2 + `.informational` + `verification != .failed` kontrolü), [AccessManager.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/AccessManager.swift), [OmakasePaywallView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/OmakasePaywallView.swift), [DailyLimitCardView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/DailyLimitCardView.swift), Cloud Run `/billing/*` + `/feed/reward-share` + sunucu günlük kotaları ve [firestore.rules](file:///Users/kuzey/projects/omakase/firestore.rules) canlıda. App Store Connect ve RevenueCat temel bağlantıları kuruldu. *Kalan panel işleri:* Legal Entity adres güncellemesi, Paid Apps `Active` onayı ve Webhook/Sandbox uçtan uca testi. |
-| **Faz 3 — Bildirim Sistemi (Yerel + APNs/FCM)** | ✅ **Kod & Canlı Altyapı Tamamlandı** | `FirebaseMessaging` (`12.13.0`), [omakase.entitlements](file:///Users/kuzey/projects/omakase/omakase/omakase/omakase.entitlements) (`aps-environment`), [NotificationManager.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/NotificationManager.swift), [omakaseApp.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/App/omakaseApp.swift) (`AppDelegate`), bağlam içi izin (`[.alert, .sound]`, rozetsiz), yerel `omakase.daily-menu` hatırlatıcısı, derin bağlantı, Profil bildirim ayarları, `firestore.rules` ve Cloud Run `/notifications/*` canlıda. *Kalan panel işleri:* APNs `.p8` Firebase Console yüklemesi ve Cloud Scheduler job bağlanması. |
-| **Faz 4 — Kabul Testleri, Gizlilik & App Store Review** | ⏳ **Sırada** | [PrivacyInfo.xcprivacy](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) güncellemesi (`PurchaseHistory`, Crashlytics/FCM doğrulaması) + birleşik Xcode Privacy Report, [terms.html](file:///Users/kuzey/projects/omakase/web/terms.html) / [privacy.html](file:///Users/kuzey/projects/omakase/web/privacy.html) abonelik hükümleri, Sandbox/APNs uçtan uca kabul testleri ve **v1.0 App Store Review gönderimi**. |
+| **Çekirdek AI Akış, 7 Dil, Kaynakça & Önbellek** | ✅ **Tamamlandı** | Bento ilgi matrisi ([BentoTasteBox.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Interests/BentoTasteBox.swift)), **7 dil desteği** (`en, tr, ja, de, fr, es, ko` — [AppLanguage.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Localization/AppLanguage.swift), `.lproj`, `config.py`), her post & Derin İnceleme sonunda zorunlu **birincil kaynakça** (`prompts.py` + tıklanabilir [PostSourceView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Theme/PostSourceView.swift)), 15–25 sn okuma ritüeli, Letterboxd RSS ve SwiftData çevrimdışı önbelleği çalışıyor. |
+| **Kimlik Doğrulama, Keşfet Sosyal Akışı & Moderasyon** | ✅ **Tamamlandı** | Firebase Auth + Sign in with Apple + Google Sign-In ([AuthService.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift)), **Keşfet / Takip Edilenler** segmentli Topluluk akışı + round-robin yazar harmanlama + kart üstü `+ Takip et` ([TimelineViewModel.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/TimelineViewModel.swift), [TimelinePostCard.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/TimelinePostCard.swift)), yorumlar, tepkiler, raporlama/engelleme ve hesap/veri silme canlı. |
+| **Faz 1 — Hata Yönetimi & Firebase Crashlytics** | ✅ **Tamamlandı & Doğrulandı** | Canonical backend `code` + `Retry-After` sözleşmesi ([errors.py](file:///Users/kuzey/projects/omakase/backend/app/errors.py)), iOS [OmakaseError.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/OmakaseError.swift) + [L10n.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Localization/L10n.swift) (7 dil), 3 katmanlı sunum ve Firebase Crashlytics non-fatal telemetri devreye alındı. |
+| **Faz 2 — Monetizasyon (RevenueCat) & 3 Tabak Kotası** | ✅ **Kod & Canlı Altyapı Tamamlandı** | `RevenueCat` SDK `5.103.2` (StoreKit 2), [AccessManager.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/AccessManager.swift) (`3` tabak istemci normalizasyonu), ana akış üst barında `Kalan: X/3` stres sayacı ([FeedView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Feed/FeedView.swift)), [OmakasePaywallView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/OmakasePaywallView.swift), [DailyLimitCardView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/DailyLimitCardView.swift), Cloud Run `/billing/*` + `/feed/reward-share` (`+1` bonus) ve sıkılaştırılmış [firestore.rules](file:///Users/kuzey/projects/omakase/firestore.rules) (`5/5`) canlıda. *Kalan panel işleri:* Legal Entity adres güncellemesi, Paid Apps `Active` onayı ve Webhook/Sandbox uçtan uca testi. |
+| **Faz 3 — Bildirim Sistemi (Yerel + APNs/FCM)** | ✅ **Kod & Canlı Altyapı Tamamlandı** | `FirebaseMessaging` (`12.13.0`), [omakase.entitlements](file:///Users/kuzey/projects/omakase/omakase/omakase/omakase.entitlements), [NotificationManager.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/NotificationManager.swift), bağlam içi izin (`[.alert, .sound]`, rozetsiz), yerel `omakase.daily-menu`, derin bağlantı, 7 dilli push şablonları (`notification_service.py`), `firestore.rules` ve Cloud Run `/notifications/*` canlıda. *Kalan panel işleri:* APNs `.p8` Firebase Console yüklemesi ve Cloud Scheduler job bağlanması. |
+| **Faz 4 — Gizlilik, Yasal Sayfalar & Kabul Testleri** | ✅ **Kod & Web Tamamlandı · ⏳ Panel/Kabul Sırada** | [PrivacyInfo.xcprivacy](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) (`PurchaseHistory`, `CrashData`, `OtherUserContent`), [terms.html](file:///Users/kuzey/projects/omakase/web/terms.html) / [privacy.html](file:///Users/kuzey/projects/omakase/web/privacy.html) abonelik/bildirim hükümleri ve sadeleştirilmiş [index.html](file:///Users/kuzey/projects/omakase/web/index.html) tamamlandı. *Kalanlar:* Birleşik Xcode Privacy Report doğrulaması, Sandbox/APNs uçtan uca testleri ve **v1.0 App Store Review gönderimi**. |
 
 ---
 
 ## 1. Güncel Sistem Mimarisi ve Canlı Altyapı Envanteri
 
 ### 1.1. iOS Uygulaması ([omakase/](file:///Users/kuzey/projects/omakase/omakase))
-- **Kimlik & Hedef:** Bundle ID `kuzeysinay.omakase` · Team ID `S88MSGP5UR` · SwiftUI + `@Observable` + SwiftData · `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`.
+- **Kimlik & Hedef:** Bundle ID `kuzeysinay.omakase` · Team ID `S88MSGP5UR` · SwiftUI + `@Observable` + SwiftData · `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` · **7 Dil** (`en, tr, ja, de, fr, es, ko` `.lproj` + `AppLanguage.systemDefault`).
 - **Swift Package Bağımlılıkları ([Package.resolved](file:///Users/kuzey/projects/omakase/omakase/omakase.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved)):**
   - `firebase-ios-sdk` `12.13.0` (`FirebaseCore`, `FirebaseAuth`, `FirebaseFirestore`, `FirebaseCrashlytics`, `FirebaseMessaging`)
   - `GoogleSignIn-iOS` `10.0.0`
@@ -30,11 +30,11 @@
 - **Ana Uygulama Katmanları:**
   - **Yaşam Döngüsü & Yönlendirme:** [omakaseApp.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/App/omakaseApp.swift), [ContentView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/App/ContentView.swift), [MainTabView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/App/MainTabView.swift) (`Akışım` / `Topluluk` / `Profil` + bildirim derin bağlantısı).
   - **Servisler:** [AccessManager.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/AccessManager.swift), [NotificationManager.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/NotificationManager.swift), [OmakaseError.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/OmakaseError.swift), [FirestoreService.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift), [PostCacheService.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/PostCacheService.swift), [ContentModerationService.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/ContentModerationService.swift), [ShareService.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/ShareService.swift).
-  - **Monetizasyon UI:** [OmakasePaywallView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/OmakasePaywallView.swift), [DailyLimitCardView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/DailyLimitCardView.swift).
+  - **Monetizasyon & Kaynakça UI:** [OmakasePaywallView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/OmakasePaywallView.swift), [DailyLimitCardView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/DailyLimitCardView.swift), [PostSourceView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Theme/PostSourceView.swift).
   - **Cihaz Doğrulaması:** [launch-ios.sh](file:///Users/kuzey/projects/omakase/scripts/launch-ios.sh) ile fiziksel iPhone (`ADFC2ADA-EA3F-51A7-9C82-E2554869B97D`) üzerinde derlenip `0` hata ile kuruldu ve başlatıldı.
 
 ### 1.2. Cloud Run Backend ([backend/](file:///Users/kuzey/projects/omakase/backend))
-- **Canlı Servis:** `omakase-backend` · Bölge `us-central1` · GCP/Firebase Proje `gen-lang-client-0120875563` · Canlı revizyon `omakase-backend-00014-qfr` (`https://omakase-backend-20235796246.us-central1.run.app`).
+- **Canlı Servis:** `omakase-backend` · Bölge `us-central1` · GCP/Firebase Proje `gen-lang-client-0120875563` · Canlı revizyon `omakase-backend-00015-btf` (`https://omakase-backend-20235796246.us-central1.run.app`).
 - **Bağımlılıklar ([requirements.txt](file:///Users/kuzey/projects/omakase/backend/requirements.txt)):** `fastapi==0.115.5`, `uvicorn[standard]==0.32.1`, `google-genai==1.47.0`, `pydantic==2.9.2`, `python-dotenv==1.0.1`, `firebase-admin==6.6.0`, `httpx==0.28.1`, `tzdata==2024.2`.
 - **Aktif Uç Noktalar ([main.py](file:///Users/kuzey/projects/omakase/backend/main.py)):**
 
@@ -43,16 +43,16 @@
 | `GET /health` | [main.py](file:///Users/kuzey/projects/omakase/backend/main.py) | Açık | Minimal canlılık kontrolü (`{"status":"ok"}`) |
 | `POST /feed/stream` | [feed.py](file:///Users/kuzey/projects/omakase/backend/app/routers/feed.py) | Firebase ID Token + rate limit + günlük kota (`plate`) | Tekil tabak SSE yayını; başarılı `done` çıktısında kota düşer |
 | `POST /feed/deep-dive` | [feed.py](file:///Users/kuzey/projects/omakase/backend/app/routers/feed.py) | Firebase ID Token + rate limit + günlük kota (`deep_dive`) | Derinlemesine inceleme SSE yayını |
-| `POST /feed/reward-share` | [feed.py](file:///Users/kuzey/projects/omakase/backend/app/routers/feed.py) | Firebase ID Token + rate limit + Firestore transaction | Günde 1 kez paylaşımla `+2` bonus Deep Dive açar |
-| `POST /interests/suggest`, `/interests/expand-category` | [interests.py](file:///Users/kuzey/projects/omakase/backend/app/routers/interests.py) | Firebase ID Token + rate limit + günlük kota (`suggestion`) | İlgi alanı / alt kategori önerileri |
+| `POST /feed/reward-share` | [feed.py](file:///Users/kuzey/projects/omakase/backend/app/routers/feed.py) | Firebase ID Token + rate limit + Firestore transaction | Günde 1 kez paylaşımla `+1` bonus Derin İnceleme açar |
+| `POST /interests/suggest`, `/interests/expand-category` | [interests.py](file:///Users/kuzey/projects/omakase/backend/app/routers/interests.py) | Firebase ID Token + rate limit + günlük kota (`suggestion`) | İlgi alanı / alt kategori önerileri (7 dil) |
 | `POST /letterboxd/films` | [letterboxd.py](file:///Users/kuzey/projects/omakase/backend/app/routers/letterboxd.py) | Firebase ID Token + rate limit | Letterboxd RSS okuma ve kanonik 404/403/502 eşlemesi |
-| `GET /billing/status` | [billing.py](file:///Users/kuzey/projects/omakase/backend/app/routers/billing.py) | Firebase ID Token | Kullanıcının güncel Pro yetkisi + günlük kota özetini döner |
-| `POST /billing/sync` | [billing.py](file:///Users/kuzey/projects/omakase/backend/app/routers/billing.py) | Firebase ID Token | Satın alma/restore sonrası RevenueCat REST ile `entitlements/{uid}` senkronu |
+| `GET /billing/status` | [billing.py](file:///Users/kuzey/projects/omakase/backend/app/routers/billing.py) | Firebase ID Token + rate limit (`30/dk`) | Kullanıcının güncel Pro yetkisi + günlük kota özetini döner |
+| `POST /billing/sync` | [billing.py](file:///Users/kuzey/projects/omakase/backend/app/routers/billing.py) | Firebase ID Token + rate limit (`10/dk`) | Satın alma/restore sonrası RevenueCat REST ile `entitlements/{uid}` senkronu |
 | `POST /billing/revenuecat-webhook` | [billing.py](file:///Users/kuzey/projects/omakase/backend/app/routers/billing.py) | `REVENUECAT_WEBHOOK_SECRET` (`hmac.compare_digest`) | RevenueCat abonelik yaşam döngüsü olaylarını Firestore'a işler |
 | `POST /notifications/events` | [notifications.py](file:///Users/kuzey/projects/omakase/backend/app/routers/notifications.py) | Firebase ID Token + rate limit | Yorum, takip ve tepki olaylarını push/kuyruk kurallarına göre işler |
 | `POST /notifications/process-queue` | [notifications.py](file:///Users/kuzey/projects/omakase/backend/app/routers/notifications.py) | `NOTIFICATION_CRON_SECRET` (`hmac.compare_digest`) | Zamanlanmış `notification_queue` teslimatı (gruplu yorum + günlük özet) |
 
-- **Otomatik Testler:** [test_error_contract.py](file:///Users/kuzey/projects/omakase/backend/tests/test_error_contract.py), [test_billing_and_quota.py](file:///Users/kuzey/projects/omakase/backend/tests/test_billing_and_quota.py) ve [test_notifications.py](file:///Users/kuzey/projects/omakase/backend/tests/test_notifications.py) toplam **18/18** birim testiyle doğrulandı.
+- **Otomatik Testler:** [test_error_contract.py](file:///Users/kuzey/projects/omakase/backend/tests/test_error_contract.py), [test_billing_and_quota.py](file:///Users/kuzey/projects/omakase/backend/tests/test_billing_and_quota.py) ve [test_notifications.py](file:///Users/kuzey/projects/omakase/backend/tests/test_notifications.py) toplam **19/19** birim testiyle doğrulandı (`7 dil normalizasyonu` dahil).
 - *Tarihsel not:* Faz 1 öncesinde tespit edilen tüm eski hata/kota boşlukları (**H1–H11**) çözülmüş ve üretime alınmıştır.
 
 ### 1.3. Firestore Güvenlik Kuralları ([firestore.rules](file:///Users/kuzey/projects/omakase/firestore.rules))
@@ -79,10 +79,10 @@ Canlı `gen-lang-client-0120875563` projesine deploy edilmiş güncel erişim ma
 
 | Özellik | Ücretsiz | Omakase Pro (Adil Kullanım Tavanı) |
 |---|---|---|
-| Şef tabağı (`feed` / özel konu / Letterboxd) | **Günde 5** | Sınırsız UI (sunucuda `100/gün`) |
-| Deep Dive | **Günde 1** (+ **günde 1 kez paylaşımda `+2` ödül**) | Sınırsız UI (sunucuda `40/gün`) |
+| Şef tabağı (`feed` / özel konu / Letterboxd) | **Günde 3** (`Kalan: X/3` stres sayacı) | Sınırsız UI (sunucuda `100/gün`) |
+| Derin İnceleme (Deep Dive) | **Günde 1** (+ **günde 1 kez paylaşımda `+1` ödül**) | Sınırsız UI (sunucuda `40/gün`) |
 | Alt konu önerisi (`suggest` / `expand-category`) | **Günde 10** | Sınırsız UI (sunucuda `100/gün`) |
-| Topluluk, yorum, tepki, yer imleri & Letterboxd | Tamamen ücretsiz | Tamamen ücretsiz + Profil/kartlarda `PRO` rozeti |
+| Topluluk (Keşfet/Takip), yorum, tepki, yer imleri & Letterboxd | Tamamen ücretsiz | Tamamen ücretsiz + Profil/kartlarda `PRO` rozeti |
 | Okuma bekleme süresi (cooldown ritüeli) | 15–25 sn | Aynı (marka değeri, ücretli kaldırılmaz) |
 
 - **Doğru sayım:** Bir tabak yalnızca Gemini akışı başarıyla `event: done` verdiğinde düşülür (`on_complete` callback'i, [gemini_service.py](file:///Users/kuzey/projects/omakase/backend/app/services/gemini_service.py)); hata veya güvenlik engeli hak yemez. Gün sınırı kullanıcının gönderdiği IANA saat dilimine göre **yerel gece yarısı**dır.
@@ -90,11 +90,11 @@ Canlı `gen-lang-client-0120875563` projesine deploy edilmiş güncel erişim ma
 
 ### 2.2. Fiyat, Paketler ve 3 Temas Noktası
 - Abonelik grubu: **Omakase Pro**
-  - `omakase.pro.yearly` — **\$29.99/yıl** (**7 gün ücretsiz deneme** — yalnızca yıllıkta; 1 haftalık alışkanlık ritmini kapsar)
+  - `omakase.pro.yearly` — **\$29.99/yıl** (`~$2.49/ay`, %37 indirim, **7 gün ücretsiz deneme** — yalnızca yıllıkta; 1 haftalık alışkanlık ritmini kapsar)
   - `omakase.pro.monthly` — **\$3.99/ay** (deneme yok)
 - **3 Paywall Temas Noktası:**
   1. **İlk değer anından sonra yumuşak paywall (tek sefer):** İlk tabak okunup cooldown bittiğinde (`FeedView`).
-  2. **Limit kartı / sheet:** 5. tabak tamamlandığında akış sonuna yerleşen satır içi **Bugünkü Menü Tamamlandı** kartı ([DailyLimitCardView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/DailyLimitCardView.swift) — geri sayım, *Omakase Pro ile Devam Et*, *Yarın Hatırlat*); 2. Deep Dive denemesinde paywall sheet ve günlük `+2` paylaşım ipucu.
+  2. **Üst Bar Stres Sayacı & Limit Kartı / Sheet:** Üst çubuktaki `Kalan: X/3` kapsülü (`FeedView.swift`, son `1` hakta kırmızıya döner) dokunulunca paywall açar; 3. tabak tamamlandığında akış sonuna yerleşen satır içi **Bugünkü Menü Tamamlandı** kartı ([DailyLimitCardView.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/DailyLimitCardView.swift) — geri sayım, *Omakase Pro ile Devam Et*, *Yarın Hatırlat*) ve 2. Derin İnceleme denemesinde paywall sheet ile günlük `+1` paylaşım ipucu gösterilir.
   3. **Profil → Üyelik bölümü:** Durum rozeti (Aktif / Ücretsiz Deneme / Ödeme Sorunu), yenilenme/bitiş tarihi, *Satın Alımları Geri Yükle* ve *Aboneliği Yönet* ([UserProfileSheet.swift](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift)).
 
 ### 2.3. Uygulanan Teknik Mimari
@@ -189,13 +189,13 @@ sequenceDiagram
 flowchart LR
     F1["✅ Faz 1 — Hata & Crashlytics<br/>Tamamlandı & Doğrulandı"] --> F2["✅ Faz 2 — RevenueCat & Kota<br/>Kod + Cloud Run + Rules Canlı"]
     F2 --> F3["✅ Faz 3 — Bildirim Sistemi<br/>Yerel + FCM + Cloud Run + Rules Canlı"]
-    F3 --> F4["⏳ Faz 4 — Gizlilik, Yasal & Kabul Testi<br/>PrivacyInfo, Web Yasal, Sandbox/APNs Testi → 🚀 v1.0"]
+    F3 --> F4["✅ Faz 4 (Kod/Web) — Gizlilik, Yasal & Kaynakça<br/>7 Dil, PostSourceView, 3 Tabak & PrivacyInfo → ⏳ Son Kabul/Panel → 🚀 v1.0"]
 ```
 
-### 5.1. Kalan Kod & Web İşleri *(Faz 4)*
-- [ ] **Gizlilik Manifesti & Birleşik Privacy Report:** [PrivacyInfo.xcprivacy](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) dosyasına `PurchaseHistory` ve telemetri/cihaz verisi beyanlarının eklenip arşiv sonrası Xcode `Generate Privacy Report` ile RevenueCat + Firebase birleşik çıktısının doğrulanması.
-- [ ] **Yasal Web Sayfaları:** [terms.html](file:///Users/kuzey/projects/omakase/web/terms.html) ve [privacy.html](file:///Users/kuzey/projects/omakase/web/privacy.html) içine otomatik yenilenen abonelik, ücretsiz deneme iptali, Crashlytics ve push bildirimi cihaz tokenı maddelerinin eklenip Firebase Hosting'e deploy edilmesi.
-- [ ] **Son Kabul Testleri:** TR ve EN cihaz dilinde uçak modu, 429 rate limit, yanlış Letterboxd, 5/1 kota sınırı, Sandbox satın alma/restore, yerel hatırlatıcı ve FCM push derin bağlantı testleri + GCP API anahtarı (`S-03`) kısıtlaması.
+### 5.1. Faz 4 Durumu (Tamamlanan Kod/Web İşleri & Son Doğrulama)
+- [x] **Gizlilik Manifesti Güncellemesi:** [PrivacyInfo.xcprivacy](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) dosyasına `PurchaseHistory`, `CrashData` ve `OtherUserContent` veri tipleri eklendi.
+- [x] **Yasal Web Sayfaları & Sadeleştirme:** [terms.html](file:///Users/kuzey/projects/omakase/web/terms.html) ve [privacy.html](file:///Users/kuzey/projects/omakase/web/privacy.html) içine otomatik yenilenen Omakase Pro aboneliği, 3 ücretsiz tabak kotası, Crashlytics ve push bildirimi token maddeleri eklendi; [index.html](file:///Users/kuzey/projects/omakase/web/index.html) ve [app.js](file:///Users/kuzey/projects/omakase/web/app.js) sadeleştirildi.
+- [ ] **Birleşik Privacy Report & Son Kabul Testleri:** Arşiv sonrası Xcode `Generate Privacy Report` ile birleşik çıktının doğrulanması; uçak modu, 429 rate limit, yanlış Letterboxd, 3/1 kota sınırı, Sandbox satın alma/restore, yerel hatırlatıcı ve FCM push derin bağlantı testleri + GCP API anahtarı (`S-03`) kısıtlaması + güncel `web/` ve `firestore.rules` deploy'u.
 
 ### 5.2. Kalan Dış Panel Aksiyonları *(Apple / RevenueCat / Firebase / GCP)*
 - [ ] **Apple Developer & App Store Connect:** Legal Entity adres talebinin tamamlanması; **Paid Apps Agreement** (`Active`) onayı; her iki abonelik için fiyat + localization + review screenshot tamamlanması; RevenueCat Apple Server-to-Server V2 URL'sinin tanımlanması; App Store Gizlilik Etiketi ve **Small Business Program (%15)** başvurusu.
@@ -203,13 +203,13 @@ flowchart LR
 - [ ] **Firebase & GCP:** Apple Developer'dan alınan **APNs `.p8`** anahtarının Firebase Console → Cloud Messaging altına yüklenmesi; Google Cloud Scheduler ile her 15 dakikada `POST https://omakase-backend-20235796246.us-central1.run.app/notifications/process-queue` (`X-Omakase-Cron-Secret`) tetiklemesinin kurulması.
 
 ### 5.3. Yayın Öncesi Teknik Kontrol Listesi
-- [x] Sunucu tarafı günlük kota (5 tabak / 1 Deep Dive + paylaşımda `+2` ödül / 10 öneri) Cloud Run'da aktif ve test edildi
-- [x] `entitlements/{uid}`, `usage/{docId}`, `notification_queue`, `notification_cooldowns`, `users/{uid}` ayrıcalıklı anahtar kısıtları ve `devices`/`notification_prefs` kuralları [firestore.rules](file:///Users/kuzey/projects/omakase/firestore.rules) içinde canlı deploy edildi
-- [x] `OmakaseError` + TR/EN `L10n` + Crashlytics devreye alındı; hiçbir ekranda teknik hata metni bırakılmadı
-- [x] Paywall UI (fiyat, süre, deneme, otomatik yenileme metni, Koşullar/Gizlilik bağlantıları, Geri Yükle) ve Limit Kartı entegre edildi
+- [x] Sunucu tarafı günlük kota (3 tabak / 1 Derin İnceleme + paylaşımda `+1` ödül / 10 öneri), 7 dil desteği (`en, tr, ja, de, fr, es, ko`) ve birincil kaynakça (`prompts.py`) Cloud Run revizyonunda (`omakase-backend-00015-btf`) aktif
+- [x] `entitlements/{uid}`, `usage/{docId}`, `notification_queue`, `notification_cooldowns`, `users/{uid}` ayrıcalıklı anahtar kısıtları ve `hasOnly` doğrulamaları [firestore.rules](file:///Users/kuzey/projects/omakase/firestore.rules) içinde sertleştirildi (`5/5 Secure`)
+- [x] `OmakaseError` + 7 dilli `L10n` + Crashlytics devreye alındı; hiçbir ekranda teknik hata metni bırakılmadı
+- [x] Paywall UI (`$2.49/ay` yıllık vurgu, fiyat, süre, deneme, otomatik yenileme metni, Koşullar/Gizlilik bağlantıları, Geri Yükle), üst bar `Kalan: X/3` stres sayacı ve Limit Kartı entegre edildi
 - [x] Bağlam içi bildirim izni, rozetsiz ayarlar, yerel hatırlatıcı, Profil bildirim tercihleri, derin bağlantı ve backend 30 dk gruplu yorum/günlük özet/sessiz saatler kuruldu
-- [x] Git üzerinde açık secret sızıntısı yok (`CLEAN`); Backend birim testleri (`18/18`) ve fiziksel iPhone build/launch (`launch-ios.sh`) doğrulandı
-- [ ] Paid Apps `Active` + Sandbox satın alma/restore + APNs `.p8` canlı push testleri ve [PrivacyInfo.xcprivacy](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) / web yasal metin denetimi (**Faz 4**)
+- [x] Git üzerinde açık secret sızıntısı yok (`CLEAN`); Backend birim testleri (**19/19**) ve fiziksel iPhone build/launch (`launch-ios.sh`) doğrulandı
+- [ ] Paid Apps `Active` + Sandbox satın alma/restore + APNs `.p8` canlı push testleri ve arşiv sonrası birleşik `Generate Privacy Report` kontrolü (**Faz 4 Son Onay**)
 
 ---
 

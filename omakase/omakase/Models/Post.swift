@@ -6,6 +6,11 @@
 import Foundation
 import Observation
 
+struct ParsedPostContent: Equatable, Sendable {
+    let body: String
+    let source: String?
+}
+
 /// A single AI-generated post in the feed. `text` grows over time as SSE
 /// tokens stream in, and `isComplete` flips to true when the `done` event
 /// arrives.
@@ -52,10 +57,162 @@ final class Post: Identifiable, @unchecked Sendable {
         self.createdAt = createdAt
     }
 
-    /// Formatted display text with any legacy robotic template labels (e.g. "SIDE A:", "SIDE B:")
-    /// and accidental LaTeX math notation removed.
+    var parsedContent: ParsedPostContent {
+        Self.splitBodyAndSource(from: text, isStreaming: !isComplete)
+    }
+
+    /// Formatted display text with any legacy robotic template labels (e.g. "SIDE A:", "SIDE B:"),
+    /// accidental LaTeX math notation, and the trailing source citation line removed.
     var cleanDisplayBody: String {
-        Self.sanitizeTemplateLabels(from: text).trimmingCharacters(in: .whitespacesAndNewlines)
+        parsedContent.body
+    }
+
+    /// Extracted primary source citation (without localized prefix such as "Kaynak:" / "Source:"), if present.
+    var sourceCitation: String? {
+        parsedContent.source
+    }
+
+    private static let leadingMarkerRegex = try? NSRegularExpression(
+        pattern: #"^[\s—–\-•·>]+"#
+    )
+
+    private static let fullSourceLineRegex = try? NSRegularExpression(
+        pattern: #"^([\*_]{0,3})(?:Primary\s+Source|Sources?|Kaynak(?:ça|lar)?|Quellen?|Fuentes?|出典|출처)\s*([\*_]{0,3})\s*[:：]([\*_]{0,3})\s*(.*)$"#,
+        options: [.caseInsensitive]
+    )
+
+    private static let incompleteSourcePrefixRegex = try? NSRegularExpression(
+        pattern: #"^[\*_]{0,3}(?:Primary\s+Source|Sources?|Kaynak(?:ça|lar)?|Quellen?|Fuentes?|出典|출처)\s*[\*_]{0,3}$"#,
+        options: [.caseInsensitive]
+    )
+
+    private static let inlineTrailingSourceRegex = try? NSRegularExpression(
+        pattern: #"(?<=[.!?。”"»)—–])\s+(?:[—–\-]\s*)?(\(?)([\*_]{0,3})(?:Primary\s+Source|Sources?|Kaynak(?:ça|lar)?|Quellen?|Fuentes?|出典|출처)([\*_]{0,3})\s*[:：]([\*_]{0,3})\s*([^\n]+)$"#
+    )
+
+    static func splitBodyAndSource(from rawText: String, isStreaming: Bool = false) -> ParsedPostContent {
+        let sanitized = sanitizeTemplateLabels(from: rawText)
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !sanitized.isEmpty else {
+            return ParsedPostContent(body: "", source: nil)
+        }
+
+        let lines = sanitized.components(separatedBy: "\n")
+        if let lastNonEmptyIdx = lines.lastIndex(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }),
+           lastNonEmptyIdx > 0 {
+            var candidate = lines[lastNonEmptyIdx].trimmingCharacters(in: .whitespacesAndNewlines)
+            if let markerRegex = leadingMarkerRegex {
+                candidate = markerRegex.stringByReplacingMatches(
+                    in: candidate,
+                    range: NSRange(location: 0, length: candidate.utf16.count),
+                    withTemplate: ""
+                ).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+
+            if candidate.hasPrefix("(") && candidate.hasSuffix(")") && candidate.count > 2 {
+                let start = candidate.index(after: candidate.startIndex)
+                let end = candidate.index(before: candidate.endIndex)
+                let unwrapped = String(candidate[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if let regex = fullSourceLineRegex,
+                   regex.firstMatch(in: unwrapped, range: NSRange(location: 0, length: unwrapped.utf16.count)) != nil {
+                    candidate = unwrapped
+                }
+            }
+
+            let nsCandidate = candidate as NSString
+            if let regex = fullSourceLineRegex,
+               let match = regex.firstMatch(in: candidate, range: NSRange(location: 0, length: nsCandidate.length)) {
+                let openEmph = substring(nsCandidate, match: match, group: 1)
+                let midEmph = substring(nsCandidate, match: match, group: 2)
+                let afterColonEmph = substring(nsCandidate, match: match, group: 3)
+                let rawRest = substring(nsCandidate, match: match, group: 4)
+
+                let citation = cleanCitation(
+                    rawRest,
+                    openEmph: openEmph,
+                    midEmph: midEmph,
+                    afterColonEmph: afterColonEmph,
+                    stripClosingParen: false
+                )
+                let body = lines[0..<lastNonEmptyIdx]
+                    .joined(separator: "\n")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !body.isEmpty {
+                    return ParsedPostContent(body: body, source: citation.isEmpty ? nil : citation)
+                }
+            } else if isStreaming,
+                      let prefixRegex = incompleteSourcePrefixRegex,
+                      prefixRegex.firstMatch(in: candidate, range: NSRange(location: 0, length: candidate.utf16.count)) != nil {
+                let body = lines[0..<lastNonEmptyIdx]
+                    .joined(separator: "\n")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !body.isEmpty {
+                    return ParsedPostContent(body: body, source: nil)
+                }
+            }
+        }
+
+        let nsSanitized = sanitized as NSString
+        if let inlineRegex = inlineTrailingSourceRegex,
+           let match = inlineRegex.firstMatch(in: sanitized, range: NSRange(location: 0, length: nsSanitized.length)) {
+            let body = nsSanitized.substring(to: match.range.location)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let openParen = substring(nsSanitized, match: match, group: 1)
+            let openEmph = substring(nsSanitized, match: match, group: 2)
+            let midEmph = substring(nsSanitized, match: match, group: 3)
+            let afterColonEmph = substring(nsSanitized, match: match, group: 4)
+            let rawRest = substring(nsSanitized, match: match, group: 5)
+
+            let citation = cleanCitation(
+                rawRest,
+                openEmph: openEmph,
+                midEmph: midEmph,
+                afterColonEmph: afterColonEmph,
+                stripClosingParen: !openParen.isEmpty
+            )
+            if !body.isEmpty {
+                return ParsedPostContent(body: body, source: citation.isEmpty ? nil : citation)
+            }
+        }
+
+        return ParsedPostContent(body: sanitized, source: nil)
+    }
+
+    private static func substring(_ nsString: NSString, match: NSTextCheckingResult, group: Int) -> String {
+        let range = match.range(at: group)
+        guard range.location != NSNotFound else { return "" }
+        return nsString.substring(with: range)
+    }
+
+    private static func cleanCitation(
+        _ rawRest: String,
+        openEmph: String,
+        midEmph: String,
+        afterColonEmph: String,
+        stripClosingParen: Bool
+    ) -> String {
+        var citation = rawRest
+        if openEmph.isEmpty && !afterColonEmph.isEmpty {
+            citation = afterColonEmph + citation
+        } else if !openEmph.isEmpty && midEmph.isEmpty && afterColonEmph.hasPrefix(openEmph) && afterColonEmph.count > openEmph.count {
+            citation = String(afterColonEmph.dropFirst(openEmph.count)) + citation
+        }
+        citation = citation.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if stripClosingParen && citation.hasSuffix(")") {
+            citation.removeLast()
+            citation = citation.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        if !openEmph.isEmpty && midEmph.isEmpty && afterColonEmph.isEmpty && citation.hasSuffix(openEmph) {
+            citation.removeLast(openEmph.count)
+            citation = citation.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return citation
     }
 
     static func sanitizeTemplateLabels(from rawText: String) -> String {

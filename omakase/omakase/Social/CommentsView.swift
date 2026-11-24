@@ -166,9 +166,7 @@ struct CommentsView: View {
     }
 
     private var commentsTitle: String {
-        l10n.lang == .turkish
-            ? "\(comments.count) Yorum"
-            : "\(comments.count) Comments"
+        l10n.commentsCountTitle(comments.count)
     }
 
     // MARK: - Subviews
@@ -178,7 +176,7 @@ struct CommentsView: View {
             Image(systemName: "bubble.left")
                 .font(.system(size: 40, weight: .light))
                 .foregroundStyle(.secondary)
-            Text(l10n.lang == .turkish ? "Henüz yorum yok" : "No comments yet")
+            Text(l10n.noCommentsYet)
                 .font(.headline)
                 .foregroundStyle(.secondary)
         }
@@ -317,7 +315,7 @@ struct CommentsView: View {
     private var composerBar: some View {
         HStack(spacing: 8) {
             TextField(
-                l10n.lang == .turkish ? "Yorum ekle…" : "Add a comment…",
+                l10n.addCommentPlaceholder,
                 text: $newCommentText,
                 axis: .vertical
             )
@@ -346,7 +344,7 @@ struct CommentsView: View {
                     .foregroundStyle(OmakaseTheme.ink)
             }
             .disabled(newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .accessibilityLabel(l10n.lang == .turkish ? "Yorum gönder" : "Send comment")
+            .accessibilityLabel(l10n.sendCommentA11y)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

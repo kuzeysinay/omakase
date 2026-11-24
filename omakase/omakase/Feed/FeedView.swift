@@ -643,7 +643,7 @@ private struct ReelsPostCard: View {
                 .padding(.top, 8)
 
             // Main post body text
-            if post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !post.isComplete {
+            if parsedPost.body.isEmpty && !post.isComplete {
                 skeletonBody
                     .transition(.opacity)
             } else {
@@ -656,12 +656,18 @@ private struct ReelsPostCard: View {
                     .transition(.opacity)
             }
 
+            if let source = parsedPost.source {
+                PostSourceView(source: source)
+                    .padding(.top, 2)
+                    .transition(.opacity)
+            }
+
             // Deep dive indicator (content shown in sheet, not inline)
             if post.deepDiveText != nil, !post.isComplete {
                 HStack(spacing: 6) {
                     Image(systemName: "fish.fill")
                         .foregroundStyle(.primary)
-                    Text(l10n.lang == .turkish ? "Derin inceleme yazılıyor…" : "Writing deep dive…")
+                    Text(l10n.writingDeepDive)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     ProgressView().controlSize(.mini)
@@ -694,7 +700,7 @@ private struct ReelsPostCard: View {
                         Spacer()
                         Image(systemName: "chevron.down")
                             .font(.caption.weight(.bold))
-                        Text(l10n.lang == .turkish ? "Yeni post için aşağı kaydır" : "Scroll down for a new post")
+                        Text(l10n.scrollDownForNewPost)
                             .font(.caption.weight(.medium))
                         Spacer()
                     }
@@ -847,7 +853,7 @@ private struct ReelsPostCard: View {
                         .font(.title3)
                         .foregroundStyle(post.deepDiveText != nil ? OmakaseTheme.ink : .primary)
                     Text(post.deepDiveText != nil
-                         ? (l10n.lang == .turkish ? "Yeniden Oku" : "Re-read")
+                         ? l10n.actionReRead
                          : l10n.actionDive)
                         .font(.caption2.weight(post.deepDiveText != nil ? .semibold : .regular))
                         .lineLimit(1)
@@ -948,20 +954,25 @@ private struct ReelsPostCard: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if let deepDive = post.deepDiveText {
-                        if deepDive.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            && !post.isComplete {
+                    if let parsed = parsedDeepDive {
+                        if parsed.body.isEmpty && !post.isComplete {
                             // Still loading — show animated skeleton
                             skeletonBody
                                 .padding(.horizontal, 20)
                                 .padding(.top, 8)
                         } else {
-                            Text(attributedDeepDive(deepDive))
+                            Text(parseMarkdown(text: parsed.body))
                                 .font(.body)
                                 .lineSpacing(3)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 20)
                                 .padding(.top, 8)
+
+                            if let source = parsed.source {
+                                PostSourceView(source: source)
+                                    .padding(.horizontal, 20)
+                                    .transition(.opacity)
+                            }
                         }
                     }
 
@@ -980,7 +991,7 @@ private struct ReelsPostCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .navigationTitle(l10n.lang == .turkish ? "Derin İnceleme" : "Deep Dive")
+            .navigationTitle(l10n.deepDiveTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -995,7 +1006,7 @@ private struct ReelsPostCard: View {
                             .font(.title3)
                             .foregroundStyle(.secondary)
                     }
-                    .accessibilityLabel(l10n.lang == .turkish ? "Kapat" : "Close")
+                    .accessibilityLabel(l10n.closeLabel)
                 }
             }
         }
@@ -1017,12 +1028,16 @@ private struct ReelsPostCard: View {
         return l10n.untitledBite
     }
 
-    private var postBody: AttributedString {
-        parseMarkdown(text: post.cleanDisplayBody)
+    private var parsedPost: ParsedPostContent {
+        post.parsedContent
     }
 
-    private func attributedDeepDive(_ deepDive: String) -> AttributedString {
-        parseMarkdown(text: Post.sanitizeTemplateLabels(from: deepDive))
+    private var parsedDeepDive: ParsedPostContent? {
+        post.deepDiveText.map { Post.splitBodyAndSource(from: $0, isStreaming: !post.isComplete) }
+    }
+
+    private var postBody: AttributedString {
+        parseMarkdown(text: parsedPost.body)
     }
     
     private func parseMarkdown(text: String) -> AttributedString {

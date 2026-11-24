@@ -56,6 +56,10 @@ struct DeepDiveReaderSheet: View {
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
+    private var parsedContent: ParsedPostContent {
+        Post.splitBodyAndSource(from: text)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -75,14 +79,19 @@ struct DeepDiveReaderSheet: View {
 
                     Divider()
 
-                    let clean = String(text.drop(while: { $0.isWhitespace || $0.isNewline }))
-                    Text(clean)
+                    Text(parsedContent.body)
                         .font(.body)
                         .lineSpacing(5)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
-                        .padding(.bottom, 48)
+                        .padding(.bottom, parsedContent.source == nil ? 48 : 16)
+
+                    if let source = parsedContent.source {
+                        PostSourceView(source: source)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 48)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -97,7 +106,7 @@ struct DeepDiveReaderSheet: View {
                             .font(.title3)
                             .foregroundStyle(.secondary)
                     }
-                    .accessibilityLabel(l10n.lang == .turkish ? "Kapat" : "Close")
+                    .accessibilityLabel(l10n.closeLabel)
                 }
             }
         }

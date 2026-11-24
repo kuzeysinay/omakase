@@ -134,7 +134,7 @@ struct BentoTasteBox: View {
                 Image(systemName: "chevron.up.circle.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(OmakaseTheme.ink)
-                Text(appLanguage == .turkish ? "Son gönderiye dönmek için yukarı kaydır veya dokun" : "Swipe up or tap to return to last post")
+                Text(l10n.bentoReturnToLastPost)
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -159,15 +159,11 @@ struct BentoTasteBox: View {
             case .rootCategories:
                 HStack(alignment: .center, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(appLanguage == .turkish ? "Kategoriler" : "Categories")
+                        Text(l10n.bentoCategoriesTitle)
                             .font(.system(size: 26, weight: .bold))
                             .foregroundStyle(.primary)
 
-                        Text(
-                            appLanguage == .turkish
-                                ? "Bir kategori seç ve alt konuya dokunarak yeni post üret"
-                                : "Select a category and tap a subtopic to craft a new post"
-                        )
+                        Text(l10n.bentoCategoriesSubtitle)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -236,8 +232,8 @@ struct BentoTasteBox: View {
                                 )
                             Text(
                                 isSynthesizing
-                                    ? (appLanguage == .turkish ? "Yenileniyor…" : "Refreshing…")
-                                    : (appLanguage == .turkish ? "Yenile" : "Refresh")
+                                    ? l10n.bentoRefreshing
+                                    : l10n.bentoRefresh
                             )
                             .font(.system(size: 15, weight: .semibold))
                             .lineLimit(1)
@@ -265,12 +261,8 @@ struct BentoTasteBox: View {
 
                 Text(
                     isCooldownActive
-                        ? (appLanguage == .turkish
-                            ? "Okuma süresi (\(cooldownRemaining) sn) tamamlandığında bir alt konuya dokunarak post üretebilirsin."
-                            : "Once reading cooldown (\(cooldownRemaining)s) ends, tap any subtopic to generate a post.")
-                        : (appLanguage == .turkish
-                            ? "Post üretmek için aşağıdaki alt konulardan birine dokun"
-                            : "Tap any subtopic below to generate a dedicated post")
+                        ? l10n.bentoCooldownHint(seconds: cooldownRemaining)
+                        : l10n.bentoSubtopicHint
                 )
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -285,7 +277,7 @@ struct BentoTasteBox: View {
             HStack(spacing: 6) {
                 ProgressView()
                     .controlSize(.small)
-                Text(appLanguage == .turkish ? "Hazırlanıyor…" : "Cooking…")
+                Text(l10n.bentoCooking)
                     .font(.subheadline.weight(.semibold))
             }
             .padding(.horizontal, 14)
@@ -296,7 +288,7 @@ struct BentoTasteBox: View {
             HStack(spacing: 6) {
                 Image(systemName: "hourglass")
                     .font(.system(size: 13, weight: .bold))
-                Text(appLanguage == .turkish ? "\(cooldownRemaining) sn" : "\(cooldownRemaining)s")
+                Text(l10n.shortSeconds(cooldownRemaining))
                     .font(.subheadline.weight(.bold).monospacedDigit())
                     .contentTransition(.numericText())
             }
@@ -435,12 +427,8 @@ struct BentoTasteBox: View {
                 .font(.caption.weight(.semibold))
             Text(
                 mode == .rootCategories
-                    ? (appLanguage == .turkish
-                        ? "Tüm kategorileri görmek için aşağı kaydır (\(InterestCategory.presets.count) kategori)"
-                        : "Scroll down to browse all \(InterestCategory.presets.count) categories")
-                    : (appLanguage == .turkish
-                        ? "Daha fazla alt konu için aşağı kaydır"
-                        : "Scroll down for more subtopics")
+                    ? l10n.bentoScrollCategoriesHint(count: InterestCategory.presets.count)
+                    : l10n.bentoScrollSubtopicsHint
             )
             .font(.caption.weight(.medium))
             Spacer()
@@ -583,7 +571,7 @@ struct BentoTasteBox: View {
                 .padding(.leading, 4)
 
             TextField(
-                appLanguage == .turkish ? "Kendi konunu yaz veya ilgi ekle…" : "Type a custom topic or add taste…",
+                l10n.bentoManualPlaceholder,
                 text: $manualText
             )
             .font(.body)
@@ -617,7 +605,7 @@ struct BentoTasteBox: View {
                     HStack(spacing: 5) {
                         Image(systemName: "sparkles")
                             .font(.caption.weight(.bold))
-                        Text(appLanguage == .turkish ? "Üret" : "Create")
+                        Text(l10n.bentoCreateButton)
                             .font(.subheadline.weight(.bold))
                     }
                     .padding(.horizontal, 14)
@@ -1217,8 +1205,8 @@ private struct LetterboxdBentoTile: View {
             } label: {
                 Label(
                     isConnected
-                        ? (l10n.lang == .turkish ? "Kullanıcı Adını Değiştir" : "Change Username")
-                        : (l10n.lang == .turkish ? "Letterboxd Hesabı Bağla" : "Connect Letterboxd"),
+                        ? l10n.letterboxdChangeUsername
+                        : l10n.letterboxdConnectAction,
                     systemImage: "person.crop.circle.badge.checkmark"
                 )
             }
@@ -1228,7 +1216,7 @@ private struct LetterboxdBentoTile: View {
                     onDisconnectUsername()
                 } label: {
                     Label(
-                        l10n.lang == .turkish ? "Bağlantıyı Kaldır" : "Disconnect",
+                        l10n.disconnectAction,
                         systemImage: "xmark.circle"
                     )
                 }

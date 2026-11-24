@@ -5,8 +5,58 @@ from __future__ import annotations
 import random
 from typing import Optional
 
+from app.config import normalize_language
 from app.schemas import DeepDiveRequest
 from app.security import _sanitize_single_line
+
+_LANGUAGE_META: dict[str, dict[str, str]] = {
+    "en": {
+        "name": "English",
+        "source_prefix": "Source: ",
+        "source_example": "Source: <Book/Paper/Archive/Interview, Year>",
+        "style_note": "Use idiomatic, crisp English.",
+    },
+    "tr": {
+        "name": "Turkish (Türkçe)",
+        "source_prefix": "Kaynak: ",
+        "source_example": "Kaynak: <Kitap/Makale/Arşiv/Röportaj, Yıl>",
+        "style_note": "Use natural Turkish (Türkçe) with proper Turkish spelling and title-style capitalization.",
+    },
+    "ja": {
+        "name": "Japanese (日本語)",
+        "source_prefix": "出典: ",
+        "source_example": "出典: <書籍・論文・資料・インタビュー, 年>",
+        "style_note": "Use crisp, natural Japanese (日本語) — avoid literal translationese.",
+    },
+    "de": {
+        "name": "German (Deutsch)",
+        "source_prefix": "Quelle: ",
+        "source_example": "Quelle: <Buch/Studie/Archiv/Interview, Jahr>",
+        "style_note": "Use natural, idiomatic German (Deutsch) with correct capitalization and compound nouns.",
+    },
+    "fr": {
+        "name": "French (Français)",
+        "source_prefix": "Source : ",
+        "source_example": "Source : <Livre/Article/Archives/Entretien, Année>",
+        "style_note": "Use natural, crisp French (Français) with proper French punctuation.",
+    },
+    "es": {
+        "name": "Spanish (Español)",
+        "source_prefix": "Fuente: ",
+        "source_example": "Fuente: <Libro/Artículo/Archivo/Entrevista, Año>",
+        "style_note": "Use natural, idiomatic neutral Spanish (Español).",
+    },
+    "ko": {
+        "name": "Korean (한국어)",
+        "source_prefix": "출처: ",
+        "source_example": "출처: <도서/논문/아카이브/인터뷰, 연도>",
+        "style_note": "Use natural, engaging Korean (한국어) prose — avoid stiff translationese.",
+    },
+}
+
+
+def _lang_meta(language: str) -> dict[str, str]:
+    return _LANGUAGE_META[normalize_language(language)]
 
 SYSTEM_PROMPT = (
     "You are the voice of Omakase — an expert curator dedicated to surfacing "
@@ -247,34 +297,41 @@ _POST_FORMATS: list[tuple[str, str]] = [
 
 def _feed_language_instruction(language: str) -> str:
     """Tells the model which natural language to use for TITLE line, TAGS line, and body."""
-    if language == "tr":
+    meta = _lang_meta(language)
+    code = normalize_language(language)
+    if code == "en":
         return (
-            "LANGUAGE: Write the entire post in Turkish (Türkçe). "
-            "Both the TITLE: headline (after the prefix TITLE: ) and every word of the body must be Turkish. "
+            "LANGUAGE: Write the entire post in English. "
+            "Both the TITLE: headline (after the prefix TITLE: ) and the body must be English. "
             "Keep the literal ASCII prefixes TITLE: and TAGS: on their respective lines. "
-            "The tag values after TAGS: must match the user's original interest strings exactly (do not translate them). "
-            "The final line after the body must start with 'Kaynak: ' naming a specific primary work, archive, study, or interview."
+            "The final line after the body must start with 'Source: ' naming a specific primary work, archive, study, or interview."
         )
     return (
-        "LANGUAGE: Write the entire post in English. "
-        "Both the TITLE: headline (after the prefix TITLE: ) and the body must be English. "
+        f"LANGUAGE: Write the entire post in {meta['name']}. "
+        f"Both the TITLE: headline (after the prefix TITLE: ) and every word of the body must be in {meta['name']}. "
         "Keep the literal ASCII prefixes TITLE: and TAGS: on their respective lines. "
-        "The final line after the body must start with 'Source: ' naming a specific primary work, archive, study, or interview."
+        "The tag values after TAGS: must match the user's original interest strings exactly (do not translate them). "
+        f"{meta['style_note']} "
+        f"The final line after the body must start with '{meta['source_prefix']}' naming a specific primary work, archive, study, or interview "
+        f"(e.g. '{meta['source_example']}')."
     )
 
 
 def _deep_dive_language_instruction(language: str) -> str:
     """Tells the model which natural language to use for Deep Dives, avoiding TAGS."""
-    if language == "tr":
+    meta = _lang_meta(language)
+    code = normalize_language(language)
+    if code == "en":
         return (
-            "LANGUAGE: Write the entire post in Turkish (Türkçe). "
-            "Both the TITLE: headline (after the prefix TITLE: ) and every word of the body must be Turkish. "
-            "Keep the literal ASCII prefix TITLE: on its line, and end on a new final line starting with 'Kaynak: '."
+            "LANGUAGE: Write the entire post in English. "
+            "Both the TITLE: headline (after the prefix TITLE: ) and the body must be English. "
+            "Keep the literal ASCII prefix TITLE: on its line, and end on a new final line starting with 'Source: '."
         )
     return (
-        "LANGUAGE: Write the entire post in English. "
-        "Both the TITLE: headline (after the prefix TITLE: ) and the body must be English. "
-        "Keep the literal ASCII prefix TITLE: on its line, and end on a new final line starting with 'Source: '."
+        f"LANGUAGE: Write the entire post in {meta['name']}. "
+        f"Both the TITLE: headline (after the prefix TITLE: ) and every word of the body must be in {meta['name']}. "
+        f"{meta['style_note']} "
+        f"Keep the literal ASCII prefix TITLE: on its line, and end on a new final line starting with '{meta['source_prefix']}'."
     )
 
 
@@ -283,26 +340,31 @@ def _feed_system_instruction(language: str) -> str:
 
 
 def _suggest_system_for_language(language: str) -> str:
-    lang_rule = (
-        "10. Write all 7 strings in natural Turkish (Türkçe), using culturally normal spelling and "
-        "title-style capitalization suitable for Turkish."
-        if language == "tr"
-        else "10. Write all 7 strings in English."
-    )
+    meta = _lang_meta(language)
+    code = normalize_language(language)
+    if code == "en":
+        lang_rule = "10. Write all 7 strings in English."
+    else:
+        lang_rule = f"10. Write all 7 strings in {meta['name']}. {meta['style_note']}"
     return _SUGGEST_SYSTEM + "\n" + lang_rule
 
 
 def _expand_system_for_language(language: str) -> str:
-    lang_rule = (
-        "\n10. Write all 12 strings in natural Turkish (Türkçe), using culturally normal "
-        "spelling and title-style capitalization suitable for Turkish. Make every single title "
-        "intriguing and specific ('bu da neymiş ya?' etkisi yaratacak spesifik alt konular), "
-        "strictly 2-4 words and max 30 characters so it fits inside a small 2-column mobile card without truncating."
-        if language == "tr"
-        else "\n10. Write all 12 strings in English, using title-style capitalization. Make every single title "
-        "intriguing and hyper-specific ('Wait, what is that?!' rabbit holes), "
-        "strictly 2-4 words and max 30 characters so it fits inside a small 2-column mobile card without truncating."
-    )
+    meta = _lang_meta(language)
+    code = normalize_language(language)
+    if code == "en":
+        lang_rule = (
+            "\n10. Write all 12 strings in English, using title-style capitalization. Make every single title "
+            "intriguing and hyper-specific ('Wait, what is that?!' rabbit holes), "
+            "strictly 2-4 words and max 30 characters so it fits inside a small 2-column mobile card without truncating."
+        )
+    else:
+        lang_rule = (
+            f"\n10. Write all 12 strings in {meta['name']}. {meta['style_note']} "
+            "Make every single title intriguing and hyper-specific ('Wait, what is that?!' rabbit holes), "
+            "compact and concise so it fits inside a small 2-column mobile card without truncating "
+            "(2-4 words for Latin scripts, <= 14 characters for Japanese/Korean)."
+        )
     return _EXPAND_CATEGORY_SYSTEM + lang_rule
 
 
@@ -350,11 +412,14 @@ def _build_user_prompt(
 
     format_name, format_instruction = _POST_FORMATS[seen_count % len(_POST_FORMATS)]
 
+    code = normalize_language(language)
     follow_lang = ""
-    if language == "tr":
+    if code != "en":
+        meta = _lang_meta(code)
         follow_lang = (
-            "Uyarı: Gönderiyi mutlaka Türkçe yaz. Aşağıdaki İngilizce format adı ve talimatlar "
-            "sadece yapı için; çıktı tamamen Türkçe olmalı.\n\n"
+            f"IMPORTANT: Write the entire post (TITLE value, body, and {meta['source_prefix']} citation) "
+            f"in {meta['name']}. The English format label and structural instructions below are only for format; "
+            f"every generated word in the output must be in {meta['name']}.\n\n"
         )
 
     user_context_block = (
@@ -408,10 +473,12 @@ def _build_user_prompt(
 
 
 def _build_deep_dive_prompt(req: DeepDiveRequest) -> str:
+    code = normalize_language(req.language)
     lang_note = ""
-    if req.language == "tr":
+    if code != "en":
+        meta = _lang_meta(code)
         lang_note = (
-            "\n\nIMPORTANT: Write the TITLE value and body in Turkish. "
+            f"\n\nIMPORTANT: Write the TITLE value, body, and '{meta['source_prefix']}' line in {meta['name']}. "
             "Keep the ASCII prefix TITLE: in English."
         )
     return (

@@ -8,13 +8,13 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("omakase.hasOnboarded") private var hasOnboarded: Bool = false
-    @AppStorage("omakase.language") private var languageCode: String = AppLanguage.english.rawValue
+    @AppStorage("omakase.language") private var languageCode: String = AppLanguage.systemDefault.rawValue
     @AppStorage("omakase.appearance") private var appearanceCode: String = AppAppearance.system.rawValue
 
     @State private var authService = AuthService()
 
     private var resolvedLanguage: AppLanguage {
-        AppLanguage(rawValue: languageCode) ?? .english
+        AppLanguage(rawValue: languageCode) ?? .systemDefault
     }
 
     private var resolvedAppearance: AppAppearance {

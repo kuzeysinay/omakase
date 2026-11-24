@@ -56,8 +56,7 @@ final class AuthService: NSObject {
     private var pendingAppleL10n: L10n?
 
     private static var currentL10n: L10n {
-        let code = UserDefaults.standard.string(forKey: "omakase.language") ?? AppLanguage.english.rawValue
-        return L10n(lang: AppLanguage(rawValue: code) ?? .english)
+        L10n(lang: AppLanguage.resolved())
     }
 
     // MARK: - Init

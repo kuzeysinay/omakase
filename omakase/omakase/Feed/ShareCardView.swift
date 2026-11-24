@@ -10,6 +10,21 @@ struct ShareCardView: View {
     let post: Post
     var language: AppLanguage = .english
 
+    private var l10n: L10n { L10n(lang: language) }
+
+    private func formattedSourceLine(_ raw: String) -> AttributedString {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        var prefix = AttributedString("\(l10n.postSourceLabel): ")
+        prefix.foregroundColor = Color(hex: 0x1A1A1A).opacity(0.45)
+
+        var citation = (try? AttributedString(
+            markdown: trimmed,
+            options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        )) ?? AttributedString(trimmed)
+        citation.foregroundColor = Color(hex: 0x1A1A1A).opacity(0.62)
+        return prefix + citation
+    }
+
     var body: some View {
         ZStack {
             // Paper background — Hidden Folks ink-on-paper aesthetic
@@ -39,6 +54,26 @@ struct ShareCardView: View {
                         .minimumScaleFactor(0.6)
                         .foregroundStyle(Color(hex: 0x1A1A1A).opacity(0.85))
                         .lineLimit(30)
+
+                    if let source = post.sourceCitation {
+                        HStack(spacing: 12) {
+                            Image(systemName: "book.closed")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundStyle(Color(hex: 0x1A1A1A).opacity(0.45))
+
+                            Text(formattedSourceLine(source))
+                                .font(.system(size: 24, weight: .regular))
+                                .lineLimit(2)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color(hex: 0x1A1A1A).opacity(0.035))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color(hex: 0x1A1A1A).opacity(0.09), lineWidth: 1)
+                        )
+                    }
                 }
                 .padding(.horizontal, 48)
 

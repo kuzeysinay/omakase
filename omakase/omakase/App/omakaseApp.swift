@@ -26,8 +26,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // Assign delegate before finishing launch so cold-launch notification taps are never missed
         // (notification-delegate-handling Rule 1).
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
-        let storedLangCode = UserDefaults.standard.string(forKey: "omakase.language") ?? AppLanguage.english.rawValue
-        let lang = AppLanguage(rawValue: storedLangCode) ?? .english
+        let lang = AppLanguage.resolved()
         NotificationManager.shared.registerNotificationCategories(language: lang)
         Messaging.messaging().delegate = NotificationManager.shared
 

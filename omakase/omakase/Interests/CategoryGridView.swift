@@ -176,7 +176,7 @@ private struct CategoryCard: View {
                         HStack(spacing: 6) {
                             ProgressView()
                                 .scaleEffect(0.7)
-                            Text(language == .turkish ? "Yükleniyor…" : "Loading…")
+                            Text(L10n(lang: language).loadingLabel)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -200,7 +200,7 @@ private struct CategoryCard: View {
                         if isLoading {
                             HStack(spacing: 4) {
                                 ProgressView().scaleEffect(0.6)
-                                Text(language == .turkish ? "Daha fazla yükleniyor…" : "Loading more…")
+                                Text(L10n(lang: language).loadingMoreLabel)
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                             }
@@ -392,7 +392,7 @@ struct CategoryStripView: View {
                 if isLoading && filteredSubInterests.isEmpty {
                     HStack(spacing: 6) {
                         ProgressView().scaleEffect(0.7)
-                        Text(appLanguage == .turkish ? "Yükleniyor…" : "Loading…")
+                        Text(L10n(lang: appLanguage).loadingLabel)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

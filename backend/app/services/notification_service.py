@@ -25,6 +25,7 @@ from app.config import (
     QUIET_HOURS_END,
     QUIET_HOURS_START,
     logger,
+    normalize_language,
 )
 from app.errors import ErrorCode, OmakaseAPIError
 from app.schemas import SocialNotificationEventRequest
@@ -99,6 +100,132 @@ def next_digest_delivery_utc(now_utc: datetime, tz_name: Optional[str]) -> datet
     return target.astimezone(timezone.utc)
 
 
+_COMMENT_COPY: dict[str, dict[str, str]] = {
+    "en": {
+        "single_title_actor": "{actor} commented",
+        "single_title_anon": "New Comment",
+        "single_body_empty": "Someone commented on your shared post.",
+        "multi_title": "New Comments",
+        "multi_body": "Your shared post received {count} new comments.",
+    },
+    "tr": {
+        "single_title_actor": "{actor} yorum yaptı",
+        "single_title_anon": "Yeni yorum",
+        "single_body_empty": "Paylaşımına yeni bir yorum geldi.",
+        "multi_title": "Gönderine yeni yorumlar",
+        "multi_body": "Paylaşımına {count} yeni yorum geldi.",
+    },
+    "ja": {
+        "single_title_actor": "{actor}さんがコメントしました",
+        "single_title_anon": "新しいコメント",
+        "single_body_empty": "共有した投稿に新しいコメントが届きました。",
+        "multi_title": "新しいコメント",
+        "multi_body": "共有した投稿に{count}件の新しいコメントが届きました。",
+    },
+    "de": {
+        "single_title_actor": "{actor} hat kommentiert",
+        "single_title_anon": "Neuer Kommentar",
+        "single_body_empty": "Jemand hat deinen geteilten Beitrag kommentiert.",
+        "multi_title": "Neue Kommentare",
+        "multi_body": "Dein geteilter Beitrag hat {count} neue Kommentare erhalten.",
+    },
+    "fr": {
+        "single_title_actor": "{actor} a commenté",
+        "single_title_anon": "Nouveau commentaire",
+        "single_body_empty": "Quelqu'un a commenté votre publication partagée.",
+        "multi_title": "Nouveaux commentaires",
+        "multi_body": "Votre publication a reçu {count} nouveaux commentaires.",
+    },
+    "es": {
+        "single_title_actor": "{actor} comentó",
+        "single_title_anon": "Nuevo comentario",
+        "single_body_empty": "Alguien comentó tu publicación compartida.",
+        "multi_title": "Nuevos comentarios",
+        "multi_body": "Tu publicación recibió {count} comentarios nuevos.",
+    },
+    "ko": {
+        "single_title_actor": "{actor}님이 댓글을 남겼습니다",
+        "single_title_anon": "새 댓글",
+        "single_body_empty": "공유한 게시물에 새 댓글이 달렸습니다.",
+        "multi_title": "새 댓글",
+        "multi_body": "공유한 게시물에 새 댓글 {count}개가 달렸습니다.",
+    },
+}
+
+_DIGEST_COPY: dict[str, dict[str, str]] = {
+    "en": {
+        "both_title": "Omakase Community",
+        "both_body": "You gained {followers} new {f_noun} and {reactions} {r_noun} today.",
+        "follow_title": "New Followers",
+        "follow_one": "1 new person followed you today.",
+        "follow_many": "{followers} new people followed you today.",
+        "react_title": "New Reactions",
+        "react_one": "Your shared post received 1 reaction today.",
+        "react_many": "Your shared post received {reactions} reactions today.",
+    },
+    "tr": {
+        "both_title": "Omakase Topluluk",
+        "both_body": "Bugün {followers} yeni takipçin ve paylaşımlarına {reactions} tepki var.",
+        "follow_title": "Yeni takipçiler",
+        "follow_one": "Bugün {followers} yeni kişi seni takip etmeye başladı.",
+        "follow_many": "Bugün {followers} yeni kişi seni takip etmeye başladı.",
+        "react_title": "Paylaşımına tepkiler",
+        "react_one": "Paylaşımın bugün {reactions} tepki aldı.",
+        "react_many": "Paylaşımın bugün {reactions} tepki aldı.",
+    },
+    "ja": {
+        "both_title": "Omakase コミュニティ",
+        "both_body": "今日は新しいフォロワーが{followers}人、リアクションが{reactions}件ありました。",
+        "follow_title": "新しいフォロワー",
+        "follow_one": "今日、新しいフォロワーが1人増えました。",
+        "follow_many": "今日、新しいフォロワーが{followers}人増えました。",
+        "react_title": "新しいリアクション",
+        "react_one": "共有した投稿に今日1件のリアクションがありました。",
+        "react_many": "共有した投稿に今日{reactions}件のリアクションがありました。",
+    },
+    "de": {
+        "both_title": "Omakase Community",
+        "both_body": "Heute hast du {followers} neue Follower und {reactions} Reaktionen erhalten.",
+        "follow_title": "Neue Follower",
+        "follow_one": "Heute folgt dir 1 neue Person.",
+        "follow_many": "Heute folgen dir {followers} neue Personen.",
+        "react_title": "Neue Reaktionen",
+        "react_one": "Dein geteilter Beitrag erhielt heute 1 Reaktion.",
+        "react_many": "Dein geteilter Beitrag erhielt heute {reactions} Reaktionen.",
+    },
+    "fr": {
+        "both_title": "Omakase Communauté",
+        "both_body": "Aujourd'hui : {followers} nouvel(s) abonné(s) et {reactions} réaction(s).",
+        "follow_title": "Nouveaux abonnés",
+        "follow_one": "1 nouvelle personne vous suit aujourd'hui.",
+        "follow_many": "{followers} nouvelles personnes vous suivent aujourd'hui.",
+        "react_title": "Nouvelles réactions",
+        "react_one": "Votre publication a reçu 1 réaction aujourd'hui.",
+        "react_many": "Votre publication a reçu {reactions} réactions aujourd'hui.",
+    },
+    "es": {
+        "both_title": "Comunidad Omakase",
+        "both_body": "Hoy conseguiste {followers} seguidores nuevos y {reactions} reacciones.",
+        "follow_title": "Nuevos seguidores",
+        "follow_one": "Hoy empezó a seguirte 1 persona nueva.",
+        "follow_many": "Hoy empezaron a seguirte {followers} personas nuevas.",
+        "react_title": "Nuevas reacciones",
+        "react_one": "Tu publicación recibió 1 reacción hoy.",
+        "react_many": "Tu publicación recibió {reactions} reacciones hoy.",
+    },
+    "ko": {
+        "both_title": "Omakase 커뮤니티",
+        "both_body": "오늘 새 팔로워 {followers}명과 반응 {reactions}개를 받았습니다.",
+        "follow_title": "새 팔로워",
+        "follow_one": "오늘 새로운 팔로워 1명이 생겼습니다.",
+        "follow_many": "오늘 새로운 팔로워 {followers}명이 생겼습니다.",
+        "react_title": "새 반응",
+        "react_one": "오늘 공유한 게시물이 반응 1개를 받았습니다.",
+        "react_many": "오늘 공유한 게시물이 반응 {reactions}개를 받았습니다.",
+    },
+}
+
+
 def build_comment_copy(
     language: str,
     actor_names: list[str],
@@ -106,7 +233,8 @@ def build_comment_copy(
     preview: Optional[str],
 ) -> tuple[str, str, str]:
     """Return `(title, body, apns_category_id)` for immediate or grouped comment notifications."""
-    lang = "tr" if (language or "").lower().startswith("tr") else "en"
+    lang = normalize_language(language)
+    copy = _COMMENT_COPY[lang]
     category = "COMMENT_NOTIFICATION"
     clean_preview = (preview or "").strip()
 
@@ -117,23 +245,17 @@ def build_comment_copy(
             if (not raw_actor or " " in raw_actor or raw_actor.startswith("@"))
             else f"@{raw_actor}"
         )
-        if lang == "tr":
-            title = f"{display_actor} yorum yaptı" if display_actor else "Yeni yorum"
-            body = clean_preview if clean_preview else "Paylaşımına yeni bir yorum geldi."
-        else:
-            title = f"{display_actor} commented" if display_actor else "New Comment"
-            body = clean_preview if clean_preview else "Someone commented on your shared post."
+        title = (
+            copy["single_title_actor"].format(actor=display_actor)
+            if display_actor
+            else copy["single_title_anon"]
+        )
+        body = clean_preview if clean_preview else copy["single_body_empty"]
         return title, body, category
 
-    if lang == "tr":
-        return (
-            "Gönderine yeni yorumlar",
-            f"Paylaşımına {count} yeni yorum geldi.",
-            category,
-        )
     return (
-        "New Comments",
-        f"Your shared post received {count} new comments.",
+        copy["multi_title"],
+        copy["multi_body"].format(count=count),
         category,
     )
 
@@ -144,50 +266,38 @@ def build_digest_copy(
     reactions_count: int,
 ) -> tuple[str, str, str]:
     """Return `(title, body, apns_category_id)` for daily follower + reaction digest notifications."""
-    lang = "tr" if (language or "").lower().startswith("tr") else "en"
+    lang = normalize_language(language)
+    copy = _DIGEST_COPY[lang]
     category = "SOCIAL_DIGEST"
 
     if followers_count > 0 and reactions_count > 0:
-        if lang == "tr":
-            return (
-                "Omakase Topluluk",
-                f"Bugün {followers_count} yeni takipçin ve paylaşımlarına {reactions_count} tepki var.",
-                category,
-            )
         f_noun = "follower" if followers_count == 1 else "followers"
         r_noun = "reaction" if reactions_count == 1 else "reactions"
         return (
-            "Omakase Community",
-            f"You gained {followers_count} new {f_noun} and {reactions_count} {r_noun} today.",
+            copy["both_title"],
+            copy["both_body"].format(
+                followers=followers_count,
+                reactions=reactions_count,
+                f_noun=f_noun,
+                r_noun=r_noun,
+            ),
             category,
         )
 
     if followers_count > 0:
-        if lang == "tr":
-            return (
-                "Yeni takipçiler",
-                f"Bugün {followers_count} yeni kişi seni takip etmeye başladı.",
-                category,
-            )
         body = (
-            "1 new person followed you today."
+            copy["follow_one"].format(followers=followers_count)
             if followers_count == 1
-            else f"{followers_count} new people followed you today."
+            else copy["follow_many"].format(followers=followers_count)
         )
-        return "New Followers", body, category
+        return copy["follow_title"], body, category
 
-    if lang == "tr":
-        return (
-            "Paylaşımına tepkiler",
-            f"Paylaşımın bugün {reactions_count} tepki aldı.",
-            category,
-        )
     body = (
-        "Your shared post received 1 reaction today."
+        copy["react_one"].format(reactions=reactions_count)
         if reactions_count == 1
-        else f"Your shared post received {reactions_count} reactions today."
+        else copy["react_many"].format(reactions=reactions_count)
     )
-    return "New Reactions", body, category
+    return copy["react_title"], body, category
 
 
 def _is_unregistered_fcm_error(exc: Optional[BaseException]) -> bool:

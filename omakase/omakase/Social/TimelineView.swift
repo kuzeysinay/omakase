@@ -225,7 +225,7 @@ struct TimelineView: View {
                 // Matching Users Section
                 if !userResults.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(appLanguage == .turkish ? "Kişiler" : "People")
+                        Text(l10n.searchPeopleSection)
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 4)
@@ -245,7 +245,7 @@ struct TimelineView: View {
                 if !filteredPosts.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         if !userResults.isEmpty {
-                            Text(appLanguage == .turkish ? "Gönderiler" : "Posts")
+                            Text(l10n.profilePosts)
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 4)
@@ -279,7 +279,7 @@ struct TimelineView: View {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 36, weight: .light))
                             .foregroundStyle(.secondary)
-                        Text(appLanguage == .turkish ? "Sonuç bulunamadı" : "No results found")
+                        Text(l10n.noSearchResults)
                             .font(.headline)
                             .foregroundStyle(.secondary)
                     }

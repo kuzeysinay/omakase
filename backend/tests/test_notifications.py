@@ -354,6 +354,43 @@ class NotificationServiceTests(unittest.TestCase):
             self.assertEqual(ok.status_code, 200)
             self.assertEqual(ok.json()["processed"], 0)
 
+    def test_multilingual_normalization_prompts_and_notifications(self) -> None:
+        from app.config import SUPPORTED_LANGUAGES, normalize_language
+        from app.prompts import (
+            _deep_dive_language_instruction,
+            _expand_system_for_language,
+            _feed_language_instruction,
+            _suggest_system_for_language,
+        )
+        from app.schemas import DeepDiveRequest, ExpandCategoryRequest, FeedRequest, SuggestRequest
+
+        for code in SUPPORTED_LANGUAGES:
+            self.assertEqual(normalize_language(code), code)
+            self.assertEqual(normalize_language(f"{code}-TEST"), code)
+            self.assertEqual(FeedRequest(language=code).language, code)
+            self.assertEqual(SuggestRequest(language=code).language, code)
+            self.assertEqual(ExpandCategoryRequest(category="Film", language=code).language, code)
+            self.assertEqual(
+                DeepDiveRequest(original_title="T", original_text="Body", language=code).language,
+                code,
+            )
+            self.assertTrue(_feed_language_instruction(code))
+            self.assertTrue(_deep_dive_language_instruction(code))
+            self.assertTrue(_suggest_system_for_language(code))
+            self.assertTrue(_expand_system_for_language(code))
+
+            title, body, _ = notification_service.build_comment_copy(code, ["Ada"], 2, None)
+            self.assertTrue(title)
+            self.assertIn("2", body)
+            d_title, d_body, _ = notification_service.build_digest_copy(code, 3, 2)
+            self.assertTrue(d_title)
+            self.assertIn("3", d_body)
+            self.assertIn("2", d_body)
+
+        self.assertEqual(normalize_language("pt-BR"), "en")
+        self.assertEqual(normalize_language("de-DE"), "de")
+        self.assertEqual(normalize_language("ja-JP"), "ja")
+
 
 if __name__ == "__main__":
     unittest.main()

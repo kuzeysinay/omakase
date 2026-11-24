@@ -180,7 +180,7 @@ struct CollectionEntriesView: View {
                                 Text(entry.postCreatedAt.localizedFormatted(for: appLanguage))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                Text(Post.sanitizeTemplateLabels(from: entry.text))
+                                Text(Post.splitBodyAndSource(from: entry.text).body)
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(4)
@@ -282,7 +282,7 @@ struct CollectionEntriesView: View {
     @ViewBuilder
     private func moveToMenu(for entry: BookmarkEntry) -> some View {
         let otherCategories = InterestCategory.presets.filter { $0.id != entry.collectionName }
-        Menu(appLanguage == .turkish ? "Kategori Değiştir…" : "Move to Category…") {
+        Menu(l10n.moveToCategory) {
             ForEach(otherCategories) { targetCat in
                 Button {
                     withAnimation {
@@ -361,6 +361,7 @@ struct BookmarkDetailView: View {
     @State private var toastMessage: String?
 
     private var post: Post { entry.toPost() }
+    private var parsedPost: ParsedPostContent { post.parsedContent }
 
     var body: some View {
         ScrollView {
@@ -383,9 +384,13 @@ struct BookmarkDetailView: View {
                 }
 
                 // Full post body
-                Text(post.cleanDisplayBody)
+                Text(parsedPost.body)
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let source = parsedPost.source {
+                    PostSourceView(source: source)
+                }
 
                 // Deep dive — opens dedicated reader sheet
                 if let deepDive = entry.deepDiveText, !deepDive.isEmpty {
@@ -397,7 +402,7 @@ struct BookmarkDetailView: View {
                                 .font(.title3)
                                 .foregroundStyle(OmakaseTheme.ink)
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(l10n.lang == .turkish ? "Derin İnceleme" : "Deep Dive")
+                                Text(l10n.deepDiveTitle)
                                     .font(.subheadline.bold())
                                     .foregroundStyle(OmakaseTheme.ink)
                                 Text(deepDivePreview(deepDive))
@@ -453,8 +458,8 @@ struct BookmarkDetailView: View {
                                     .font(.title3)
                                     .foregroundStyle(isShared ? OmakaseTheme.ink : .primary)
                                 Text(isShared
-                                     ? (l10n.lang == .turkish ? "Paylaşıldı" : "Shared")
-                                     : (l10n.lang == .turkish ? "Paylaş" : "Share"))
+                                     ? l10n.actionShared
+                                     : l10n.actionShare)
                                     .font(.subheadline.weight(.medium))
                             }
                             .foregroundStyle(.primary)
@@ -465,7 +470,7 @@ struct BookmarkDetailView: View {
 
                     // iOS Share Sheet
                     Button {
-                        ShareService.presentShareSheet(post: post)
+                        ShareService.presentShareSheet(post: post, language: appLanguage)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "square.and.arrow.up")
@@ -496,12 +501,12 @@ struct BookmarkDetailView: View {
             }
             .padding()
         }
-        .navigationTitle(l10n.lang == .turkish ? "Kayıtlı Gönderi" : "Saved Post")
+        .navigationTitle(l10n.savedPostFallbackTitle)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showDeepDiveSheet) {
             DeepDiveReaderSheet(
                 text: Post.sanitizeTemplateLabels(from: entry.deepDiveText ?? ""),
-                title: l10n.lang == .turkish ? "Derin İnceleme" : "Deep Dive"
+                title: l10n.deepDiveTitle
             )
             .environment(\.appLanguage, appLanguage)
         }
@@ -521,7 +526,7 @@ struct BookmarkDetailView: View {
     }
 
     private func deepDivePreview(_ text: String) -> String {
-        let clean = String(text.drop(while: { $0.isWhitespace || $0.isNewline }))
+        let clean = Post.splitBodyAndSource(from: text).body
         let snippet = clean.prefix(120)
         if snippet.count < clean.count {
             return String(snippet).trimmingCharacters(in: .whitespaces) + "…"

@@ -171,7 +171,7 @@ struct AuthView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(appLanguage == .turkish ? "Geri" : "Back")
+                    .accessibilityLabel(l10n.backA11y)
                 } else {
                     Spacer().frame(width: 40, height: 40)
                 }
@@ -392,7 +392,7 @@ struct AuthView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(appLanguage == .turkish ? "Şifre görünürlüğü" : "Password visibility")
+                        .accessibilityLabel(l10n.passwordVisibilityA11y)
                     }
                     .padding(.horizontal, 16)
                     .frame(height: 52)
@@ -470,7 +470,7 @@ struct AuthView: View {
                                 .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(appLanguage == .turkish ? "Metni temizle" : "Clear text")
+                        .accessibilityLabel(l10n.clearTextA11y)
                     }
                 }
                 .padding(.horizontal, 16)

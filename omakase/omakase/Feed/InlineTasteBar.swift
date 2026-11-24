@@ -83,7 +83,7 @@ struct InlineTasteBar: View {
                             Image(systemName: showAddField ? "keyboard.chevron.compact.down" : "keyboard")
                                 .font(.caption2.weight(.medium))
                             Text(showAddField
-                                 ? (l10n.lang == .turkish ? "Klavyeyi gizle" : "Hide keyboard")
+                                 ? l10n.hideKeyboard
                                  : l10n.orTypeYourOwn)
                                 .font(.caption2)
                         }

@@ -608,8 +608,7 @@ final class NotificationManager: NSObject {
     }
 
     private func currentLanguage() -> AppLanguage {
-        let code = defaults.string(forKey: "omakase.language") ?? AppLanguage.english.rawValue
-        return AppLanguage(rawValue: code) ?? .english
+        AppLanguage.resolved(from: defaults)
     }
 
     private func currentInterests() -> [String] {

@@ -30,6 +30,10 @@ struct TimelinePostCard: View {
     @State private var showBlockConfirm = false
     @State private var showReportConfirmation = false
 
+    private var parsedPost: ParsedPostContent {
+        Post.splitBodyAndSource(from: post.text)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
 
@@ -45,9 +49,13 @@ struct TimelinePostCard: View {
             }
 
             // MARK: Body
-            Text(Post.sanitizeTemplateLabels(from: post.text))
+            Text(parsedPost.body)
                 .font(.body)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if let source = parsedPost.source {
+                PostSourceView(source: source)
+            }
 
             // MARK: Tags
             if !post.tags.isEmpty {
@@ -172,7 +180,7 @@ struct TimelinePostCard: View {
                         onDelete?()
                     } label: {
                         Label(
-                            l10n.lang == .turkish ? "Gönderiyi Sil" : "Delete Post",
+                            l10n.deletePost,
                             systemImage: "trash"
                         )
                     }
@@ -285,7 +293,7 @@ struct TimelinePostCard: View {
                     VStack(spacing: 4) {
                         Image(systemName: "fish.fill")
                             .font(.title2)
-                        Text(l10n.lang == .turkish ? "İnceleme" : "Deep Dive")
+                        Text(l10n.deepDiveShortLabel)
                             .font(.caption2)
                             .lineLimit(1)
                             .fixedSize()
@@ -295,7 +303,7 @@ struct TimelinePostCard: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 8)
-                .accessibilityLabel(l10n.lang == .turkish ? "Derin incelemeyi oku" : "Read deep dive")
+                .accessibilityLabel(l10n.readDeepDiveA11y)
             }
 
             // Like button (Instagram-style)
@@ -336,7 +344,7 @@ struct TimelinePostCard: View {
             .foregroundStyle(isLiked ? OmakaseTheme.ink : .secondary)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(l10n.lang == .turkish ? "Beğen" : "Like")
+        .accessibilityLabel(l10n.likeA11y)
     }
 
     // MARK: - Comments (replaces old reactionBar)
@@ -357,7 +365,7 @@ struct TimelinePostCard: View {
             .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(l10n.lang == .turkish ? "Yorumlar" : "Comments")
+        .accessibilityLabel(l10n.commentsA11y)
     }
 
     // MARK: - Deep Dive Sheet
@@ -368,7 +376,7 @@ struct TimelinePostCard: View {
     private var deepDiveSheet: some View {
         DeepDiveReaderSheet(
             text: post.deepDiveText ?? "",
-            title: l10n.lang == .turkish ? "Derin İnceleme" : "Deep Dive"
+            title: l10n.deepDiveTitle
         )
         .environment(\.appLanguage, appLanguage)
     }

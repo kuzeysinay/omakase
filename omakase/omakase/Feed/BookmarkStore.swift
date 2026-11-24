@@ -147,7 +147,7 @@ final class BookmarkStore {
     /// Returns the localized display title for a folder ID (`"All"` or an `InterestCategory.id`).
     func displayTitle(for collectionId: String, language: AppLanguage) -> String {
         if collectionId == "All" {
-            return language == .turkish ? "Tümü" : "All"
+            return L10n(lang: language).bookmarkAllCategory
         }
         if let cat = InterestCategory.category(forId: collectionId) {
             return cat.localizedName(for: language)
