@@ -62,36 +62,6 @@ struct InlineTasteBar: View {
                     .padding(.top, 8)
                     .transition(.opacity.combined(with: .move(edge: .top)))
 
-                    // Small text field below
-                    if showAddField {
-                        addField
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-
-                    // Toggle for manual text input
-                    Button {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                            showAddField.toggle()
-                            if showAddField {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                                    isFieldFocused = true
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: showAddField ? "keyboard.chevron.compact.down" : "keyboard")
-                                .font(.caption2.weight(.medium))
-                            Text(showAddField
-                                 ? l10n.hideKeyboard
-                                 : l10n.orTypeYourOwn)
-                                .font(.caption2)
-                        }
-                        .foregroundStyle(.tertiary)
-                        .padding(.vertical, 6)
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.plain)
                 }
                 .padding(.bottom, 4)
             }
@@ -102,13 +72,6 @@ struct InlineTasteBar: View {
         .clipped()
         .task { fetchInitialSuggestionsIfNeeded() }
         .onChange(of: allInterests) { _, _ in requestReplacementSuggestion() }
-        .onChange(of: isFieldFocused) { _, focused in
-            if !focused && draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && showAddField {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                    showAddField = false
-                }
-            }
-        }
     }
 
     // MARK: - Chip row

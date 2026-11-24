@@ -54,10 +54,6 @@ struct BentoTasteBox: View {
     @State private var revealedTilesCount: Int = 0
     @State private var justAddedInterest: String? = nil
 
-    // Manual text entry
-    @State private var manualText: String = ""
-    @FocusState private var isManualFieldFocused: Bool
-
     // Nested vertical scroll -> return to previous post handoff
     @State private var didScrollDeepInGrid: Bool = false
     @State private var hasTriggeredPullBack: Bool = false
@@ -91,25 +87,14 @@ struct BentoTasteBox: View {
                 .padding(.top, 6)
                 .padding(.bottom, 10)
 
-            // Bottom controls: Active interests ribbon + Custom topic input bar
-            VStack(spacing: 10) {
-                if !allInterests.isEmpty || isLetterboxdActive {
-                    activeInterestsRibbon
-                }
-
-                manualInputBar
-                    .padding(.horizontal, 18)
+            // Bottom controls: Active interests ribbon
+            if !allInterests.isEmpty || isLetterboxdActive {
+                activeInterestsRibbon
+                    .padding(.bottom, 16)
             }
-            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(uiColor: .systemBackground))
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if isManualFieldFocused {
-                isManualFieldFocused = false
-            }
-        }
         .onChange(of: appLanguage) { _, newLang in
             cachedSubInterestsByCategory.removeAll()
             prefetchedSubInterestsByCategory.removeAll()
@@ -127,7 +112,6 @@ struct BentoTasteBox: View {
     private var backToFeedBanner: some View {
         Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            isManualFieldFocused = false
             onScrollToLastPost?()
         } label: {
             HStack(spacing: 8) {
@@ -467,7 +451,6 @@ struct BentoTasteBox: View {
         if hasExistingPosts && !didScrollDeepInGrid && !hasTriggeredPullBack && minY > 56 {
             hasTriggeredPullBack = true
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            isManualFieldFocused = false
             onScrollToLastPost?()
         }
     }
@@ -558,77 +541,6 @@ struct BentoTasteBox: View {
             }
             .padding(.horizontal, 18)
         }
-    }
-
-    // MARK: - Manual Input Bar (Large & Easy to Tap)
-
-    private var manualInputBar: some View {
-        let trimmed = manualText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(.secondary)
-                .padding(.leading, 4)
-
-            TextField(
-                l10n.bentoManualPlaceholder,
-                text: $manualText
-            )
-            .font(.body)
-            .textInputAutocapitalization(.words)
-            .autocorrectionDisabled()
-            .focused($isManualFieldFocused)
-            .submitLabel(.go)
-            .onSubmit {
-                if !trimmed.isEmpty {
-                    if !isGenerationDisabled {
-                        submitCustomTopicForPost()
-                    } else {
-                        commitManualInput()
-                    }
-                }
-            }
-
-            if !trimmed.isEmpty {
-                // Add to tastes button (44x44 tap target)
-                Button(action: commitManualInput) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 40, height: 40)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-
-                // Generate dedicated post on this custom topic
-                Button(action: submitCustomTopicForPost) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "sparkles")
-                            .font(.caption.weight(.bold))
-                        Text(l10n.bentoCreateButton)
-                            .font(.subheadline.weight(.bold))
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .background(OmakaseTheme.chipActiveFill, in: Capsule())
-                    .foregroundStyle(OmakaseTheme.chipActiveText)
-                }
-                .buttonStyle(.plain)
-                .disabled(isGenerationDisabled)
-                .opacity(isGenerationDisabled ? 0.45 : 1.0)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .frame(minHeight: 50)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
-        )
     }
 
     // MARK: - Game Mechanics & AI Synthesis
@@ -810,7 +722,6 @@ struct BentoTasteBox: View {
         } else {
             currentCatId = InterestCategory.resolveMainCategory(tags: [topic], title: topic).id
         }
-        isManualFieldFocused = false
         resetGridScrollState()
         mode = .rootCategories
         onSelectDedicatedTopic?(topic, currentCatId)
@@ -854,35 +765,6 @@ struct BentoTasteBox: View {
                     activeInterests.insert(topic)
                 }
             }
-        }
-    }
-
-    private func commitManualInput() {
-        let trimmed = manualText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        guard ContentModerationService.isAppropriate(trimmed) else {
-            UINotificationFeedbackGenerator().notificationOccurred(.error)
-            manualText = ""
-            return
-        }
-        collectInterest(trimmed)
-        manualText = ""
-        isManualFieldFocused = false
-    }
-
-    private func submitCustomTopicForPost() {
-        let trimmed = manualText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        guard ContentModerationService.isAppropriate(trimmed) else {
-            UINotificationFeedbackGenerator().notificationOccurred(.error)
-            manualText = ""
-            return
-        }
-        collectInterest(trimmed)
-        manualText = ""
-        isManualFieldFocused = false
-        if !isGenerationDisabled {
-            selectDedicatedTopic(trimmed)
         }
     }
 }

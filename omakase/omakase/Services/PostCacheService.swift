@@ -70,6 +70,17 @@ class PostCacheService {
         } catch {}
     }
 
+    func clearAllPosts() async {
+        guard let container = modelContainer else { return }
+        let context = container.mainContext
+        let descriptor = FetchDescriptor<CachedPost>()
+        do {
+            let all = try context.fetch(descriptor)
+            for post in all { context.delete(post) }
+            try? context.save()
+        } catch {}
+    }
+
     var hasCachedPosts: Bool {
         get async {
             guard let container = modelContainer else { return false }

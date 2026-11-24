@@ -14,9 +14,6 @@ struct InterestsEditorForm: View {
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
-    @State private var draft: String = ""
-    @FocusState private var isFieldFocused: Bool
-
     @State private var aiSuggestions: [String] = []
     @State private var isSuggesting: Bool = false
     @State private var suggestionFootnote: String?
@@ -49,42 +46,11 @@ struct InterestsEditorForm: View {
             CategoryGridView(interests: $interests)
 
             suggestionSection
-
-            // Secondary: manual text input (small, for power users)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(l10n.orTypeYourOwn)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                inputField
-            }
         }
         .onAppear {
             scheduleSuggestion(reason: .initial)
         }
-        .onChange(of: draft) { _, _ in scheduleSuggestion(reason: .draftChange) }
         .onChange(of: interests) { _, _ in scheduleSuggestion(reason: .interestsChange) }
-    }
-
-    private var inputField: some View {
-        HStack {
-            TextField(
-                l10n.addTastePlaceholder,
-                text: $draft
-            )
-            .textInputAutocapitalization(.words)
-            .autocorrectionDisabled()
-            .focused($isFieldFocused)
-            .submitLabel(.done)
-            .onSubmit(commitDraft)
-
-            Button(action: commitDraft) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-            }
-            .disabled(trimmedDraft.isEmpty)
-        }
-        .padding(12)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var chips: some View {
@@ -177,26 +143,6 @@ struct InterestsEditorForm: View {
         }
     }
 
-    private var trimmedDraft: String {
-        draft.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func commitDraft() {
-        let value = trimmedDraft
-        guard !value.isEmpty else { return }
-        guard ContentModerationService.isAppropriate(value) else {
-            UINotificationFeedbackGenerator().notificationOccurred(.error)
-            draft = ""
-            isFieldFocused = true
-            return
-        }
-        if !interests.contains(where: { $0.caseInsensitiveCompare(value) == .orderedSame }) {
-            interests.append(value)
-        }
-        draft = ""
-        isFieldFocused = true
-    }
-
     private func scheduleSuggestion(reason: SuggestionRefreshReason) {
         debounceTask?.cancel()
         refreshTask?.cancel()
@@ -225,7 +171,6 @@ struct InterestsEditorForm: View {
 
     private func loadFreshSuggestions() async {
         let snapshotInterests = await MainActor.run { interests }
-        let snapshotDraft = await MainActor.run { trimmedDraft }
         let snapshotLang = await MainActor.run { appLanguage }
 
         refreshTask = Task {
@@ -239,7 +184,7 @@ struct InterestsEditorForm: View {
                 outcome = try await Task.detached {
                     try await InterestSuggestor.suggest(
                         interests: snapshotInterests,
-                        draft: snapshotDraft,
+                        draft: "",
                         excludeSuggestions: [],
                         language: snapshotLang
                     )
@@ -256,7 +201,6 @@ struct InterestsEditorForm: View {
 
     private func appendReplacementSuggestion() async {
         let snapshotInterests = await MainActor.run { interests }
-        let snapshotDraft = await MainActor.run { trimmedDraft }
         let snapshotLang = await MainActor.run { appLanguage }
         let exclude = await MainActor.run { aiSuggestions }
 
@@ -271,7 +215,7 @@ struct InterestsEditorForm: View {
                 outcome = try await Task.detached {
                     try await InterestSuggestor.suggest(
                         interests: snapshotInterests,
-                        draft: snapshotDraft,
+                        draft: "",
                         excludeSuggestions: exclude,
                         language: snapshotLang
                     )

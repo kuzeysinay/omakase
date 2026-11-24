@@ -54,6 +54,14 @@ final class AuthService: NSObject {
     private weak var presentingWindow: UIWindow?
     @ObservationIgnored
     private var pendingAppleL10n: L10n?
+    @ObservationIgnored
+    private var pendingAppleReauthContinuation: CheckedContinuation<AppleReauthPayload, Error>?
+
+    private struct AppleReauthPayload: Sendable {
+        let idToken: String
+        let rawNonce: String
+        let authorizationCode: String
+    }
 
     private static var currentL10n: L10n {
         L10n(lang: AppLanguage.resolved())
@@ -375,6 +383,7 @@ final class AuthService: NSObject {
             Task {
                 await Self.deleteKeychainAppleUserID()
                 await NotificationManager.shared.cancelDailyMenuReminder()
+                await PostCacheService.shared.clearAllPosts()
             }
         } catch {
             errorMessage = Self.friendlyErrorMessage(
@@ -403,6 +412,18 @@ final class AuthService: NSObject {
         clearMessages()
 
         do {
+            let isAppleUser = user.providerData.contains { $0.providerID == "apple.com" }
+            if isAppleUser {
+                let appleAuth = try await requestFreshAppleReauth()
+                let firebaseCredential = OAuthProvider.appleCredential(
+                    withIDToken: appleAuth.idToken,
+                    rawNonce: appleAuth.rawNonce,
+                    fullName: nil
+                )
+                try await user.reauthenticate(with: firebaseCredential)
+                try await Auth.auth().revokeToken(withAuthorizationCode: appleAuth.authorizationCode)
+            }
+
             await NotificationManager.shared.cancelDailyMenuReminder()
             // 1. Delete all associated user data in Cloud Firestore first (while still authenticated as owner).
             try await FirestoreService.shared.deleteAllUserData(uid: uid)
@@ -410,15 +431,20 @@ final class AuthService: NSObject {
             // 2. Delete the Firebase Auth user record.
             try await user.delete()
 
-            // 3. Clean up local session & preferences.
+            // 3. Clean up local session, cached posts, bookmarks & preferences.
             GIDSignIn.sharedInstance.signOut()
             await Self.deleteKeychainAppleUserID()
+            await PostCacheService.shared.clearAllPosts()
+            BookmarkStore.shared.removeAll()
             UserDefaults.standard.removeObject(forKey: "omakase.interests")
             UserDefaults.standard.set(false, forKey: "omakase.hasOnboarded")
             UserDefaults.standard.removeObject(forKey: "omakase.letterboxd_username")
             currentUser = nil
             isSigningIn = false
             return true
+        } catch let authError as ASAuthorizationError where authError.code == .canceled {
+            isSigningIn = false
+            return false
         } catch {
             let nsError = error as NSError
             if nsError.domain == AuthErrorDomain,
@@ -441,6 +467,35 @@ final class AuthService: NSObject {
     }
 
     // MARK: - Sign in with Apple Credential State & Nonce Helpers
+
+    private func requestFreshAppleReauth() async throws -> AppleReauthPayload {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first else {
+            throw OmakaseError.authProviderFailed
+        }
+
+        if let existing = pendingAppleReauthContinuation {
+            pendingAppleReauthContinuation = nil
+            existing.resume(throwing: ASAuthorizationError(.canceled))
+        }
+
+        presentingWindow = window
+        let rawNonce = Self.randomNonceString()
+        currentRawNonce = rawNonce
+
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = []
+        request.nonce = Self.sha256(rawNonce)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            pendingAppleReauthContinuation = continuation
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            controller.delegate = self
+            controller.presentationContextProvider = self
+            activeAppleController = controller
+            controller.performRequests()
+        }
+    }
 
     private func verifyPersistedAppleCredentialState() async {
         guard let appleUserID = await Self.readKeychainAppleUserID(), !appleUserID.isEmpty else { return }
@@ -575,6 +630,30 @@ extension AuthService: ASAuthorizationControllerDelegate, ASAuthorizationControl
         controller: ASAuthorizationController,
         didCompleteWithAuthorization authorization: ASAuthorization
     ) {
+        if let continuation = pendingAppleReauthContinuation {
+            pendingAppleReauthContinuation = nil
+            activeAppleController = nil
+            let rawNonce = currentRawNonce
+            currentRawNonce = nil
+
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let rawNonce,
+                  let idTokenData = credential.identityToken,
+                  let idToken = String(data: idTokenData, encoding: .utf8),
+                  let authCodeData = credential.authorizationCode,
+                  let authorizationCode = String(data: authCodeData, encoding: .utf8) else {
+                continuation.resume(throwing: OmakaseError.authProviderFailed)
+                return
+            }
+
+            continuation.resume(returning: AppleReauthPayload(
+                idToken: idToken,
+                rawNonce: rawNonce,
+                authorizationCode: authorizationCode
+            ))
+            return
+        }
+
         activeAppleController = nil
 
         guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
@@ -655,6 +734,14 @@ extension AuthService: ASAuthorizationControllerDelegate, ASAuthorizationControl
         controller: ASAuthorizationController,
         didCompleteWithError error: Error
     ) {
+        if let continuation = pendingAppleReauthContinuation {
+            pendingAppleReauthContinuation = nil
+            activeAppleController = nil
+            currentRawNonce = nil
+            continuation.resume(throwing: error)
+            return
+        }
+
         let resolvedL10n = pendingAppleL10n ?? Self.currentL10n
         pendingAppleL10n = nil
         activeAppleController = nil
