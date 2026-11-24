@@ -2,18 +2,14 @@
 //  OnboardingView.swift
 //  omakase
 //
-//  Post-signup introduction flow (3 editorial slides over swaying ASCII sushi)
-//  followed by the interest selection step.
+//  Zero-friction 3-slide introduction over swaying ASCII sushi.
+//  Completing or skipping seeds sensible default categories and drops
+//  the user straight into the main feed (HIG Rule 2 & Rule 6 + MPTV).
 //
 
 import SwiftUI
 
 struct OnboardingView: View {
-
-    private enum Phase {
-        case intro
-        case pickInterests
-    }
 
     @Environment(\.appLanguage) private var appLanguage
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -22,9 +18,7 @@ struct OnboardingView: View {
 
     var authService: AuthService? = nil
 
-    @State private var phase: Phase = .intro
     @State private var introPage: Int = 0
-    @State private var interests: [String] = []
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -35,130 +29,103 @@ struct OnboardingView: View {
 
             OmakaseASCIIBackdrop(
                 reduceMotion: reduceMotion,
-                opacityMultiplier: phase == .intro ? 0.95 : 0.55
+                opacityMultiplier: 0.95
             )
             .ignoresSafeArea()
 
-            Group {
-                switch phase {
-                case .intro:
-                    introFlow
-                        .transition(.asymmetric(
-                            insertion: .opacity,
-                            removal: .move(edge: .leading).combined(with: .opacity)
-                        ))
-                case .pickInterests:
-                    interestsStep
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal: .opacity
-                        ))
-                }
-            }
-        }
-        .onAppear {
-            interests = FeedView.parse(interests: storedInterests)
-        }
-    }
-
-    // MARK: - Phase 1: 3-Slide Introduction
-
-    private var introFlow: some View {
-        VStack(spacing: 0) {
-            // Top brand & skip bar
-            HStack {
-                HStack(spacing: 8) {
-                    Image("AppLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 26, height: 26)
-                    Text(l10n.appTitle)
-                        .font(.system(size: 19, weight: .bold))
-                        .tracking(-0.3)
-                }
-
-                Spacer()
-
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.36, dampingFraction: 0.86)) {
-                        phase = .pickInterests
-                    }
-                } label: {
-                    Text(l10n.introSkip)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 22)
-            .padding(.top, 14)
-
-            // Paged slides
-            TabView(selection: $introPage) {
-                introSlide1.tag(0)
-                introSlide2.tag(1)
-                introSlide3.tag(2)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: introPage)
-
-            // Page indicators + primary button
-            VStack(spacing: 18) {
-                HStack(spacing: 7) {
-                    ForEach(0..<3, id: \.self) { index in
-                        Capsule()
-                            .fill(index == introPage ? OmakaseTheme.ink : Color.primary.opacity(0.18))
-                            .frame(width: index == introPage ? 26 : 8, height: 6)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: introPage)
-                    }
-                }
-
-                Button {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    if introPage < 2 {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                            introPage += 1
-                        }
-                    } else {
-                        withAnimation(.spring(response: 0.36, dampingFraction: 0.86)) {
-                            phase = .pickInterests
-                        }
-                    }
-                } label: {
+            VStack(spacing: 0) {
+                // Top brand & skip bar
+                HStack {
                     HStack(spacing: 8) {
-                        Text(introPage < 2 ? l10n.introNext : l10n.introPickInterestsCTA)
-                            .font(.system(size: 16.5, weight: .bold))
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 14, weight: .bold))
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 26, height: 26)
+                        Text(l10n.appTitle)
+                            .font(.system(size: 19, weight: .bold))
+                            .tracking(-0.3)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(OmakaseTheme.chipActiveFill)
-                    )
-                    .foregroundStyle(OmakaseTheme.chipActiveText)
+
+                    Spacer()
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        completeOnboarding()
+                    } label: {
+                        Text(l10n.introSkip)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(OmakaseChipButtonStyle())
+                .padding(.horizontal, 22)
+                .padding(.top, 14)
+
+                // Paged intro slides
+                TabView(selection: $introPage) {
+                    introSlide1.tag(0)
+                    introSlide2.tag(1)
+                    introSlide3.tag(2)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: introPage)
+
+                // Page indicators + primary CTA
+                VStack(spacing: 18) {
+                    HStack(spacing: 7) {
+                        ForEach(0..<3, id: \.self) { index in
+                            Capsule()
+                                .fill(index == introPage ? OmakaseTheme.ink : Color.primary.opacity(0.18))
+                                .frame(width: index == introPage ? 26 : 8, height: 6)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: introPage)
+                        }
+                    }
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        if introPage < 2 {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                                introPage += 1
+                            }
+                        } else {
+                            completeOnboarding()
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text(introPage < 2 ? l10n.introNext : l10n.onboardingStartFeed)
+                                .font(.system(size: 16.5, weight: .bold))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(OmakaseTheme.chipActiveFill)
+                        )
+                        .foregroundStyle(OmakaseTheme.chipActiveText)
+                    }
+                    .buttonStyle(OmakaseChipButtonStyle())
+                }
+                .padding(.horizontal, 22)
+                .padding(.bottom, 22)
             }
-            .padding(.horizontal, 22)
-            .padding(.bottom, 22)
         }
     }
+
+    // MARK: - Slides
 
     private var introSlide1: some View {
         VStack(alignment: .leading, spacing: 20) {
             Spacer()
 
-            // Editorial post preview card
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 6) {
                     Circle()
@@ -212,7 +179,6 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 20) {
             Spacer()
 
-            // Mindful reading pace + Deep Dive preview card
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
                     Image(systemName: "hourglass")
@@ -273,7 +239,6 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 20) {
             Spacer()
 
-            // Community + Offline + Letterboxd preview card
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
                     featurePill(icon: "paperplane.fill", text: l10n.introSlide3Pill1)
@@ -356,81 +321,20 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Phase 2: Interest Picker
-
-    private var interestsStep: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    header
-
-                    InterestsEditorForm(interests: $interests)
-
-                    Spacer(minLength: 32)
-                }
-                .padding()
-            }
-            .scrollContentBackground(.hidden)
-            .safeAreaInset(edge: .bottom) {
-                continueButton
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
-                    .background(.ultraThinMaterial)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                            phase = .intro
-                        }
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 15, weight: .semibold))
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    LanguagePicker()
-                }
-            }
-        }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image("AppLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 48, height: 48)
-                .padding(.bottom, 8)
-            Text(l10n.appTitle)
-                .font(.largeTitle.bold())
-            Text(l10n.onboardingTagline)
-                .font(.title3)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var continueButton: some View {
-        Button {
-            save()
-        } label: {
-            Text(interests.isEmpty ? l10n.onboardingNeedInterest : l10n.onboardingStartFeed)
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(OmakaseTheme.chipActiveFill)
-        .controlSize(.large)
-        .disabled(interests.isEmpty)
-    }
-
     // MARK: - Actions
 
-    private func save() {
-        let finalInterests = interests
-        storedInterests = finalInterests.joined(separator: ", ")
+    private func completeOnboarding() {
+        let existing = FeedView.parse(interests: storedInterests)
+        let finalInterests: [String]
+        if existing.isEmpty {
+            finalInterests = InterestCategory.presets.prefix(3).map { $0.localizedName(for: appLanguage) }
+            storedInterests = finalInterests.joined(separator: ", ")
+        } else {
+            finalInterests = existing
+        }
+
         hasOnboarded = true
+
         if let uid = authService?.uid {
             Task {
                 try? await FirestoreService.shared.updateInterests(finalInterests, uid: uid)
