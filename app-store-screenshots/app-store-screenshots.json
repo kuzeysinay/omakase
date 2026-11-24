@@ -13,7 +13,7 @@
     "es",
     "ko"
   ],
-  "locale": "en",
+  "locale": "tr",
   "device": "iphone",
   "orientation": "portrait",
   "appIcon": "/app-icon.png",
@@ -32,8 +32,8 @@
           "tr": "-"
         },
         "headline": {
-          "en": "Feed your mind,\nnot the algorithm.",
-          "tr": "Algoritmayı değil,\nzihnini besle.",
+          "en": "feed your mind,\nnot the algorithm.",
+          "tr": "algoritmayı değil,\nzihnini besle.",
           "ja": "アルゴリズムではなく、\n知性を満たす。",
           "de": "Nähre deinen Geist,\nnicht den Algorithmus.",
           "fr": "Nourris ton esprit,\npas l'algorithme.",
@@ -115,8 +115,8 @@
           "ko": "12가지 교양"
         },
         "headline": {
-          "tr": "\n\nTek dokunuşta fun-fact.\n\nPostu AI anlık üretir.\n\nKaynağını da verir.",
-          "en": "\n\nFun-facts in one tap.\n\nAI crafts each post live.\n\nAlways with its source.",
+          "tr": "\n\ntek dokunuşta fun-fact.\n\npostu ai anlık üretir.\n\nkaynağını da verir.",
+          "en": "\n\nfun-facts in one tap.\n\nai crafts each post live.\n\nalways with its source.",
           "ja": "\n\nひと触れでfun-fact。\n\nAIがその場で紡ぎ、\n\n一次出典まで添える。",
           "de": "\n\nFun-Facts mit einem Tipp.\n\nKI erstellt ihn sofort.\n\nImmer mit Quelle.",
           "fr": "\n\nDes fun-facts en un geste.\n\nL'IA rédige à l'instant.\n\nToujours avec sa source.",
@@ -160,8 +160,8 @@
           "ko": "세부 주제"
         },
         "headline": {
-          "tr": "Kategorini aç.\n\nİlginç bir alt konuya dokun.",
-          "en": "Open any discipline.\n\nTap the subtopic that sparks you.",
+          "tr": "kategorini aç.\n\nilginç bir alt konuya dokun.",
+          "en": "open any discipline.\n\ntap the subtopic that sparks you.",
           "ja": "分野を開く。\n\n惹かれる小テーマをタップ。",
           "de": "Öffne eine Disziplin.\n\nTippe auf dein Unterthema.",
           "fr": "Ouvre une discipline.\n\nTouche le sous-thème qui t'attire.",
@@ -205,13 +205,13 @@
           "ko": "심층 탐구"
         },
         "headline": {
-          "en": "Caught your interest?\n\nDive deeper.",
+          "en": "caught your interest?\n\ndive deeper.",
           "ja": "気になる話に出会った？\n\nもっと深く潜れる。",
           "de": "Neugierig geworden?\n\nTauche tiefer ein.",
           "fr": "Ça t'intrigue ?\n\nCreuse le sujet.",
           "es": "¿Te despertó curiosidad?\n\nProfundiza al instante.",
           "ko": "흥미가 생겼나요?\n\n더 깊이 파고들어 보세요.",
-          "tr": "Post ilgini mi çekti?\n\nDerine inebilirsin."
+          "tr": "post ilgini mi çekti?\n\nderine inebilirsin."
         },
         "screenshot": "/screenshots/apple/iphone/{locale}/03.png",
         "transforms": {
@@ -247,8 +247,8 @@
           "ko": "독서 의식"
         },
         "headline": {
-          "en": "\nA brief pause to read.\n\nSo every bite sinks in.\n",
-          "tr": "\nOkuma süresi kadar beklenir.\n\nOkuyup sindirmen için.\n",
+          "en": "\na brief pause to read.\n\nso every bite sinks in.\n",
+          "tr": "\nokuma süresi kadar beklenir.\n\nokuyup sindirmen için.\n",
           "ja": "\n読む時間だけ、少し待つ。\n\nしっかり味わうために。\n",
           "de": "\nEine kurze Lesepause.\n\nDamit es wirklich wirkt.\n",
           "fr": "\nUne pause le temps de lire.\n\nPour vraiment savourer.\n",
@@ -306,13 +306,13 @@
           "ko": "커뮤니티"
         },
         "headline": {
-          "en": "Share the cultural bites you loved with friends.\n\nTaste what others discovered too.",
+          "en": "share the cultural bites you loved with friends.\n\ntaste what others discovered too.",
           "ja": "気に入った教養のひと口を、仲間と分かち合おう。\n\n誰かが見つけた一皿も味わえる。",
           "de": "Teile deine liebsten Kultur-Happen mit Freunden.\n\nKoste auch, was andere entdecken.",
           "fr": "Partage tes bouchées culturelles avec tes amis.\n\nGoûte aussi aux trouvailles des autres.",
           "es": "Comparte tus bocados culturales con amigos.\n\nPrueba también lo que otros descubren.",
           "ko": "마음에 든 교양 한 입을 친구와 나누세요.\n\n다른 이들이 발견한 한 입도 맛보세요.",
-          "tr": "Tattığın kültürel lokmayı arkadaşlarınla da paylaş.\n\nBaşkalarının denk geldiği lokmaları da tat."
+          "tr": "tattığın kültürel lokmayı arkadaşlarınla da paylaş.\n\nbaşkalarının denk geldiği lokmaları da tat."
         },
         "screenshot": "/screenshots/apple/iphone/{locale}/05.png",
         "transforms": {

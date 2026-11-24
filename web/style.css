@@ -2796,3 +2796,6 @@ button {
     font-size: 0.75rem;
   }
 }
+
+/* all lowercase */
+*, *::before, *::after { text-transform: lowercase !important; }
