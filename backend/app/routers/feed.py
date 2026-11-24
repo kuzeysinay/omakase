@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Body, Depends, Header
+from fastapi import APIRouter, Body, Depends, Header, Request
 from fastapi.responses import StreamingResponse
 
 from app.errors import ErrorCode, OmakaseAPIError
@@ -23,7 +23,9 @@ router = APIRouter(prefix="/feed", tags=["feed"])
 @router.post("/stream")
 async def feed_stream(
     req: FeedRequest,
+    request: Request,
     x_omakase_timezone: Optional[str] = Header(default=None),
+    x_omakase_device_id: Optional[str] = Header(default=None),
     caller_id: str = Depends(verify_firebase_user),
 ) -> StreamingResponse:
     """Stream a single generated post as Server-Sent Events."""
@@ -37,7 +39,7 @@ async def feed_stream(
 
     uid = extract_uid(caller_id)
     tz = req.timezone or x_omakase_timezone
-    await assert_quota_available(uid, "plate", tz)
+    await assert_quota_available(uid, "plate", tz, device_id=x_omakase_device_id)
 
     headers = {
         "Cache-Control": "no-cache",
@@ -50,7 +52,8 @@ async def feed_stream(
             req.seen_count,
             req.language,
             letterboxd_films=req.letterboxd_films,
-            on_complete=(lambda: record_quota_usage(uid, "plate", tz)) if uid else None,
+            on_complete=(lambda: record_quota_usage(uid, "plate", tz, device_id=x_omakase_device_id)) if uid else None,
+            is_disconnected=request.is_disconnected,
         ),
         media_type="text/event-stream",
         headers=headers,
@@ -60,19 +63,22 @@ async def feed_stream(
 @router.post("/deep-dive")
 async def deep_dive(
     req: DeepDiveRequest,
+    request: Request,
     x_omakase_timezone: Optional[str] = Header(default=None),
+    x_omakase_device_id: Optional[str] = Header(default=None),
     caller_id: str = Depends(verify_firebase_user),
 ) -> StreamingResponse:
     """Stream a deep-dive expansion of an existing post as Server-Sent Events."""
     _check_rate_limit(caller_id, "deep_dive", max_calls=20, window_seconds=60)
     uid = extract_uid(caller_id)
     tz = req.timezone or x_omakase_timezone
-    await assert_quota_available(uid, "deep_dive", tz)
+    await assert_quota_available(uid, "deep_dive", tz, device_id=x_omakase_device_id)
 
     return StreamingResponse(
         _stream_deep_dive(
             req,
-            on_complete=(lambda: record_quota_usage(uid, "deep_dive", tz)) if uid else None,
+            on_complete=(lambda: record_quota_usage(uid, "deep_dive", tz, device_id=x_omakase_device_id)) if uid else None,
+            is_disconnected=request.is_disconnected,
         ),
         media_type="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
@@ -83,9 +89,10 @@ async def deep_dive(
 async def reward_share(
     req: RewardShareRequest = Body(default_factory=RewardShareRequest),
     x_omakase_timezone: Optional[str] = Header(default=None),
+    x_omakase_device_id: Optional[str] = Header(default=None),
     caller_id: str = Depends(verify_firebase_user),
 ) -> dict[str, Any]:
-    """Grant once-per-day +2 Deep Dive bonus after sharing a plate."""
+    """Grant once-per-day +1 Deep Dive bonus after sharing a post."""
     _check_rate_limit(caller_id, "reward_share", max_calls=10, window_seconds=60)
     uid = extract_uid(caller_id)
     if not uid:
@@ -95,4 +102,4 @@ async def reward_share(
             detail="Authentication required.",
         )
     tz = req.timezone or x_omakase_timezone
-    return await claim_share_bonus(uid, tz)
+    return await claim_share_bonus(uid, tz, device_id=x_omakase_device_id)

@@ -48,6 +48,7 @@ def _verify_webhook_authorization(authorization: Optional[str]) -> None:
 async def billing_status(
     timezone: Optional[str] = Query(default=None, max_length=64),
     x_omakase_timezone: Optional[str] = Header(default=None),
+    x_omakase_device_id: Optional[str] = Header(default=None),
     caller_id: str = Depends(verify_firebase_user),
 ) -> dict[str, Any]:
     """Return the signed-in user's entitlement and daily quota snapshot."""
@@ -60,13 +61,14 @@ async def billing_status(
             detail="Authentication required.",
         )
     tz = timezone or x_omakase_timezone
-    return await asyncio.to_thread(build_access_snapshot, uid, tz)
+    return await asyncio.to_thread(build_access_snapshot, uid, tz, x_omakase_device_id)
 
 
 @router.post("/sync")
 async def billing_sync(
     req: BillingSyncRequest = Body(default_factory=BillingSyncRequest),
     x_omakase_timezone: Optional[str] = Header(default=None),
+    x_omakase_device_id: Optional[str] = Header(default=None),
     caller_id: str = Depends(verify_firebase_user),
 ) -> dict[str, Any]:
     """Verify the user's RevenueCat subscriber state immediately after purchase or restore."""
@@ -80,7 +82,7 @@ async def billing_sync(
         )
     await sync_revenuecat_subscriber(uid)
     tz = req.timezone or x_omakase_timezone
-    return await asyncio.to_thread(build_access_snapshot, uid, tz)
+    return await asyncio.to_thread(build_access_snapshot, uid, tz, x_omakase_device_id)
 
 
 @router.post("/revenuecat-webhook")

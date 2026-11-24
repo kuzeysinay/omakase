@@ -9,6 +9,7 @@
 
 import Foundation
 import FirebaseAuth
+import Security
 
 /// Centralizes backend base URL resolution and Firebase Auth Bearer token attachment
 /// (`knowledge.networking.authenticated-requests` Rules 1-4 & `knowledge.xcode.build-configurations`).
@@ -35,10 +36,46 @@ actor APITokenProvider {
         #endif
     }()
 
-    /// Attaches `Authorization: Bearer <token>` to the request when a user is signed in.
+    /// Anonymous, non-tracking Keychain installation identifier used solely for
+    /// server-side daily free-quota anti-abuse across account switches/deletions.
+    /// Never synced to iCloud and never cleared on sign-out or account deletion.
+    private nonisolated static let quotaDeviceID: String = {
+        let service = "kuzeysinay.omakase.device"
+        let account = "quota_device_id"
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+           let data = result as? Data,
+           let existing = String(data: data, encoding: .utf8),
+           !existing.isEmpty {
+            return existing
+        }
+
+        let generated = UUID().uuidString.lowercased()
+        if let data = generated.data(using: .utf8) {
+            let addQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+                kSecValueData as String: data,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            ]
+            SecItemAdd(addQuery as CFDictionary, nil)
+        }
+        return generated
+    }()
+
+    /// Attaches `Authorization: Bearer <token>` and `X-Omakase-Device-Id` to the request.
     /// Never logs the token value (`authenticated-requests` Rule 4).
     func authorizedRequest(_ request: URLRequest, forceRefresh: Bool = false) async -> URLRequest {
         var authed = request
+        authed.setValue(Self.quotaDeviceID, forHTTPHeaderField: "X-Omakase-Device-Id")
         if let token = await fetchToken(forceRefresh: forceRefresh) {
             authed.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }

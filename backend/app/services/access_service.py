@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -17,6 +18,7 @@ from app.config import (
     PRO_DAILY_PLATES,
     PRO_DAILY_SUGGESTIONS,
     SHARE_BONUS_DEEP_DIVES,
+    USER_DAILY_PLATES_OVERRIDES,
     logger,
 )
 from app.errors import ErrorCode, OmakaseAPIError
@@ -170,6 +172,16 @@ def set_entitlement(uid: str, data: dict[str, Any]) -> dict[str, Any]:
     return _normalize_entitlement_doc(payload)
 
 
+def _hash_device_id(device_id: Optional[str]) -> Optional[str]:
+    """One-way SHA-256 hash of an anonymous installation ID for anti-abuse quota enforcement."""
+    if not device_id:
+        return None
+    cleaned = device_id.strip()
+    if len(cleaned) < 8 or len(cleaned) > 128:
+        return None
+    return hashlib.sha256(f"omakase-device-quota:{cleaned}".encode("utf-8")).hexdigest()[:32]
+
+
 def get_usage(uid: str, day_key: str) -> dict[str, Any]:
     """Read the user's daily usage counters from `usage/{uid}_{day_key}`."""
     db = get_firestore_client()
@@ -182,15 +194,42 @@ def get_usage(uid: str, day_key: str) -> dict[str, Any]:
     return _normalize_usage_doc(snap.to_dict())
 
 
+def get_device_usage(device_hash: Optional[str], day_key: str) -> dict[str, Any]:
+    """Read anonymous device-level daily usage counters from `device_usage/{device_hash}_{day_key}`."""
+    if not device_hash:
+        return _default_usage()
+    db = get_firestore_client()
+    if db is None:
+        return _default_usage()
+    snap = db.collection("device_usage").document(f"{device_hash}_{day_key}").get()
+    if not snap.exists:
+        return _default_usage()
+    return _normalize_usage_doc(snap.to_dict())
+
+
+def _merge_usage(user_usage: dict[str, Any], device_usage: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "plates_used": max(int(user_usage["plates_used"]), int(device_usage["plates_used"])),
+        "deep_dives_used": max(int(user_usage["deep_dives_used"]), int(device_usage["deep_dives_used"])),
+        "suggestions_used": max(int(user_usage["suggestions_used"]), int(device_usage["suggestions_used"])),
+        "bonus_deep_dives": max(int(user_usage["bonus_deep_dives"]), int(device_usage["bonus_deep_dives"])),
+        "share_bonus_claimed": bool(user_usage["share_bonus_claimed"]) or bool(device_usage["share_bonus_claimed"]),
+    }
+
+
 def _assemble_snapshot(
     entitlement: dict[str, Any],
     usage: dict[str, Any],
     day_key: str,
     resolved_tz: str,
     resets_at: str,
+    uid: Optional[str] = None,
 ) -> dict[str, Any]:
     is_pro = bool(entitlement["is_pro"])
-    plates_limit = PRO_DAILY_PLATES if is_pro else FREE_DAILY_PLATES
+    if is_pro:
+        plates_limit = PRO_DAILY_PLATES
+    else:
+        plates_limit = USER_DAILY_PLATES_OVERRIDES.get(uid or "", FREE_DAILY_PLATES)
     deep_dives_limit = (
         PRO_DAILY_DEEP_DIVES
         if is_pro
@@ -226,12 +265,22 @@ def _assemble_snapshot(
     }
 
 
-def build_access_snapshot(uid: str, tz_name: Optional[str]) -> dict[str, Any]:
-    """Build the full entitlement + daily quota snapshot for a user."""
+def build_access_snapshot(
+    uid: str,
+    tz_name: Optional[str],
+    device_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Build the full entitlement + daily quota snapshot for a user (and device for free tier)."""
     day_key, resolved_tz, resets_at = resolve_user_day(tz_name)
     entitlement = get_entitlement(uid)
     usage = get_usage(uid, day_key)
-    return _assemble_snapshot(entitlement, usage, day_key, resolved_tz, resets_at)
+    if not entitlement["is_pro"]:
+        device_hash = _hash_device_id(device_id)
+        if device_hash:
+            usage = _merge_usage(usage, get_device_usage(device_hash, day_key))
+    return _assemble_snapshot(
+        entitlement, usage, day_key, resolved_tz, resets_at, uid=uid
+    )
 
 
 def _execute_transaction(db: Any, update_fn: Callable[[Any], Any]) -> Any:
@@ -246,8 +295,13 @@ def _execute_transaction(db: Any, update_fn: Callable[[Any], Any]) -> Any:
     return _runner(tx)
 
 
-def _check_quota_sync(uid: str, kind: str, tz_name: Optional[str]) -> dict[str, Any]:
-    snapshot = build_access_snapshot(uid, tz_name)
+def _check_quota_sync(
+    uid: str,
+    kind: str,
+    tz_name: Optional[str],
+    device_id: Optional[str] = None,
+) -> dict[str, Any]:
+    snapshot = build_access_snapshot(uid, tz_name, device_id=device_id)
     if kind == "plate":
         remaining = snapshot["plates_remaining"]
     elif kind == "deep_dive":
@@ -275,23 +329,27 @@ async def assert_quota_available(
     uid: Optional[str],
     kind: str,
     tz_name: Optional[str],
+    device_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Raise 402 `quota_exceeded` if the authenticated user has exhausted their daily quota."""
+    """Raise 402 `quota_exceeded` if the authenticated user or device has exhausted daily quota."""
     if not uid:
         return {}
-    return await asyncio.to_thread(_check_quota_sync, uid, kind, tz_name)
+    return await asyncio.to_thread(_check_quota_sync, uid, kind, tz_name, device_id)
 
 
 def _record_usage_sync(
     uid: str,
     kind: str,
     tz_name: Optional[str],
+    device_id: Optional[str] = None,
 ) -> Optional[dict[str, Any]]:
     db = get_firestore_client()
     day_key, resolved_tz, resets_at = resolve_user_day(tz_name)
     entitlement = get_entitlement(uid)
     if db is None:
-        return _assemble_snapshot(entitlement, _default_usage(), day_key, resolved_tz, resets_at)
+        return _assemble_snapshot(
+            entitlement, _default_usage(), day_key, resolved_tz, resets_at, uid=uid
+        )
 
     field_map = {
         "plate": "platesUsed",
@@ -303,12 +361,24 @@ def _record_usage_sync(
         return None
 
     doc_ref = db.collection("usage").document(f"{uid}_{day_key}")
+    device_hash = _hash_device_id(device_id)
+    device_ref = (
+        db.collection("device_usage").document(f"{device_hash}_{day_key}")
+        if (device_hash and not entitlement["is_pro"])
+        else None
+    )
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     def _update(transaction: Any) -> dict[str, Any]:
         snap = doc_ref.get(transaction=transaction)
         existing = snap.to_dict() if snap.exists else {}
         usage = _normalize_usage_doc(existing)
+
+        if device_ref is not None:
+            dev_snap = device_ref.get(transaction=transaction)
+            dev_existing = dev_snap.to_dict() if dev_snap.exists else {}
+            usage = _merge_usage(usage, _normalize_usage_doc(dev_existing))
+
         if kind == "plate":
             usage["plates_used"] += 1
             next_val = usage["plates_used"]
@@ -329,47 +399,81 @@ def _record_usage_sync(
             },
             merge=True,
         )
+        if device_ref is not None:
+            transaction.set(
+                device_ref,
+                {
+                    "deviceHash": device_hash,
+                    "dayKey": day_key,
+                    target_field: next_val,
+                    "updatedAt": now_iso,
+                },
+                merge=True,
+            )
         return usage
 
     updated_usage = _execute_transaction(db, _update)
-    return _assemble_snapshot(entitlement, updated_usage, day_key, resolved_tz, resets_at)
+    return _assemble_snapshot(
+        entitlement, updated_usage, day_key, resolved_tz, resets_at, uid=uid
+    )
 
 
 async def record_quota_usage(
     uid: Optional[str],
     kind: str,
     tz_name: Optional[str],
+    device_id: Optional[str] = None,
 ) -> Optional[dict[str, Any]]:
-    """Atomically increment daily usage for `uid` after a successful generation."""
+    """Atomically increment daily usage for `uid` (and device for free tier) after generation."""
     if not uid:
         return None
     try:
-        return await asyncio.to_thread(_record_usage_sync, uid, kind, tz_name)
+        return await asyncio.to_thread(_record_usage_sync, uid, kind, tz_name, device_id)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to record usage (%s) for %s: %s", kind, uid, exc)
         return None
 
 
-def _claim_share_bonus_sync(uid: str, tz_name: Optional[str]) -> dict[str, Any]:
+def _claim_share_bonus_sync(
+    uid: str,
+    tz_name: Optional[str],
+    device_id: Optional[str] = None,
+) -> dict[str, Any]:
     day_key, resolved_tz, resets_at = resolve_user_day(tz_name)
     entitlement = get_entitlement(uid)
     db = get_firestore_client()
     if db is None:
-        snapshot = _assemble_snapshot(entitlement, _default_usage(), day_key, resolved_tz, resets_at)
+        snapshot = _assemble_snapshot(
+            entitlement, _default_usage(), day_key, resolved_tz, resets_at, uid=uid
+        )
         return {"granted": False, "bonus_added": 0, "access": snapshot}
 
     if entitlement["is_pro"]:
         usage = get_usage(uid, day_key)
-        snapshot = _assemble_snapshot(entitlement, usage, day_key, resolved_tz, resets_at)
+        snapshot = _assemble_snapshot(
+            entitlement, usage, day_key, resolved_tz, resets_at, uid=uid
+        )
         return {"granted": False, "bonus_added": 0, "access": snapshot}
 
     doc_ref = db.collection("usage").document(f"{uid}_{day_key}")
+    device_hash = _hash_device_id(device_id)
+    device_ref = (
+        db.collection("device_usage").document(f"{device_hash}_{day_key}")
+        if device_hash
+        else None
+    )
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     def _update(transaction: Any) -> tuple[bool, dict[str, Any]]:
         snap = doc_ref.get(transaction=transaction)
         existing = snap.to_dict() if snap.exists else {}
         usage = _normalize_usage_doc(existing)
+
+        if device_ref is not None:
+            dev_snap = device_ref.get(transaction=transaction)
+            dev_existing = dev_snap.to_dict() if dev_snap.exists else {}
+            usage = _merge_usage(usage, _normalize_usage_doc(dev_existing))
+
         if usage["share_bonus_claimed"]:
             return False, usage
 
@@ -386,10 +490,24 @@ def _claim_share_bonus_sync(uid: str, tz_name: Optional[str]) -> dict[str, Any]:
             },
             merge=True,
         )
+        if device_ref is not None:
+            transaction.set(
+                device_ref,
+                {
+                    "deviceHash": device_hash,
+                    "dayKey": day_key,
+                    "shareBonusClaimed": True,
+                    "bonusDeepDives": usage["bonus_deep_dives"],
+                    "updatedAt": now_iso,
+                },
+                merge=True,
+            )
         return True, usage
 
     granted, updated_usage = _execute_transaction(db, _update)
-    snapshot = _assemble_snapshot(entitlement, updated_usage, day_key, resolved_tz, resets_at)
+    snapshot = _assemble_snapshot(
+        entitlement, updated_usage, day_key, resolved_tz, resets_at, uid=uid
+    )
     return {
         "granted": granted,
         "bonus_added": SHARE_BONUS_DEEP_DIVES if granted else 0,
@@ -397,6 +515,10 @@ def _claim_share_bonus_sync(uid: str, tz_name: Optional[str]) -> dict[str, Any]:
     }
 
 
-async def claim_share_bonus(uid: str, tz_name: Optional[str]) -> dict[str, Any]:
-    """Grant once-per-day +2 Deep Dive bonus when a free user shares a plate."""
-    return await asyncio.to_thread(_claim_share_bonus_sync, uid, tz_name)
+async def claim_share_bonus(
+    uid: str,
+    tz_name: Optional[str],
+    device_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Grant once-per-day +1/+2 Deep Dive bonus when a free user shares a post."""
+    return await asyncio.to_thread(_claim_share_bonus_sync, uid, tz_name, device_id)
