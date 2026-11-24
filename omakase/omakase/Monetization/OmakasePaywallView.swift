@@ -154,12 +154,12 @@ struct OmakasePaywallView: View {
                     .padding(.bottom, 6)
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 18) {
                         heroSection
+                            .padding(.top, 26)
                         comparisonCard
                     }
                     .padding(.horizontal, 22)
-                    .padding(.top, 8)
                     .padding(.bottom, 20)
                 }
 
@@ -304,7 +304,7 @@ struct OmakasePaywallView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemBackground).opacity(colorScheme == .dark ? 0.78 : 0.88))
+                .fill(.ultraThinMaterial)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -644,40 +644,51 @@ struct OmakasePaywallView: View {
 // MARK: - Gently Swaying Monochrome ASCII Backdrop
 
 /// Calm, Hidden-Folks-inspired monochrome ASCII wave & koi field that sways
-/// slowly behind the paywall hero, keeping foreground typography razor-sharp.
+/// slowly behind the paywall hero and frosted comparison card.
 private struct OmakaseASCIIBackdrop: View {
 
     let reduceMotion: Bool
     @Environment(\.colorScheme) private var colorScheme
 
-    private let waveRows: [String] = [
-        "  ~   ·   ≈   ~   ·   ∘   ~   ≈   ·   ~   ·   ≈   ~  ",
-        "    ·   ~   ><((°>   ~   ·   ≈   ~   ·   ✦   ~   ·   ",
-        " ~   ≈   ·   ~   ∘   ≈   ~   ·   ~   ≈   ·   ~   ≈   ",
-        "   ·   ∘   ~   ·   ~   ≈   ·   <°))><   ~   ·   ∘   ~",
-        " ≈   ~   ·   ✦   ~   ·   ≈   ~   ·   ~   ≈   ·   ~   ",
-        "  ·   ~   ≈   ·   ~   ∘   ~   ·   ≈   ~   ·   ~   ·  ",
-        "~   ·   ~   ><((°>   ·   ≈   ~   ·   ~   ∘   ~   ≈   ",
-        "   ≈   ·   ~   ·   ≈   ~   ·   ✦   ~   ·   ≈   ~   · ",
-        " ·   ~   ∘   ~   ≈   ·   ~   ·   ~   ≈   ·   <°))><  ",
-        "~   ≈   ·   ~   ·   ~   ≈   ·   ∘   ~   ·   ≈   ~   ·"
+    private let waveRows: [(text: String, isMotif: Bool)] = [
+        ("  ~   ·   ≈   ~   ·   ∘   ~   ≈   ·   ~   ·   ≈   ~  ", false),
+        ("    ·   ~   ><((°>   ~   ·   ≈   ~   ·   ✦   ~   ·   ", true),
+        (" ~   ≈   ·   ~   ∘   ≈   ~   ·   ~   ≈   ·   ~   ≈   ", false),
+        ("   ·   ∘   ~   ·   ~   ≈   ·   <°))><   ~   ·   ∘   ~", true),
+        (" ≈   ~   ·   ✦   ~   ·   ≈   ~   ·   ~   ≈   ·   ~   ", false),
+        ("  ·   ~   ≈   ·   ~   ∘   ~   ·   ≈   ~   ·   ~   ·  ", false),
+        ("~   ·   ~   ><((°>   ·   ≈   ~   ·   ~   ∘   ~   ≈   ", true),
+        ("   ≈   ·   ~   ·   ≈   ~   ·   ✦   ~   ·   ≈   ~   · ", false),
+        (" ·   ~   ∘   ~   ≈   ·   ~   ·   ~   ≈   ·   <°))><  ", true),
+        ("~   ≈   ·   ~   ·   ~   ≈   ·   ∘   ~   ·   ≈   ~   ·", false),
+        ("  ·   ✦   ~   ≈   ·   ~   ><((°>   ·   ~   ≈   ·   ~ ", true),
+        (" ≈   ·   ~   ∘   ~   ·   ≈   ~   ·   ~   ≈   ·   ~   ", false),
+        ("   ~   ·   ≈   ~   ·   <°))><   ·   ~   ∘   ~   ·   ≈", true),
+        (" ·   ≈   ~   ·   ~   ≈   ·   ~   ✦   ~   ·   ≈   ~   ", false),
+        ("~   ·   ∘   ~   ≈   ·   ~   ·   ~   ≈   ·   ~   ·   ≈", false),
+        ("  ≈   ~   ·   ><((°>   ~   ·   ≈   ~   ·   ∘   ~   · ", true)
     ]
 
     var body: some View {
-        SwiftUI.TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: reduceMotion)) { context in
+        SwiftUI.TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
             let t = reduceMotion ? 0.0 : context.date.timeIntervalSinceReferenceDate
             GeometryReader { geo in
-                VStack(spacing: 14) {
+                VStack(spacing: 13) {
                     ForEach(Array(waveRows.enumerated()), id: \.offset) { idx, row in
-                        let phase = Double(idx) * 0.85
-                        let speed = idx.isMultiple(of: 2) ? 0.42 : -0.34
-                        let swayX = sin(t * speed + phase) * 18.0
-                        let swayY = cos(t * 0.28 + phase) * 2.5
-                        let baseOpacity = colorScheme == .dark ? 0.11 : 0.085
-                        let pulse = 0.78 + 0.22 * sin(t * 0.55 + phase)
+                        let phase = Double(idx) * 0.75
+                        let speed = idx.isMultiple(of: 2) ? 0.55 : -0.45
+                        let swayX = sin(t * speed + phase) * 26.0
+                        let swayY = cos(t * 0.35 + phase) * 3.0
+                        let baseOpacity: Double = {
+                            if row.isMotif {
+                                return colorScheme == .dark ? 0.28 : 0.24
+                            }
+                            return colorScheme == .dark ? 0.18 : 0.15
+                        }()
+                        let pulse = 0.80 + 0.20 * sin(t * 0.65 + phase)
 
-                        Text(row + row)
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                        Text(row.text + row.text)
+                            .font(.system(size: 14, weight: row.isMotif ? .semibold : .medium, design: .monospaced))
                             .foregroundStyle(OmakaseTheme.ink.opacity(baseOpacity * pulse))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
@@ -685,14 +696,14 @@ private struct OmakaseASCIIBackdrop: View {
                     }
                 }
                 .frame(width: geo.size.width, alignment: .center)
-                .padding(.top, 16)
+                .padding(.top, 8)
                 .mask(
                     LinearGradient(
                         stops: [
-                            .init(color: .black.opacity(0.95), location: 0.0),
-                            .init(color: .black.opacity(0.75), location: 0.42),
-                            .init(color: .black.opacity(0.15), location: 0.72),
-                            .init(color: .clear, location: 0.92)
+                            .init(color: .black, location: 0.0),
+                            .init(color: .black.opacity(0.88), location: 0.45),
+                            .init(color: .black.opacity(0.35), location: 0.70),
+                            .init(color: .clear, location: 0.88)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
