@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tr: {
       "nav.screenshots": "Ekran Görüntüleri",
       "shots.tag": "Uygulamadan Kareler",
-      "shots.title": "Tek dokunuşta fun-fact. Postu AI anlık üretir.",
+      "shots.title": "Tek dokunuşta fun-fact. Postu ai anlık üretir.",
       "shots.desc": "Kaynağını da verir. Kategorini aç, ilgini çeken alt konuya dokun, derine in.",
       "shots.l1": "Algoritmayı değil, zihnini besle",
       "shots.l2": "Fun-fact + kaynak",
@@ -1022,7 +1022,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (navigator.share) {
         try {
           await navigator.share({ title: 'Omakase', text: text, url: window.location.href });
-        } catch (err) {}
+        } catch (err) { }
       } else {
         navigator.clipboard.writeText(`${text} ${window.location.href}`);
         const span = btnShareDemo.querySelector('span');
@@ -1132,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   let lightboxIndex = 0;
-  const shotLabels = ['shots.l1','shots.l2','shots.l3','shots.l4','shots.l5','shots.l6'];
+  const shotLabels = ['shots.l1', 'shots.l2', 'shots.l3', 'shots.l4', 'shots.l5', 'shots.l6'];
   const shotsGrid = document.getElementById('screenshots-grid');
   const lightbox = document.getElementById('lightbox');
   const lightboxImg = document.getElementById('lightbox-img');
@@ -1219,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = JSON.parse(localStorage.getItem('omakase_waitlist') || '[]');
         list.push({ email, date: new Date().toISOString() });
         localStorage.setItem('omakase_waitlist', JSON.stringify(list));
-      } catch (err) {}
+      } catch (err) { }
 
       if (waitlistFeedback) {
         waitlistFeedback.textContent = currentLang === 'tr'
