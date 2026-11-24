@@ -29,6 +29,8 @@ final class AuthService: NSObject {
     private(set) var currentUser: User?
     /// `true` while a sign-in or account operation is in flight.
     private(set) var isSigningIn: Bool = false
+    /// `true` when an authenticated user still needs to pick their display name & unique `@username`.
+    private(set) var needsProfileSetup: Bool = false
     private(set) var errorMessage: String?
     private(set) var infoMessage: String?
 
@@ -80,6 +82,9 @@ final class AuthService: NSObject {
                 await NotificationManager.shared.syncAuthUser(uid: user?.uid)
                 if let uid = user?.uid {
                     _ = try? await FirestoreService.shared.fetchBlockedUIDs(currentUid: uid)
+                    await self?.refreshProfileSetupState()
+                } else {
+                    self?.needsProfileSetup = false
                 }
             }
         }
@@ -212,6 +217,7 @@ final class AuthService: NSObject {
         isSigningIn = false
     }
 
+
     func signInWithEmail(
         email: String,
         password: String,
@@ -250,6 +256,7 @@ final class AuthService: NSObject {
         isSigningIn = false
     }
 
+
     func sendPasswordReset(email: String, l10n: L10n) async {
         guard !isSigningIn else { return }
         clearMessages()
@@ -269,6 +276,7 @@ final class AuthService: NSObject {
         }
         isSigningIn = false
     }
+
 
     private static func friendlyErrorMessage(
         for error: Error,
@@ -358,6 +366,7 @@ final class AuthService: NSObject {
 
             // Ensure a Firestore profile document exists for this user.
             try await FirestoreService.shared.ensureUserProfile(for: authResult.user)
+            await refreshProfileSetupState()
 
         } catch {
             let nsError = error as NSError
@@ -370,6 +379,33 @@ final class AuthService: NSObject {
         isSigningIn = false
     }
 
+
+    // MARK: - Profile Setup State
+
+    func refreshProfileSetupState() async {
+        guard let uid = currentUser?.uid else {
+            needsProfileSetup = false
+            return
+        }
+        guard let profile = try? await FirestoreService.shared.fetchUserProfile(uid: uid) else {
+            needsProfileSetup = true
+            return
+        }
+        let hasValidUsername = (profile.username?.trimmingCharacters(in: .whitespacesAndNewlines).count ?? 0) >= 3
+        let explicitlyIncomplete = (profile.profileSetupCompleted == false)
+        needsProfileSetup = !hasValidUsername || explicitlyIncomplete
+    }
+
+    func markProfileSetupCompleted(displayName: String) async {
+        if let user = Auth.auth().currentUser {
+            let req = user.createProfileChangeRequest()
+            req.displayName = displayName
+            try? await req.commitChanges()
+            currentUser = Auth.auth().currentUser
+        }
+        needsProfileSetup = false
+    }
+
     // MARK: - Sign Out
 
     func signOut(l10n: L10n? = nil) {
@@ -379,6 +415,7 @@ final class AuthService: NSObject {
             GIDSignIn.sharedInstance.signOut()
             FirestoreService.shared.clearBlockedCache()
             currentUser = nil
+            needsProfileSetup = false
             ErrorReporter.setUserID(nil)
             Task {
                 await Self.deleteKeychainAppleUserID()
@@ -714,6 +751,7 @@ extension AuthService: ASAuthorizationControllerDelegate, ASAuthorizationControl
                     for: updatedUser,
                     customDisplayName: formattedFirstAuthName
                 )
+                await refreshProfileSetupState()
 
                 if let profile = try? await FirestoreService.shared.fetchUserProfile(uid: updatedUser.uid),
                    !profile.interests.isEmpty {

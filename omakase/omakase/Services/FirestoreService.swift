@@ -11,6 +11,13 @@ extension Notification.Name {
     static let omakaseDidUpdateBlockedUsers = Notification.Name("omakase.didUpdateBlockedUsers")
 }
 
+enum ProfileUpdateError: Error, Equatable {
+    case invalidDisplayName
+    case invalidUsername
+    case usernameTaken
+    case cooldownActive(daysRemaining: Int)
+}
+
 /// Singleton that handles all Firestore read/write operations for the social layer.
 @MainActor
 final class FirestoreService {
@@ -48,20 +55,16 @@ final class FirestoreService {
             return "Omakase User"
         }()
 
-        let resolvedUsername: String = {
+        let resolvedUsername: String? = {
             if let custom = customUsername {
                 let clean = UserProfile.sanitizeUsername(custom)
-                if !clean.isEmpty { return clean }
+                if clean.count >= 3 { return clean }
             }
-            if let email = user.email, let prefix = email.split(separator: "@").first {
-                let clean = UserProfile.sanitizeUsername(String(prefix))
-                if !clean.isEmpty { return clean }
-            }
-            let fromName = UserProfile.sanitizeUsername(resolvedName)
-            return fromName.isEmpty ? "omakase_user" : fromName
+            return nil
         }()
 
         if !snapshot.exists {
+            let hasExplicitHandle = (resolvedUsername != nil)
             // Do not store private `email` in the publicly readable `users/{uid}` document (S-04 PII protection).
             let profile = UserProfile(
                 id: user.uid,
@@ -70,8 +73,17 @@ final class FirestoreService {
                 email: "",
                 photoURL: nil,
                 interests: [],
-                createdAt: .now
+                createdAt: .now,
+                usernameUpdatedAt: hasExplicitHandle ? .now : nil,
+                profileSetupCompleted: hasExplicitHandle
             )
+            if let handle = resolvedUsername {
+                let handleRef = db.collection("usernames").document(handle)
+                try await handleRef.setData([
+                    "uid": user.uid,
+                    "createdAt": FieldValue.serverTimestamp()
+                ])
+            }
             try ref.setData(from: profile)
         } else {
             var updates: [String: Any] = [
@@ -83,12 +95,16 @@ final class FirestoreService {
                 updates["displayName"] = custom
                 updates["searchableName"] = custom.lowercased()
             }
-            if let customU = customUsername {
-                let clean = UserProfile.sanitizeUsername(customU)
-                if !clean.isEmpty {
-                    updates["username"] = clean
-                    updates["searchableUsername"] = clean.lowercased()
-                }
+            if let clean = resolvedUsername {
+                let handleRef = db.collection("usernames").document(clean)
+                try? await handleRef.setData([
+                    "uid": user.uid,
+                    "createdAt": FieldValue.serverTimestamp()
+                ])
+                updates["username"] = clean
+                updates["searchableUsername"] = clean.lowercased()
+                updates["usernameUpdatedAt"] = FieldValue.serverTimestamp()
+                updates["profileSetupCompleted"] = true
             }
             try await ref.updateData(updates)
         }
@@ -96,11 +112,21 @@ final class FirestoreService {
         _ = try? await fetchBlockedUIDs(currentUid: user.uid)
     }
 
-    /// Check if a `@username` is available across all users.
+    /// Check if a `@username` is available across both `usernames/{handle}` and `users`.
     func isUsernameAvailable(_ rawUsername: String, excludingUid: String? = nil) async throws -> Bool {
         let clean = UserProfile.sanitizeUsername(rawUsername)
         guard clean.count >= 3 else { return false }
 
+        // 1. Check atomic reservation doc
+        let handleDoc = try? await db.collection("usernames").document(clean).getDocument()
+        if let handleDoc, handleDoc.exists {
+            let ownerUid = handleDoc.data()?["uid"] as? String
+            if ownerUid != excludingUid {
+                return false
+            }
+        }
+
+        // 2. Also check legacy `users` collection for handles created before `usernames/` existed
         let snapshot = try await db.collection("users")
             .whereField("searchableUsername", isEqualTo: clean.lowercased())
             .limit(to: 2)
@@ -112,6 +138,96 @@ final class FirestoreService {
             }
         }
         return true
+    }
+
+    /// Updates display name and/or atomically claims a unique `@username` with 14-day cooldown enforcement.
+    @discardableResult
+    func updateUserProfile(
+        uid: String,
+        displayName: String,
+        newUsername: String,
+        markSetupCompleted: Bool = false
+    ) async throws -> UserProfile {
+        let trimmedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty, trimmedName.count <= 60, ContentModerationService.isAppropriate(trimmedName) else {
+            throw ProfileUpdateError.invalidDisplayName
+        }
+
+        let cleanUsername = UserProfile.sanitizeUsername(newUsername)
+        guard cleanUsername.count >= 3, cleanUsername.count <= 20, ContentModerationService.isAppropriate(cleanUsername) else {
+            throw ProfileUpdateError.invalidUsername
+        }
+
+        let userRef = db.collection("users").document(uid)
+        let currentProfile = try await fetchUserProfile(uid: uid)
+        let oldUsername = currentProfile?.username.map { UserProfile.sanitizeUsername($0) }
+        let usernameChanged = (oldUsername != cleanUsername)
+
+        if usernameChanged {
+            // Enforce 14-day cooldown only if user already had a username set previously.
+            if let existing = currentProfile,
+               let existingHandle = existing.username, !existingHandle.isEmpty,
+               !existing.canChangeUsernameNow {
+                throw ProfileUpdateError.cooldownActive(daysRemaining: existing.daysUntilNextUsernameChange)
+            }
+
+            let available = try await isUsernameAvailable(cleanUsername, excludingUid: uid)
+            guard available else {
+                throw ProfileUpdateError.usernameTaken
+            }
+
+            // Atomically claim the new handle in `usernames/{cleanUsername}`.
+            let newHandleRef = db.collection("usernames").document(cleanUsername)
+            do {
+                try await newHandleRef.setData([
+                    "uid": uid,
+                    "createdAt": FieldValue.serverTimestamp()
+                ])
+            } catch {
+                throw ProfileUpdateError.usernameTaken
+            }
+        } else if let existingHandle = oldUsername, !existingHandle.isEmpty {
+            // Backfill `usernames/{handle}` reservation for legacy users keeping their handle.
+            let handleRef = db.collection("usernames").document(existingHandle)
+            let snap = try? await handleRef.getDocument()
+            if snap?.exists != true {
+                try? await handleRef.setData([
+                    "uid": uid,
+                    "createdAt": FieldValue.serverTimestamp()
+                ])
+            }
+        }
+
+        var updates: [String: Any] = [
+            "displayName": trimmedName,
+            "searchableName": trimmedName.lowercased()
+        ]
+        if usernameChanged {
+            updates["username"] = cleanUsername
+            updates["searchableUsername"] = cleanUsername.lowercased()
+            updates["usernameUpdatedAt"] = FieldValue.serverTimestamp()
+        }
+        if markSetupCompleted {
+            updates["profileSetupCompleted"] = true
+        }
+
+        try await userRef.updateData(updates)
+
+        // Release the old username reservation after the user doc update succeeds.
+        if usernameChanged, let old = oldUsername, !old.isEmpty, old != cleanUsername {
+            try? await db.collection("usernames").document(old).delete()
+        }
+
+        return (try? await fetchUserProfile(uid: uid)) ?? UserProfile(
+            id: uid,
+            displayName: trimmedName,
+            username: cleanUsername,
+            email: "",
+            interests: currentProfile?.interests ?? [],
+            createdAt: currentProfile?.createdAt ?? .now,
+            usernameUpdatedAt: usernameChanged ? .now : currentProfile?.usernameUpdatedAt,
+            profileSetupCompleted: markSetupCompleted ? true : currentProfile?.profileSetupCompleted
+        )
     }
 
     /// Update the user's interests array in Firestore.
@@ -584,6 +700,15 @@ final class FirestoreService {
 
     /// Permanently removes the user's Firestore data: shared posts, social graph edges, blocked users list, and profile document.
     func deleteAllUserData(uid: String) async throws {
+        // 0. Release reserved `@username` handle if present
+        if let profile = try? await fetchUserProfile(uid: uid),
+           let handle = profile.username, !handle.isEmpty {
+            let clean = UserProfile.sanitizeUsername(handle)
+            if !clean.isEmpty {
+                try? await db.collection("usernames").document(clean).delete()
+            }
+        }
+
         // 1. Delete all shared posts authored by this user
         let sharedPostsSnap = try? await db.collection("shared_posts")
             .whereField("authorId", isEqualTo: uid)

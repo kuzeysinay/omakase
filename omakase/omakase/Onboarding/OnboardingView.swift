@@ -331,3 +331,284 @@ struct OnboardingView: View {
 #Preview {
     OnboardingView()
 }
+
+// MARK: - Mandatory Profile Setup (Display Name & Unique @username)
+
+/// Shown right after Apple/Google first sign-up (or if a profile has no unique `@username` yet)
+/// so every user chooses their own public display name (surname optional) and unique handle.
+struct ProfileSetupView: View {
+
+    let authService: AuthService
+
+    @Environment(\.appLanguage) private var appLanguage
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @State private var displayName: String = ""
+    @State private var username: String = ""
+    @State private var isCheckingUsername = false
+    @State private var isUsernameAvailable: Bool? = nil
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    @State private var debounceTask: Task<Void, Never>?
+
+    private var l10n: L10n { L10n(lang: appLanguage) }
+    private var trimmedName: String { displayName.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var cleanUsername: String { UserProfile.sanitizeUsername(username) }
+
+    private var canSubmit: Bool {
+        !isSaving && !trimmedName.isEmpty && cleanUsername.count >= 3 && !isCheckingUsername && isUsernameAvailable == true
+    }
+
+    private var suggestions: [String] {
+        var result: [String] = []
+        let base = UserProfile.sanitizeUsername(trimmedName.isEmpty ? (authService.displayName ?? "omakase") : trimmedName)
+        if base.count >= 3 {
+            result.append(base)
+            result.append(String("\(base)_01".prefix(20)))
+            result.append(String("\(base)\(Int.random(in: 10...99))".prefix(20)))
+        }
+        return Array(NSOrderedSet(array: result)).compactMap { $0 as? String }
+    }
+
+    var body: some View {
+        ZStack {
+            Color(uiColor: .systemBackground)
+                .ignoresSafeArea()
+
+            OmakaseASCIIBackdrop(reduceMotion: reduceMotion, opacityMultiplier: 0.72)
+                .ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 22) {
+                    // Top logo
+                    HStack {
+                        HStack(spacing: 8) {
+                            Image("AppLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 26, height: 26)
+                            Text(l10n.appTitle)
+                                .font(.system(size: 19, weight: .bold))
+                                .tracking(-0.3)
+                        }
+                        Spacer()
+                    }
+                    .padding(.top, 8)
+
+                    // Live Monogram Avatar preview
+                    MonogramAvatarView(
+                        name: trimmedName.isEmpty ? (cleanUsername.isEmpty ? "O" : cleanUsername) : trimmedName,
+                        size: 86
+                    )
+                    .padding(.top, 4)
+
+                    VStack(spacing: 6) {
+                        Text(l10n.profileSetupTitle)
+                            .font(.system(size: 28, weight: .heavy))
+                            .tracking(-0.5)
+                            .multilineTextAlignment(.center)
+
+                        Text(l10n.profileSetupSubtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    // Display name field
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(l10n.profileDisplayNameLabel)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+
+                        TextField(l10n.authDisplayNamePlaceholder, text: $displayName)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 13)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .strokeBorder(OmakaseTheme.ink.opacity(0.25), lineWidth: 1)
+                            )
+
+                        Text(l10n.profileDisplayNameHint)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // Unique @username field
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(l10n.profileUsernameLabel)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 6) {
+                            Text("@")
+                                .font(.body.weight(.bold))
+                                .foregroundStyle(.secondary)
+
+                            TextField(l10n.authUsernamePlaceholder, text: $username)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+
+                            if isCheckingUsername {
+                                ProgressView().controlSize(.small)
+                            } else if isUsernameAvailable == true {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.primary)
+                            } else if isUsernameAvailable == false {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(
+                                    isUsernameAvailable == false
+                                        ? Color.red.opacity(0.5)
+                                        : OmakaseTheme.ink.opacity(0.25),
+                                    lineWidth: 1
+                                )
+                        )
+
+                        if isUsernameAvailable == false {
+                            Text(l10n.authUsernameTaken)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.red)
+                        } else {
+                            Text(l10n.profileUsernameCooldownNote)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if let errorMessage {
+                        HStack(spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.red)
+                            Text(errorMessage)
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(Color.red.opacity(0.35), lineWidth: 1)
+                        )
+                    }
+
+                    Button {
+                        Task { await submit() }
+                    } label: {
+                        ZStack {
+                            if isSaving {
+                                ProgressView().tint(OmakaseTheme.chipActiveText)
+                            } else {
+                                HStack(spacing: 8) {
+                                    Text(l10n.profileSetupContinue)
+                                        .font(.system(size: 16.5, weight: .bold))
+                                    Image(systemName: "arrow.right")
+                                        .font(.system(size: 14, weight: .bold))
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(OmakaseTheme.chipActiveFill)
+                        )
+                        .foregroundStyle(OmakaseTheme.chipActiveText)
+                        .opacity(canSubmit ? 1.0 : 0.4)
+                    }
+                    .buttonStyle(OmakaseChipButtonStyle())
+                    .disabled(!canSubmit)
+                }
+                .padding(.horizontal, 22)
+                .padding(.bottom, 32)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .onAppear {
+            // Pre-fill display name with provider's first name only (surname stays optional).
+            if displayName.isEmpty, let full = authService.displayName?.trimmingCharacters(in: .whitespacesAndNewlines), !full.isEmpty {
+                displayName = String(full.split(whereSeparator: \.isWhitespace).first ?? Substring(full))
+            }
+            if username.isEmpty, let suggested = suggestions.first {
+                username = suggested
+                checkAvailabilityDebounced(suggested)
+            }
+        }
+        .onChange(of: username) { _, newValue in
+            let sanitized = UserProfile.sanitizeUsername(newValue)
+            if sanitized != newValue {
+                username = sanitized
+            }
+            checkAvailabilityDebounced(sanitized)
+        }
+    }
+
+    private func checkAvailabilityDebounced(_ candidate: String) {
+        debounceTask?.cancel()
+        errorMessage = nil
+        guard candidate.count >= 3 else {
+            isCheckingUsername = false
+            isUsernameAvailable = nil
+            return
+        }
+        isCheckingUsername = true
+        debounceTask = Task {
+            try? await Task.sleep(for: .milliseconds(320))
+            guard !Task.isCancelled else { return }
+            let available = (try? await FirestoreService.shared.isUsernameAvailable(
+                candidate,
+                excludingUid: authService.uid
+            )) ?? false
+            await MainActor.run {
+                if UserProfile.sanitizeUsername(username) == candidate {
+                    isUsernameAvailable = available
+                    isCheckingUsername = false
+                }
+            }
+        }
+    }
+
+    private func submit() async {
+        guard let uid = authService.uid else { return }
+        isSaving = true
+        errorMessage = nil
+        do {
+            let updated = try await FirestoreService.shared.updateUserProfile(
+                uid: uid,
+                displayName: trimmedName,
+                newUsername: cleanUsername,
+                markSetupCompleted: true
+            )
+            await authService.markProfileSetupCompleted(displayName: updated.displayName)
+            isSaving = false
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } catch let err as ProfileUpdateError {
+            isSaving = false
+            switch err {
+            case .usernameTaken:
+                errorMessage = l10n.authUsernameTaken
+                isUsernameAvailable = false
+            case .cooldownActive(let days):
+                errorMessage = l10n.profileUsernameLockedDays(days)
+            case .invalidUsername:
+                errorMessage = l10n.authUsernameInvalid
+            case .invalidDisplayName:
+                errorMessage = l10n.errorContentBlockedMessage
+            }
+        } catch {
+            isSaving = false
+            errorMessage = OmakaseError.from(error).message(l10n: l10n)
+        }
+    }
+}

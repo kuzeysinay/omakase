@@ -22,6 +22,27 @@ struct UserProfile: Codable, Identifiable, Equatable, Sendable {
     var searchableName: String
     /// Lowercase version of username for case-insensitive handle search.
     var searchableUsername: String?
+    /// Last timestamp when `@username` was updated (enforces 14-day cooldown).
+    var usernameUpdatedAt: Date?
+    /// True once the user has explicitly confirmed their display name & unique @username.
+    var profileSetupCompleted: Bool?
+
+    static let usernameCooldownDays: Int = 14
+
+    /// Days remaining before the user can change their `@username` again (0 if allowed now).
+    var daysUntilNextUsernameChange: Int {
+        guard let lastChanged = usernameUpdatedAt else { return 0 }
+        guard let nextAllowed = Calendar.current.date(byAdding: .day, value: Self.usernameCooldownDays, to: lastChanged) else {
+            return 0
+        }
+        let remaining = nextAllowed.timeIntervalSinceNow
+        guard remaining > 0 else { return 0 }
+        return max(1, Int(ceil(remaining / 86_400.0)))
+    }
+
+    var canChangeUsernameNow: Bool {
+        daysUntilNextUsernameChange == 0
+    }
 
     /// Returns the `@username` handle (falls back to email prefix if legacy profile lacks username).
     var formattedHandle: String {
@@ -41,7 +62,9 @@ struct UserProfile: Codable, Identifiable, Equatable, Sendable {
         email: String,
         photoURL: String? = nil,
         interests: [String] = [],
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        usernameUpdatedAt: Date? = nil,
+        profileSetupCompleted: Bool? = nil
     ) {
         self.id = id
         self.displayName = displayName
@@ -53,6 +76,8 @@ struct UserProfile: Codable, Identifiable, Equatable, Sendable {
         self.createdAt = createdAt
         self.searchableName = displayName.lowercased()
         self.searchableUsername = self.username?.lowercased()
+        self.usernameUpdatedAt = usernameUpdatedAt
+        self.profileSetupCompleted = profileSetupCompleted
     }
 
     init(from decoder: Decoder) throws {
@@ -67,6 +92,8 @@ struct UserProfile: Codable, Identifiable, Equatable, Sendable {
         createdAt = (try? c.decodeIfPresent(Date.self, forKey: .createdAt)) ?? .now
         searchableName = (try? c.decodeIfPresent(String.self, forKey: .searchableName)) ?? displayName.lowercased()
         searchableUsername = try c.decodeIfPresent(String.self, forKey: .searchableUsername) ?? username?.lowercased()
+        usernameUpdatedAt = try? c.decodeIfPresent(Date.self, forKey: .usernameUpdatedAt)
+        profileSetupCompleted = try? c.decodeIfPresent(Bool.self, forKey: .profileSetupCompleted)
     }
 
     /// Normalizes a raw string into a valid Twitter-style handle (lowercase a-z, 0-9, underscore, dot).

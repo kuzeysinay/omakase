@@ -660,6 +660,19 @@ struct L10n {
     var introSlide3Pill2: String { tr("introSlide3Pill2", fallback: "Offline Bookmarks") }
     var introSlide3Pill3: String { tr("introSlide3Pill3", fallback: "Letterboxd") }
     var settingsTitle: String { tr("settingsTitle", fallback: "Settings") }
+    var editProfileTitle: String { tr("editProfileTitle", fallback: "Edit Profile") }
+    var profileSetupTitle: String { tr("profileSetupTitle", fallback: "Set Up Your Profile") }
+    var profileSetupSubtitle: String { tr("profileSetupSubtitle", fallback: "Choose your display name and a unique username. No need to use your last name.") }
+    var profileDisplayNameLabel: String { tr("profileDisplayNameLabel", fallback: "Display Name") }
+    var profileDisplayNameHint: String { tr("profileDisplayNameHint", fallback: "You can change this anytime. Its initials appear on your avatar.") }
+    var profileUsernameLabel: String { tr("profileUsernameLabel", fallback: "Username") }
+    var profileUsernameCooldownNote: String { tr("profileUsernameCooldownNote", fallback: "You can change your username once every 14 days.") }
+    func profileUsernameLockedDays(_ days: Int) -> String {
+        tr("profileUsernameLockedDays", fallback: "You can change your username again in {days} days.", ("days", "\(days)"))
+    }
+    var profileSavedToast: String { tr("profileSavedToast", fallback: "Profile updated.") }
+    var profileSetupContinue: String { tr("profileSetupContinue", fallback: "Continue") }
+    var authUsernameInvalid: String { tr("authUsernameInvalid", fallback: "Username must be at least 3 characters (a-z, 0-9, _ or .).") }
     var proFeatureUnlimitedDeepDive: String {
         tr("proFeatureUnlimitedDeepDive", fallback: "Unlimited Deep Dives with verified primary sources")
     }

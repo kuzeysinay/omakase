@@ -430,3 +430,14 @@
 "introSlide3Pill2" = "Çevrimdışı Kayıt";
 "introSlide3Pill3" = "Letterboxd";
 "settingsTitle" = "Ayarlar";
+"editProfileTitle" = "Profili Düzenle";
+"profileSetupTitle" = "Profilini Oluştur";
+"profileSetupSubtitle" = "İstediğin görünen ismi ve benzersiz kullanıcı adını seç. Soyadını yazmak zorunda değilsin.";
+"profileDisplayNameLabel" = "Görünen İsim";
+"profileDisplayNameHint" = "İstediğin zaman değiştirebilirsin. Baş harflerin avatarında görünür.";
+"profileUsernameLabel" = "Kullanıcı Adı";
+"profileUsernameCooldownNote" = "Kullanıcı adını 14 günde bir değiştirebilirsin.";
+"profileUsernameLockedDays" = "Kullanıcı adını tekrar değiştirmek için {days} gün kaldı.";
+"profileSavedToast" = "Profilin güncellendi.";
+"profileSetupContinue" = "Devam Et";
+"authUsernameInvalid" = "Kullanıcı adı en az 3 karakter olmalı (a-z, 0-9, _ veya .).";

@@ -27,10 +27,13 @@ struct ContentView: View {
         ZStack {
             Group {
                 if !authService.isAuthenticated {
-                    // Step 1: Sign in or Sign up (Email / Google)
+                    // Step 1: Sign in or Sign up (Email / Google / Apple)
                     AuthView(authService: authService)
+                } else if authService.needsProfileSetup {
+                    // Step 1.5: Choose display name & unique @username (Apple / Google / incomplete profiles)
+                    ProfileSetupView(authService: authService)
                 } else if !hasOnboarded {
-                    // Step 2: Onboarding (pick interests)
+                    // Step 2: Onboarding introduction
                     OnboardingView(authService: authService)
                 } else {
                     // Step 3: Main app with tab bar
@@ -38,6 +41,7 @@ struct ContentView: View {
                 }
             }
             .animation(.default, value: authService.isAuthenticated)
+            .animation(.default, value: authService.needsProfileSetup)
             .animation(.default, value: hasOnboarded)
             .environment(\.locale, Locale(identifier: resolvedLanguage.localeIdentifier))
             .environment(\.appLanguage, resolvedLanguage)

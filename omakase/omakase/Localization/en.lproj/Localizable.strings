@@ -430,3 +430,14 @@
 "introSlide3Pill2" = "Offline Bookmarks";
 "introSlide3Pill3" = "Letterboxd";
 "settingsTitle" = "Settings";
+"editProfileTitle" = "Edit Profile";
+"profileSetupTitle" = "Set Up Your Profile";
+"profileSetupSubtitle" = "Choose your display name and a unique username. No need to use your last name.";
+"profileDisplayNameLabel" = "Display Name";
+"profileDisplayNameHint" = "You can change this anytime. Its initials appear on your avatar.";
+"profileUsernameLabel" = "Username";
+"profileUsernameCooldownNote" = "You can change your username once every 14 days.";
+"profileUsernameLockedDays" = "You can change your username again in {days} days.";
+"profileSavedToast" = "Profile updated.";
+"profileSetupContinue" = "Continue";
+"authUsernameInvalid" = "Username must be at least 3 characters (a-z, 0-9, _ or .).";

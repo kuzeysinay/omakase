@@ -344,6 +344,7 @@ struct MyProfileSheet: View {
     @State private var isDeletingAccount = false
     @State private var accountErrorMessage: String?
     @State private var isShowingPaywall = false
+    @State private var isShowingEditProfile = false
     @State private var profileToastMessage: String?
 
     private var l10n: L10n { L10n(lang: appLanguage) }
@@ -377,6 +378,27 @@ struct MyProfileSheet: View {
                                     .multilineTextAlignment(.center)
                             }
                         }
+
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            isShowingEditProfile = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "pencil")
+                                    .font(.caption.weight(.bold))
+                                Text(l10n.editProfileTitle)
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(Color(uiColor: .systemBackground), in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(OmakaseTheme.ink.opacity(0.28), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
 
                         // Stats pill
                         HStack(spacing: 0) {
@@ -582,6 +604,17 @@ struct MyProfileSheet: View {
             OmakasePaywallView(
                 source: .profile,
                 onToast: { profileToastMessage = $0 }
+            )
+            .environment(\.appLanguage, appLanguage)
+        }
+        .sheet(isPresented: $isShowingEditProfile) {
+            EditProfileSheet(
+                authService: authService,
+                currentProfile: profile,
+                onSaved: { updated in
+                    profile = updated
+                    profileToastMessage = l10n.profileSavedToast
+                }
             )
             .environment(\.appLanguage, appLanguage)
         }
@@ -1063,39 +1096,311 @@ struct MyProfileSheet: View {
     }
 }
 
-// MARK: - Editorial Monogram Avatar
+// MARK: - Edit Profile Sheet (Display Name + Unique @username with 14-day cooldown)
+
+struct EditProfileSheet: View {
+    let authService: AuthService
+    let currentProfile: UserProfile?
+    var onSaved: (UserProfile) -> Void
+
+    @Environment(\.appLanguage) private var appLanguage
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var displayName: String = ""
+    @State private var username: String = ""
+    @State private var isCheckingUsername = false
+    @State private var isUsernameAvailable: Bool? = nil
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    @State private var debounceTask: Task<Void, Never>?
+
+    private var l10n: L10n { L10n(lang: appLanguage) }
+
+    private var cleanUsername: String { UserProfile.sanitizeUsername(username) }
+    private var trimmedName: String { displayName.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private var originalUsername: String {
+        UserProfile.sanitizeUsername(currentProfile?.username ?? "")
+    }
+
+    private var usernameChanged: Bool {
+        cleanUsername != originalUsername
+    }
+
+    private var cooldownDaysRemaining: Int {
+        guard let currentProfile, !(currentProfile.username ?? "").isEmpty else { return 0 }
+        return currentProfile.daysUntilNextUsernameChange
+    }
+
+    private var canEditUsername: Bool {
+        cooldownDaysRemaining == 0
+    }
+
+    private var canSave: Bool {
+        guard !isSaving, !trimmedName.isEmpty, cleanUsername.count >= 3 else { return false }
+        if usernameChanged {
+            return canEditUsername && !isCheckingUsername && isUsernameAvailable == true
+        }
+        return true
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 22) {
+                    MonogramAvatarView(
+                        name: trimmedName.isEmpty ? (cleanUsername.isEmpty ? "O" : cleanUsername) : trimmedName,
+                        size: 84
+                    )
+                    .padding(.top, 8)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(l10n.profileDisplayNameLabel)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+
+                        TextField(l10n.authDisplayNamePlaceholder, text: $displayName)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 13)
+                            .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .strokeBorder(OmakaseTheme.ink.opacity(0.25), lineWidth: 1)
+                            )
+
+                        Text(l10n.profileDisplayNameHint)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(l10n.profileUsernameLabel)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 6) {
+                            Text("@")
+                                .font(.body.weight(.bold))
+                                .foregroundStyle(.secondary)
+
+                            TextField(l10n.authUsernamePlaceholder, text: $username)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .disabled(!canEditUsername)
+
+                            if usernameChanged && canEditUsername {
+                                if isCheckingUsername {
+                                    ProgressView().controlSize(.small)
+                                } else if isUsernameAvailable == true {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.primary)
+                                } else if isUsernameAvailable == false {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.red)
+                                }
+                            } else if !canEditUsername {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                        .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(
+                                    (usernameChanged && isUsernameAvailable == false)
+                                        ? Color.red.opacity(0.5)
+                                        : OmakaseTheme.ink.opacity(canEditUsername ? 0.25 : 0.12),
+                                    lineWidth: 1
+                                )
+                        )
+                        .opacity(canEditUsername ? 1.0 : 0.65)
+
+                        if !canEditUsername {
+                            Text(l10n.profileUsernameLockedDays(cooldownDaysRemaining))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else if usernameChanged && isUsernameAvailable == false {
+                            Text(l10n.authUsernameTaken)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.red)
+                        } else {
+                            Text(l10n.profileUsernameCooldownNote)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if let errorMessage {
+                        HStack(spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.red)
+                            Text(errorMessage)
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(Color.red.opacity(0.35), lineWidth: 1)
+                        )
+                    }
+
+                    Button {
+                        Task { await saveProfile() }
+                    } label: {
+                        ZStack {
+                            if isSaving {
+                                ProgressView().tint(OmakaseTheme.chipActiveText)
+                            } else {
+                                Text(l10n.save)
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(
+                            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                .fill(OmakaseTheme.chipActiveFill)
+                        )
+                        .foregroundStyle(OmakaseTheme.chipActiveText)
+                        .opacity(canSave ? 1.0 : 0.4)
+                    }
+                    .buttonStyle(OmakaseChipButtonStyle())
+                    .disabled(!canSave)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 28)
+            }
+            .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+            .navigationTitle(l10n.editProfileTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(l10n.cancel) { dismiss() }
+                }
+            }
+        }
+        .onAppear {
+            displayName = currentProfile?.displayName ?? authService.displayName ?? ""
+            username = currentProfile?.username ?? ""
+        }
+        .onChange(of: username) { _, newValue in
+            let sanitized = UserProfile.sanitizeUsername(newValue)
+            if sanitized != newValue {
+                username = sanitized
+            }
+            checkAvailabilityDebounced(sanitized)
+        }
+    }
+
+    private func checkAvailabilityDebounced(_ candidate: String) {
+        debounceTask?.cancel()
+        errorMessage = nil
+        guard candidate != originalUsername else {
+            isCheckingUsername = false
+            isUsernameAvailable = true
+            return
+        }
+        guard candidate.count >= 3 else {
+            isCheckingUsername = false
+            isUsernameAvailable = nil
+            return
+        }
+        isCheckingUsername = true
+        debounceTask = Task {
+            try? await Task.sleep(for: .milliseconds(320))
+            guard !Task.isCancelled else { return }
+            let available = (try? await FirestoreService.shared.isUsernameAvailable(
+                candidate,
+                excludingUid: authService.uid
+            )) ?? false
+            await MainActor.run {
+                if UserProfile.sanitizeUsername(username) == candidate {
+                    isUsernameAvailable = available
+                    isCheckingUsername = false
+                }
+            }
+        }
+    }
+
+    private func saveProfile() async {
+        guard let uid = authService.uid else { return }
+        isSaving = true
+        errorMessage = nil
+        do {
+            let updated = try await FirestoreService.shared.updateUserProfile(
+                uid: uid,
+                displayName: trimmedName,
+                newUsername: cleanUsername
+            )
+            await authService.markProfileSetupCompleted(displayName: updated.displayName)
+            isSaving = false
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            onSaved(updated)
+            dismiss()
+        } catch let err as ProfileUpdateError {
+            isSaving = false
+            switch err {
+            case .usernameTaken:
+                errorMessage = l10n.authUsernameTaken
+                isUsernameAvailable = false
+            case .cooldownActive(let days):
+                errorMessage = l10n.profileUsernameLockedDays(days)
+            case .invalidUsername:
+                errorMessage = l10n.authUsernameInvalid
+            case .invalidDisplayName:
+                errorMessage = l10n.errorContentBlockedMessage
+            }
+        } catch {
+            isSaving = false
+            errorMessage = OmakaseError.from(error).message(l10n: l10n)
+        }
+    }
+}
+
+// MARK: - Hidden Folks Ink-on-Paper Monogram Avatar
 
 struct MonogramAvatarView: View {
     let name: String
     var size: CGFloat
 
     private var initials: String {
-        let parts = name
+        let cleaned = name
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .split(whereSeparator: \.isWhitespace)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "@"))
+        let parts = cleaned.split(whereSeparator: \.isWhitespace)
         if parts.count >= 2,
            let first = parts.first?.first,
            let last = parts.last?.first {
             return "\(first)\(last)".uppercased()
         }
         if let only = parts.first {
-            return String(only.prefix(1)).uppercased()
+            // Single-word name or handle (e.g. "Kuzey" or email user) -> 2 crisp letters
+            return String(only.prefix(2)).uppercased()
         }
         return "O"
     }
 
     var body: some View {
         Circle()
-            .fill(Color.primary.opacity(0.08))
+            .fill(Color(uiColor: .systemBackground))
             .frame(width: size, height: size)
             .overlay(
                 Circle()
-                    .strokeBorder(Color.primary.opacity(0.14), lineWidth: 1)
+                    .strokeBorder(OmakaseTheme.ink, lineWidth: max(1.5, size * 0.025))
             )
             .overlay(
                 Text(initials)
-                    .font(.system(size: size * 0.38, weight: .semibold, design: .serif))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: size * 0.36, weight: .heavy, design: .rounded))
+                    .tracking(-0.3)
+                    .foregroundStyle(OmakaseTheme.ink)
             )
             .accessibilityHidden(true)
     }

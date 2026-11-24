@@ -14,6 +14,13 @@ rules_version = '2';
 //   - createdAt: timestamp (required)
 //   - searchableName: string (optional, <= 100 chars)
 //   - searchableUsername: string (optional, <= 40 chars)
+//   - usernameUpdatedAt: timestamp/null (optional, enforces 14-day username change cooldown)
+//   - profileSetupCompleted: bool/null (optional)
+//
+// Collection: usernames/{handle}
+//   Document ID: lowercase handle matching ^[a-z0-9_.]{3,20}$
+//   - uid: string (required, matches request.auth.uid)
+//   - createdAt: timestamp (optional)
 //
 // Subcollection: users/{userId}/following/{targetUid}
 //   - followedAt: timestamp
@@ -149,7 +156,9 @@ service cloud.firestore {
           'interests',
           'createdAt',
           'searchableName',
-          'searchableUsername'
+          'searchableUsername',
+          'usernameUpdatedAt',
+          'profileSetupCompleted'
         ]) &&
         !data.keys().hasAny([
           'isPro',
@@ -170,7 +179,37 @@ service cloud.firestore {
         (!('interests' in data) || (data.interests is list && data.interests.size() <= 100)) &&
         (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('searchableName' in data) || (data.searchableName is string && data.searchableName.size() <= 100)) &&
-        (!('searchableUsername' in data) || data.searchableUsername == null || (data.searchableUsername is string && data.searchableUsername.size() <= 40));
+        (!('searchableUsername' in data) || data.searchableUsername == null || (data.searchableUsername is string && data.searchableUsername.size() <= 40)) &&
+        (!('usernameUpdatedAt' in data) || data.usernameUpdatedAt == null || data.usernameUpdatedAt is timestamp) &&
+        (!('profileSetupCompleted' in data) || data.profileSetupCompleted == null || data.profileSetupCompleted is bool);
+    }
+
+    function isValidUsernameUpdate() {
+      let oldUsername = resource.data.get('username', null);
+      let newUsername = request.resource.data.get('username', null);
+      let oldSearchable = resource.data.get('searchableUsername', null);
+      let newSearchable = request.resource.data.get('searchableUsername', null);
+      let oldUpdatedAt = resource.data.get('usernameUpdatedAt', null);
+      let newUpdatedAt = request.resource.data.get('usernameUpdatedAt', null);
+      let usernameChanged = (newUsername != oldUsername) || (newSearchable != oldSearchable);
+      return
+        (!usernameChanged ||
+          oldUsername == null ||
+          oldUpdatedAt == null ||
+          (request.time >= oldUpdatedAt + duration.value(14, 'd') &&
+           newUpdatedAt is timestamp &&
+           newUpdatedAt >= request.time - duration.value(5, 'm') &&
+           newUpdatedAt <= request.time + duration.value(5, 'm'))) &&
+        (oldUpdatedAt == null ||
+          (newUpdatedAt is timestamp && newUpdatedAt >= oldUpdatedAt));
+    }
+
+    function isValidUsernameReservation(data) {
+      return data.keys().hasOnly(['uid', 'createdAt']) &&
+        data.keys().hasAll(['uid']) &&
+        data.uid is string &&
+        data.uid == request.auth.uid &&
+        (!('createdAt' in data) || data.createdAt is timestamp);
     }
 
     function isValidFollowDoc(data) {
@@ -362,6 +401,7 @@ service cloud.firestore {
           'usage'
         ]) &&
         isValidUserProfile(request.resource.data, userId) &&
+        isValidUsernameUpdate() &&
         (!('id' in resource.data) || ('id' in request.resource.data && request.resource.data.id == resource.data.id)) &&
         (!('createdAt' in resource.data) || ('createdAt' in request.resource.data && request.resource.data.createdAt == resource.data.createdAt));
       allow delete: if isOwner(userId);
@@ -405,6 +445,21 @@ service cloud.firestore {
           prefId == 'settings' &&
           isValidNotificationPrefs(request.resource.data);
       }
+    }
+
+    // ===============================================================
+    // 1b. Atomic @username Uniqueness Reservations
+    // ===============================================================
+
+    match /usernames/{handle} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        handle.matches('^[a-z0-9_.]{3,20}$') &&
+        !exists(/databases/$(database)/documents/usernames/$(handle)) &&
+        isValidUsernameReservation(request.resource.data);
+      allow update: if false;
+      allow delete: if isAuthenticated() &&
+        resource.data.uid == request.auth.uid;
     }
 
     // ===============================================================
