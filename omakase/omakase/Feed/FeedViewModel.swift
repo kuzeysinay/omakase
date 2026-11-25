@@ -233,15 +233,12 @@ final class FeedViewModel {
         activeStreamPostID = postID
         activeStreamHasError = false
 
-        var requestBody: [String: Any] = [
+        let requestBody: [String: Any] = [
             "interests": [topic],
             "seen_count": max(posts.count - 1, 0),
             "language": contentLanguage.rawValue,
             "timezone": TimeZone.current.identifier,
         ]
-        if isLetterboxdActive, !letterboxdFilms.isEmpty {
-            requestBody["letterboxd_films"] = letterboxdFilms.map { $0.asDictionary }
-        }
 
         streamPost(postID: postID, requestBody: requestBody, area: area)
     }
@@ -404,6 +401,13 @@ final class FeedViewModel {
 
     // MARK: - Letterboxd
 
+    func clearLetterboxd() {
+        letterboxdUsername = ""
+        letterboxdFilms = []
+        isLetterboxdActive = false
+        letterboxdIssue = nil
+    }
+
     /// Fetch the user's recently watched films from Letterboxd (via the backend).
     /// Results are cached in `letterboxdFilms` and reused across post generations.
     func fetchLetterboxdFilms() {
@@ -458,6 +462,11 @@ final class FeedViewModel {
             return
         }
         if AccessManager.shared.isPlateLimitReached {
+            requestedPaywallSource = .plateLimit
+            return
+        }
+        if AccessManager.shared.isLetterboxdLimitReached {
+            requestedPaywallSource = .letterboxdLimit
             return
         }
 
@@ -483,7 +492,7 @@ final class FeedViewModel {
         activeError = nil
         letterboxdIssue = nil
         activeStreamHasError = false
-        isLetterboxdActive = true
+        isLetterboxdActive = false
         lastRetryAction = .letterboxd(username: username)
 
         let post = Post(tags: ["Film"], categoryId: "film")
@@ -786,6 +795,8 @@ final class FeedViewModel {
             AccessManager.shared.applyQuotaExceeded(kind: kind, resetsAt: resetsAt)
             if kind == .deepDive {
                 requestedPaywallSource = .deepDiveLimit
+            } else if kind == .letterboxd {
+                requestedPaywallSource = .letterboxdLimit
             }
             return
         }
@@ -824,6 +835,7 @@ final class FeedViewModel {
                 post.deepDiveText! += text
             } else {
                 post.text += text
+                reconcileLeadingMetadata(for: post)
             }
         }
     }
@@ -831,6 +843,26 @@ final class FeedViewModel {
     private func markPostComplete(_ postID: UUID) {
         guard let post = posts.first(where: { $0.id == postID }) else { return }
         post.isComplete = true
+        if post.deepDiveText == nil {
+            reconcileLeadingMetadata(for: post)
+        }
+    }
+
+    private func reconcileLeadingMetadata(for post: Post) {
+        let extracted = Post.extractLeadingMetadata(from: post.text, isStreaming: !post.isComplete)
+        if let title = extracted.title,
+           !title.isEmpty,
+           (post.title.isEmpty || post.title == "Diving deeper...") {
+            post.title = title
+        }
+        if let tags = extracted.tags,
+           !tags.isEmpty,
+           (post.tags.isEmpty || post.tags.count <= 1) {
+            post.tags = tags
+        }
+        if post.isComplete, (extracted.title != nil || extracted.tags != nil) {
+            post.text = extracted.body
+        }
     }
 
     /// When a stream is superseded (new request) or cancelled, avoid stuck LIVE / empty "…" cards.

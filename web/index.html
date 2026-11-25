@@ -145,7 +145,7 @@
           </h1>
 
           <p class="hero-subtitle" data-i18n="hero.subtitle">
-            Tek dokunuşta fun-fact. Postu AI anlık üretir, kaynağını da verir. 12 kültür disiplini, okuma süresi molası ve Letterboxd günlüğün — günde 3 ücretsiz lokmayla başla.
+            Evet, chatbot'lar öğretici — ama senin sormanı bekliyor. Omakase'de tek dokunuşla kaynaklı fun-fact oku, son 50 Letterboxd filmini keşfet, kart olarak paylaş.
           </p>
 
           <div class="hero-cta-group">
@@ -466,8 +466,8 @@
       <div class="container">
         <div class="section-header">
           <div class="section-tag" data-i18n="shots.tag">Uygulamadan Kareler</div>
-          <h2 class="section-title" data-i18n="shots.title">Tek dokunuşta fun-fact. Postu AI anlık üretir.</h2>
-          <p class="section-desc" data-i18n="shots.desc">Kaynağını da verir. Kategorini aç, ilgini çeken alt konuya dokun, derine in.</p>
+          <h2 class="section-title" data-i18n="shots.title">Evet, chatbot'lar öğretici — ama senin sormanı bekliyor.</h2>
+          <p class="section-desc" data-i18n="shots.desc">Ne soracağını düşünme. Konunu seç ya da Letterboxd'ını bağla; kaynaklı fun-fact oku ve dışa aktar.</p>
         </div>
         <div class="screenshots-grid" id="screenshots-grid"></div>
       </div>
@@ -750,9 +750,9 @@
                 <line x1="2" y1="12" x2="22" y2="12"></line>
               </svg>
             </div>
-            <h3 class="feature-title" data-i18n="features.f5Title">Letterboxd Günlüğü Bağlantısı</h3>
+            <h3 class="feature-title" data-i18n="features.f5Title">Letterboxd Günlüğü Fun-Fact'leri</h3>
             <p class="feature-desc" data-i18n="features.f5Desc">
-              Şifre vermeden kullanıcı adını yaz, son 50 filmin bağlansın. İzlediğin filmlerin kamera arkası yapım hikayelerini oku.
+              Şifre vermeden kullanıcı adını yaz; izlediğin son 50 filme dair doğrulanmış kamera arkası fun-fact'ler ve yapım hikayeleri oku.
             </p>
           </div>
 
@@ -763,9 +763,9 @@
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
               </svg>
             </div>
-            <h3 class="feature-title" data-i18n="features.f6Title">Kağıt Paylaşım Kartı & Arşiv</h3>
+            <h3 class="feature-title" data-i18n="features.f6Title">Monokrom Dışa Aktar & Arşiv</h3>
             <p class="feature-desc" data-i18n="features.f6Desc">
-              Beğendiğin yazıları 1080×1350 kağıt kart olarak dışa aktar veya 12 kategorilik çevrimdışı arşivine kaydet.
+              Beğendiğin postları Hikaye, Gönderi veya Kare formatında 4 monokrom temayla getomakase.app kartı olarak Instagram, WhatsApp ve X'te paylaş.
             </p>
           </div>
         </div>
@@ -906,7 +906,7 @@
               </svg>
             </button>
             <div class="faq-answer" data-i18n="faq.a4">
-              Film kategorisindeki Letterboxd kartına veya Profil sekmesine sadece kullanıcı adınızı girmeniz yeterlidir; şifreniz asla istenmez. Uygulama herkese açık RSS günlüğünüzden son 50 filminizi okur ve her dokunuşta izlediğiniz bir filmin belgelenmiş kamera arkası prodüksiyon hikayesini üretir.
+              Film kategorisindeki Letterboxd kartına sadece kullanıcı adınızı girmeniz yeterlidir; şifreniz asla istenmez. Uygulama herkese açık RSS günlüğünüzden izlediğiniz son 50 filmi çeker ve bu filmlere dair doğrulanmış kamera arkası fun-fact'ler üretir (Ücretsiz günde 1, Pro'da sınırsız).
             </div>
           </div>
 
@@ -920,7 +920,7 @@
               </svg>
             </button>
             <div class="faq-answer" data-i18n="faq.a5">
-              Beğendiğiniz bir şef yazısını @kullanıcı_adı profilinizle topluluk akışında paylaşabilir, #F5F0E8 kağıt tasarımlı görsel kart olarak dışa aktarabilir veya 12 kategoriye göre otomatik düzenlenen çevrimdışı koleksiyonlarınıza kaydedebilirsiniz.
+              Beğendiğiniz bir şef yazısını @kullanıcı_adı profilinizle topluluk akışında paylaşabilir, Hikaye (9:16), Gönderi (4:5) veya Kare (1:1) formatında monokrom getomakase.app kartı olarak Instagram, WhatsApp ve X'e görsel şeklinde aktarabilir ya da çevrimdışı arşivinize kaydedebilirsiniz.
             </div>
           </div>
 
@@ -1034,9 +1034,12 @@
         </button>
       </div>
       <div class="modal-body share-modal-body">
-        <!-- #F5F0E8 Paper Card matching ShareCardView.swift -->
+        <!-- Monochrome Paper Card matching ShareCardView.swift -->
         <div class="paper-share-card">
-          <div class="paper-card-brand">OMAKASE</div>
+          <div class="paper-card-brand">
+            <span>omakase</span>
+            <span class="paper-card-domain">getomakase.app</span>
+          </div>
           <div class="paper-card-content">
             <h4 class="paper-card-title" id="paper-card-title">Oppenheimer ve IMAX 70mm'nin Görsel Ağırlığı</h4>
             <p class="paper-card-text" id="paper-card-text"></p>

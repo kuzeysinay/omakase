@@ -27,10 +27,13 @@ struct BentoTasteBox: View {
     var cooldownRemaining: Int = 0
     var cooldownTotal: Int = 0
     var hasExistingPosts: Bool = false
+    var outerBottomOverscroll: CGFloat = 0
+    var isOuterScrollDragging: Bool = false
     var onScrollToLastPost: (() -> Void)? = nil
     var onSelectDedicatedTopic: ((String, String?) -> Void)? = nil
     var onPromptLetterboxdUsername: (() -> Void)? = nil
     var onSelectLetterboxdPost: (() -> Void)? = nil
+    var onTriggerChefPick: ((InterestCategory?, String) -> Void)? = nil
     var initialSubtopicCategory: InterestCategory? = nil
     var initialSubtopics: [String] = []
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
@@ -56,10 +59,23 @@ struct BentoTasteBox: View {
     @State private var revealedTilesCount: Int = 0
     @State private var justAddedInterest: String? = nil
 
-    // Nested vertical scroll -> return to previous post handoff
+    // Nested vertical scroll -> return to previous post / bottom overscroll Chef's Pick
     @State private var didScrollDeepInGrid: Bool = false
     @State private var hasTriggeredPullBack: Bool = false
+    @State private var bottomOverscroll: CGFloat = 0
+    @State private var isInnerScrollDragging: Bool = false
+    @State private var isChefPickArmed: Bool = false
+    @State private var hasTriggeredChefPick: Bool = false
     @State private var scrollResetTask: Task<Void, Never>?
+    private let chefPickThreshold: CGFloat = 130
+
+    private var isDraggingScroll: Bool {
+        isInnerScrollDragging || isOuterScrollDragging
+    }
+
+    private var effectiveBottomOverscroll: CGFloat {
+        max(bottomOverscroll, outerBottomOverscroll)
+    }
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -88,11 +104,19 @@ struct BentoTasteBox: View {
                 scrollHintBar
                     .padding(.horizontal, 18)
                     .padding(.top, 6)
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 8)
+            }
+
+            // Thumb-zone frictionless Chef's Pick bar (tap or swipe up)
+            if onTriggerChefPick != nil {
+                chefPickBottomBar
+                    .padding(.horizontal, 18)
+                    .padding(.top, mode == .rootCategories ? 6 : 0)
+                    .padding(.bottom, allInterests.isEmpty ? 16 : 10)
             }
 
             // Bottom controls: Active interests ribbon
-            if !allInterests.isEmpty || isLetterboxdActive {
+            if !allInterests.isEmpty {
                 activeInterestsRibbon
                     .padding(.bottom, 16)
             }
@@ -107,16 +131,25 @@ struct BentoTasteBox: View {
         }
         .task(id: appLanguage) {
             if let initialSubtopicCategory, currentSubInterests.isEmpty {
-                mode = .subInterests(category: initialSubtopicCategory)
-                let topics = initialSubtopics.isEmpty
-                    ? initialSubtopicCategory.fallbackInterests(for: appLanguage)
-                    : initialSubtopics
-                currentSubInterests = topics
-                revealedTilesCount = topics.count
+                var noAnim = Transaction()
+                noAnim.disablesAnimations = true
+                withTransaction(noAnim) {
+                    mode = .subInterests(category: initialSubtopicCategory)
+                    let topics = initialSubtopics.isEmpty
+                        ? initialSubtopicCategory.fallbackInterests(for: appLanguage)
+                        : initialSubtopics
+                    currentSubInterests = topics
+                    revealedTilesCount = topics.count
+                }
             }
             SubTopicDiscoveryStore.shared.prewarmAllCategories(language: appLanguage, userInterests: allInterests)
         }
-        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: mode)
+        .onChange(of: outerBottomOverscroll) { _, _ in
+            evaluateChefPickOverscroll()
+        }
+        .onChange(of: isOuterScrollDragging) { wasDragging, isDragging in
+            handleDragStateTransition(wasDragging: wasDragging, isDragging: isDragging)
+        }
     }
 
     // MARK: - Back to Feed Banner
@@ -338,28 +371,52 @@ struct BentoTasteBox: View {
             GridItem(.flexible(), spacing: spacing),
             GridItem(.flexible(), spacing: spacing)
         ]
+        let builtContent = content()
 
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVGrid(columns: columns, spacing: spacing) {
-                content()
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 4)
-            .background(
-                GeometryReader { proxy in
-                    Color.clear
-                        .preference(
-                            key: BentoGridScrollOffsetKey.self,
-                            value: proxy.frame(in: .named("bentoGridScroll-\(id)")).minY
-                        )
+        GeometryReader { viewportGeo in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 14) {
+                    LazyVGrid(columns: columns, spacing: spacing) {
+                        builtContent
+                    }
+
+                    if onTriggerChefPick != nil {
+                        chefPickOverscrollFooter
+                    }
                 }
-            )
-        }
-        .id(id)
-        .coordinateSpace(name: "bentoGridScroll-\(id)")
-        .scrollBounceBehavior(.basedOnSize)
-        .onPreferenceChange(BentoGridScrollOffsetKey.self) { minY in
-            handleGridScrollOffset(minY)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 4)
+                .background(
+                    GeometryReader { proxy in
+                        let frame = proxy.frame(in: .named("bentoGridScroll-\(id)"))
+                        Color.clear
+                            .preference(
+                                key: BentoGridScrollMetricsKey.self,
+                                value: BentoGridScrollMetrics(
+                                    minY: frame.minY,
+                                    maxY: frame.maxY,
+                                    contentHeight: frame.height
+                                )
+                            )
+                    }
+                )
+            }
+            .id(id)
+            .coordinateSpace(name: "bentoGridScroll-\(id)")
+            .scrollBounceBehavior(.always, axes: .vertical)
+            .onPreferenceChange(BentoGridScrollMetricsKey.self) { metrics in
+                handleGridScrollMetrics(metrics, viewportHeight: viewportGeo.size.height)
+            }
+            .onBottomOverscrollChange { overscroll in
+                guard onTriggerChefPick != nil else { return }
+                bottomOverscroll = overscroll
+                evaluateChefPickOverscroll()
+            }
+            .onScrollDraggingChange { dragging in
+                let wasDragging = isInnerScrollDragging
+                isInnerScrollDragging = dragging
+                handleDragStateTransition(wasDragging: wasDragging, isDragging: dragging)
+            }
         }
     }
 
@@ -378,6 +435,7 @@ struct BentoTasteBox: View {
                 LetterboxdBentoTile(
                     username: storedLetterboxdUsername,
                     isDisabled: isGenerationDisabled,
+                    isLimitReached: AccessManager.shared.isLetterboxdLimitReached,
                     l10n: l10n,
                     onTap: {
                         guard !isGenerationDisabled else { return }
@@ -437,6 +495,54 @@ struct BentoTasteBox: View {
         scrollResetTask = nil
         didScrollDeepInGrid = false
         hasTriggeredPullBack = false
+        bottomOverscroll = 0
+        isInnerScrollDragging = false
+        isChefPickArmed = false
+        hasTriggeredChefPick = false
+    }
+
+    private func handleGridScrollMetrics(_ metrics: BentoGridScrollMetrics, viewportHeight: CGFloat) {
+        handleGridScrollOffset(metrics.minY)
+
+        if #available(iOS 18.0, *) {
+            return
+        }
+        guard viewportHeight > 0, metrics.contentHeight > 0, onTriggerChefPick != nil else { return }
+        let effectiveBottom = min(viewportHeight, metrics.contentHeight)
+        bottomOverscroll = max(0, effectiveBottom - metrics.maxY)
+        evaluateChefPickOverscroll()
+    }
+
+    private func evaluateChefPickOverscroll() {
+        guard onTriggerChefPick != nil else { return }
+        let overscroll = effectiveBottomOverscroll
+
+        if !isDraggingScroll && !isChefPickArmed && overscroll < 8 {
+            hasTriggeredChefPick = false
+        }
+
+        guard isDraggingScroll, !isGenerationDisabled else { return }
+
+        if !isChefPickArmed && overscroll >= chefPickThreshold {
+            isChefPickArmed = true
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        } else if isChefPickArmed && overscroll < chefPickThreshold * 0.75 {
+            isChefPickArmed = false
+        }
+    }
+
+    private func handleDragStateTransition(wasDragging: Bool, isDragging: Bool) {
+        guard onTriggerChefPick != nil else { return }
+        if wasDragging && !isDragging {
+            if isChefPickArmed && !isGenerationDisabled && !hasTriggeredChefPick {
+                hasTriggeredChefPick = true
+                isChefPickArmed = false
+                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                triggerChefPick(source: "overscroll")
+            } else {
+                isChefPickArmed = false
+            }
+        }
     }
 
     private func handleGridScrollOffset(_ minY: CGFloat) {
@@ -467,27 +573,162 @@ struct BentoTasteBox: View {
         }
     }
 
+    private func triggerChefPick(source: String) {
+        guard !isGenerationDisabled else { return }
+        let preferredCategory: InterestCategory?
+        if case .subInterests(let category) = mode {
+            preferredCategory = category
+        } else {
+            preferredCategory = nil
+        }
+        resetGridScrollState()
+        mode = .rootCategories
+        onTriggerChefPick?(preferredCategory, source)
+    }
+
+    private var chefPickPromptText: String {
+        if case .subInterests(let category) = mode {
+            return l10n.chefPickCategoryHint(category.localizedName(for: appLanguage))
+        }
+        return l10n.chefPickTitle
+    }
+
+    private var chefPickOverscrollFooter: some View {
+        let visibleOverscroll = (isDraggingScroll || isChefPickArmed) ? effectiveBottomOverscroll : 0
+        let progress = min(1, max(0, visibleOverscroll / chefPickThreshold))
+        let isReady = isChefPickArmed
+
+        return Button {
+            guard !isGenerationDisabled else { return }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            triggerChefPick(source: "footer_tap")
+        } label: {
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    Image("AppLogo")
+                        .resizable()
+                        .renderingMode(.template)
+                        .scaledToFit()
+                        .frame(width: 16, height: 16)
+                        .foregroundStyle(OmakaseTheme.ink)
+
+                    Text(isReady ? l10n.chefPickReleaseHint : l10n.chefPickPullHint)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isReady ? OmakaseTheme.ink : .secondary)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 4)
+
+                    if isCooldownActive {
+                        HStack(spacing: 4) {
+                            Image(systemName: "hourglass")
+                                .font(.system(size: 11, weight: .bold))
+                            Text(l10n.shortSeconds(cooldownRemaining))
+                                .font(.caption2.weight(.bold).monospacedDigit())
+                        }
+                        .foregroundStyle(.secondary)
+                    } else {
+                        Image(systemName: isReady ? "checkmark.circle.fill" : "arrow.down.circle")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(isReady ? OmakaseTheme.ink : .secondary)
+                    }
+                }
+
+                GeometryReader { barGeo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(OmakaseTheme.ink.opacity(0.08))
+                        Capsule()
+                            .fill(OmakaseTheme.ink)
+                            .frame(width: max(0, barGeo.size.width * progress))
+                    }
+                }
+                .frame(height: 3)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(OmakaseTheme.wash, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        isReady ? OmakaseTheme.ink.opacity(0.45) : OmakaseTheme.stroke,
+                        lineWidth: isReady ? 1.2 : 0.8
+                    )
+            )
+            .opacity(isGenerationDisabled ? 0.5 : 1.0)
+            .animation(.easeOut(duration: 0.14), value: isReady)
+        }
+        .buttonStyle(OmakaseChipButtonStyle())
+        .disabled(isGenerationDisabled)
+        .padding(.top, 2)
+        .padding(.bottom, 8)
+    }
+
+    private var chefPickBottomBar: some View {
+        Button {
+            guard !isGenerationDisabled else { return }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            triggerChefPick(source: "bar_tap")
+        } label: {
+            HStack(spacing: 10) {
+                Image("AppLogo")
+                    .resizable()
+                    .renderingMode(.template)
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(OmakaseTheme.ink)
+
+                Text(chefPickPromptText)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(OmakaseTheme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+
+                Spacer(minLength: 6)
+
+                HStack(spacing: 5) {
+                    if isGenerating {
+                        ProgressView()
+                            .controlSize(.mini)
+                            .tint(OmakaseTheme.chipActiveText)
+                    } else if isCooldownActive {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 11, weight: .bold))
+                        Text(l10n.shortSeconds(cooldownRemaining))
+                            .font(.caption.weight(.bold).monospacedDigit())
+                    } else {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 11, weight: .bold))
+                        Text(l10n.chefPickButtonCTA)
+                            .font(.caption.weight(.bold))
+                            .lineLimit(1)
+                    }
+                }
+                .foregroundStyle(OmakaseTheme.chipActiveText)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(OmakaseTheme.chipActiveFill, in: Capsule())
+                .fixedSize(horizontal: true, vertical: false)
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 8)
+            .padding(.vertical, 7)
+            .background(OmakaseTheme.wash, in: Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(OmakaseTheme.stroke, lineWidth: 0.9)
+            )
+            .opacity(isGenerationDisabled ? 0.55 : 1.0)
+        }
+        .buttonStyle(OmakaseChipButtonStyle())
+        .disabled(isGenerationDisabled)
+    }
+
     // MARK: - Active Interests Ribbon (Large Tappable Pills)
 
     private var activeInterestsRibbon: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                // Letterboxd pill if active
-                if isLetterboxdActive {
-                    HStack(spacing: 6) {
-                        Image(systemName: "film.fill")
-                            .font(.caption.weight(.semibold))
-                        Text("Letterboxd")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .frame(minHeight: 40)
-                    .background(Color.green.opacity(0.16), in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.green.opacity(0.45), lineWidth: 1))
-                    .foregroundStyle(Color.green)
-                }
-
                 // Active User Interests
                 ForEach(allInterests, id: \.self) { interest in
                     let isActive = activeInterests.contains(interest)
@@ -995,6 +1236,7 @@ private struct BentoRefreshButtonStyle: ButtonStyle {
 private struct LetterboxdBentoTile: View {
     let username: String
     let isDisabled: Bool
+    let isLimitReached: Bool
     let l10n: L10n
     let onTap: () -> Void
     let onEditUsername: () -> Void
@@ -1039,9 +1281,26 @@ private struct LetterboxdBentoTile: View {
 
                     Spacer(minLength: 2)
 
-                    Image(systemName: isConnected ? "sparkles" : "plus.circle.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0x00E054).opacity(0.9))
+                    if isConnected && isLimitReached {
+                        HStack(spacing: 3) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 8.5, weight: .bold))
+                            Text("PRO")
+                                .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        }
+                        .foregroundStyle(Color(hex: 0x00E054))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: 0x00E054).opacity(0.16), in: Capsule())
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color(hex: 0x00E054).opacity(0.45), lineWidth: 0.8)
+                        )
+                    } else {
+                        Image(systemName: isConnected ? "sparkles" : "plus.circle.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color(hex: 0x00E054).opacity(0.9))
+                    }
                 }
 
                 Spacer(minLength: 4)
@@ -1119,9 +1378,46 @@ private struct LetterboxdBentoTile: View {
     }
 }
 
-private struct BentoGridScrollOffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+private struct BentoGridScrollMetrics: Equatable {
+    let minY: CGFloat
+    let maxY: CGFloat
+    let contentHeight: CGFloat
+}
+
+private struct BentoGridScrollMetricsKey: PreferenceKey {
+    static var defaultValue = BentoGridScrollMetrics(minY: 0, maxY: 0, contentHeight: 0)
+    static func reduce(value: inout BentoGridScrollMetrics, nextValue: () -> BentoGridScrollMetrics) {
         value = nextValue()
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func onBottomOverscrollChange(_ action: @escaping (CGFloat) -> Void) -> some View {
+        if #available(iOS 18.0, *) {
+            self.onScrollGeometryChange(for: CGFloat.self) { geo in
+                guard geo.containerSize.height > 0, geo.contentSize.height > 0 else { return 0 }
+                let maxOffset = max(
+                    -geo.contentInsets.top,
+                    geo.contentSize.height - geo.containerSize.height + geo.contentInsets.bottom
+                )
+                return max(0, geo.contentOffset.y - maxOffset)
+            } action: { _, overscroll in
+                action(overscroll)
+            }
+        } else {
+            self
+        }
+    }
+
+    @ViewBuilder
+    func onScrollDraggingChange(_ action: @escaping (Bool) -> Void) -> some View {
+        if #available(iOS 18.0, *) {
+            self.onScrollPhaseChange { _, newPhase in
+                action(newPhase == .interacting)
+            }
+        } else {
+            self
+        }
     }
 }

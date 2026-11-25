@@ -602,14 +602,20 @@ struct L10n {
     }
     var proEyebrowPlateLimit: String { tr("proEyebrowPlateLimit", fallback: "DAILY 3/3 POSTS REACHED") }
     var proEyebrowDeepDiveLimit: String { tr("proEyebrowDeepDiveLimit", fallback: "DEEP DIVE LIMIT") }
+    var proEyebrowLetterboxdLimit: String { tr("proEyebrowLetterboxdLimit", fallback: "DAILY LETTERBOXD LIMIT") }
     var proHeadlinePlateLimit: String { tr("proHeadlinePlateLimit", fallback: "Keep your reading flow.") }
     var proHeadlineDeepDiveLimit: String { tr("proHeadlineDeepDiveLimit", fallback: "Go deeper on every post.") }
+    var proHeadlineLetterboxdLimit: String {
+        tr("proHeadlineLetterboxdLimit", fallback: "Unlock unlimited Letterboxd posts.")
+    }
     var proCompareFreeHeader: String { tr("proCompareFreeHeader", fallback: "Free") }
     var proCompareProHeader: String { tr("proCompareProHeader", fallback: "Pro") }
     var proComparePostsLabel: String { tr("proComparePostsLabel", fallback: "Daily posts") }
     var proComparePostsFree: String { tr("proComparePostsFree", fallback: "3 / day") }
     var proCompareDeepDiveLabel: String { tr("proCompareDeepDiveLabel", fallback: "Deep Dive & sources") }
     var proCompareDeepDiveFree: String { tr("proCompareDeepDiveFree", fallback: "1 / day") }
+    var proCompareLetterboxdLabel: String { tr("proCompareLetterboxdLabel", fallback: "Letterboxd posts") }
+    var proCompareLetterboxdFree: String { tr("proCompareLetterboxdFree", fallback: "1 / day") }
     var proCompareSubtopicsLabel: String { tr("proCompareSubtopicsLabel", fallback: "Subtopics & Letterboxd") }
     var proCompareSubtopicsFree: String { tr("proCompareSubtopicsFree", fallback: "Limited") }
     var proCompareUnlimited: String { tr("proCompareUnlimited", fallback: "Unlimited") }
@@ -1092,4 +1098,49 @@ struct L10n {
     var feedbackSubmitButton: String { tr("feedbackSubmitButton", fallback: "Send") }
     var feedbackSending: String { tr("feedbackSending", fallback: "Sending…") }
     var feedbackSentToast: String { tr("feedbackSentToast", fallback: "Thanks! Your feedback reached the chef.") }
+
+    // MARK: - Export Studio
+
+    var exportStudioTitle: String { tr("exportStudioTitle", fallback: "Export Post") }
+    var exportRatioStory: String { tr("exportRatioStory", fallback: "Story") }
+    var exportRatioPost: String { tr("exportRatioPost", fallback: "Post") }
+    var exportRatioSquare: String { tr("exportRatioSquare", fallback: "Square") }
+    var exportThemePaper: String { tr("exportThemePaper", fallback: "Paper") }
+    var exportThemeInk: String { tr("exportThemeInk", fallback: "Ink") }
+    var exportThemeEditorial: String { tr("exportThemeEditorial", fallback: "Editorial") }
+    var exportThemeMidnight: String { tr("exportThemeMidnight", fallback: "Midnight") }
+    var exportToggleSource: String { tr("exportToggleSource", fallback: "Source") }
+    var exportToggleTags: String { tr("exportToggleTags", fallback: "Tags") }
+    var exportToggleMotif: String { tr("exportToggleMotif", fallback: "Motif") }
+    var exportActionInstagram: String { tr("exportActionInstagram", fallback: "Instagram") }
+    var exportActionWhatsApp: String { tr("exportActionWhatsApp", fallback: "WhatsApp") }
+    var exportActionX: String { tr("exportActionX", fallback: "X") }
+    var exportActionSave: String { tr("exportActionSave", fallback: "Save") }
+    var exportActionCopy: String { tr("exportActionCopy", fallback: "Copy") }
+    var exportActionMore: String { tr("exportActionMore", fallback: "More") }
+    var exportCopyLink: String { tr("exportCopyLink", fallback: "Copy") }
+    var exportCopied: String { tr("exportCopied", fallback: "Copied") }
+    var exportToastLinkCopied: String { tr("exportToastLinkCopied", fallback: "Link copied: getomakase.app") }
+    var exportToastImageCopied: String { tr("exportToastImageCopied", fallback: "Card image copied") }
+    var exportToastSavedToPhotos: String { tr("exportToastSavedToPhotos", fallback: "Saved to Photos") }
+    var exportToastPhotoPermissionDenied: String {
+        tr("exportToastPhotoPermissionDenied", fallback: "Allow Photos access in Settings to save")
+    }
+    var exportToastImageCopiedForApp: String {
+        tr("exportToastImageCopiedForApp", fallback: "Card copied — paste it in your post!")
+    }
+
+    // MARK: - Chef's Pick (Frictionless Feed)
+
+    var chefPickTitle: String { tr("chefPickTitle", fallback: "Leave it to the Chef") }
+    var chefPickPullHint: String {
+        tr("chefPickPullHint", fallback: "Keep scrolling down for a surprise post")
+    }
+    var chefPickReleaseHint: String {
+        tr("chefPickReleaseHint", fallback: "Serving a surprise post…")
+    }
+    func chefPickCategoryHint(_ category: String) -> String {
+        tr("chefPickCategoryHint", fallback: "Surprise me in {category}", ("category", category))
+    }
+    var chefPickButtonCTA: String { tr("chefPickButtonCTA", fallback: "Surprise") }
 }

@@ -41,8 +41,12 @@ async def feed_stream(
 
     uid = extract_uid(caller_id)
     tz = req.timezone or x_omakase_timezone
+    is_letterboxd = bool(req.letterboxd_films)
     await assert_quota_available(uid, "plate", tz, device_id=x_omakase_device_id)
+    if is_letterboxd:
+        await assert_quota_available(uid, "letterboxd", tz, device_id=x_omakase_device_id)
 
+    usage_kind = "letterboxd_plate" if is_letterboxd else "plate"
     headers = {
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
@@ -54,7 +58,7 @@ async def feed_stream(
             req.seen_count,
             req.language,
             letterboxd_films=req.letterboxd_films,
-            on_complete=(lambda: record_quota_usage(uid, "plate", tz, device_id=x_omakase_device_id)) if uid else None,
+            on_complete=(lambda: record_quota_usage(uid, usage_kind, tz, device_id=x_omakase_device_id)) if uid else None,
             is_disconnected=request.is_disconnected,
             uid=uid,
         ),

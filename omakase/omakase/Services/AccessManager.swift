@@ -24,6 +24,9 @@ struct AccessSnapshot: Codable, Equatable, Sendable {
     var platesUsed: Int
     var platesLimit: Int
     var platesRemaining: Int
+    var letterboxdPlatesUsed: Int
+    var letterboxdPlatesLimit: Int
+    var letterboxdPlatesRemaining: Int
     var deepDivesUsed: Int
     var deepDivesLimit: Int
     var deepDivesRemaining: Int
@@ -45,6 +48,9 @@ struct AccessSnapshot: Codable, Equatable, Sendable {
         case platesUsed = "plates_used"
         case platesLimit = "plates_limit"
         case platesRemaining = "plates_remaining"
+        case letterboxdPlatesUsed = "letterboxd_plates_used"
+        case letterboxdPlatesLimit = "letterboxd_plates_limit"
+        case letterboxdPlatesRemaining = "letterboxd_plates_remaining"
         case deepDivesUsed = "deep_dives_used"
         case deepDivesLimit = "deep_dives_limit"
         case deepDivesRemaining = "deep_dives_remaining"
@@ -67,6 +73,9 @@ struct AccessSnapshot: Codable, Equatable, Sendable {
         platesUsed: 0,
         platesLimit: 3,
         platesRemaining: 3,
+        letterboxdPlatesUsed: 0,
+        letterboxdPlatesLimit: 1,
+        letterboxdPlatesRemaining: 1,
         deepDivesUsed: 0,
         deepDivesLimit: 1,
         deepDivesRemaining: 1,
@@ -76,6 +85,82 @@ struct AccessSnapshot: Codable, Equatable, Sendable {
         shareBonusClaimed: false,
         canClaimShareBonus: true
     )
+
+    init(
+        isPro: Bool,
+        status: String,
+        productId: String?,
+        expiresAt: String?,
+        willRenew: Bool,
+        dayKey: String,
+        timezone: String,
+        resetsAt: String,
+        platesUsed: Int,
+        platesLimit: Int,
+        platesRemaining: Int,
+        letterboxdPlatesUsed: Int,
+        letterboxdPlatesLimit: Int,
+        letterboxdPlatesRemaining: Int,
+        deepDivesUsed: Int,
+        deepDivesLimit: Int,
+        deepDivesRemaining: Int,
+        suggestionsUsed: Int,
+        suggestionsLimit: Int,
+        suggestionsRemaining: Int,
+        shareBonusClaimed: Bool,
+        canClaimShareBonus: Bool
+    ) {
+        self.isPro = isPro
+        self.status = status
+        self.productId = productId
+        self.expiresAt = expiresAt
+        self.willRenew = willRenew
+        self.dayKey = dayKey
+        self.timezone = timezone
+        self.resetsAt = resetsAt
+        self.platesUsed = platesUsed
+        self.platesLimit = platesLimit
+        self.platesRemaining = platesRemaining
+        self.letterboxdPlatesUsed = letterboxdPlatesUsed
+        self.letterboxdPlatesLimit = letterboxdPlatesLimit
+        self.letterboxdPlatesRemaining = letterboxdPlatesRemaining
+        self.deepDivesUsed = deepDivesUsed
+        self.deepDivesLimit = deepDivesLimit
+        self.deepDivesRemaining = deepDivesRemaining
+        self.suggestionsUsed = suggestionsUsed
+        self.suggestionsLimit = suggestionsLimit
+        self.suggestionsRemaining = suggestionsRemaining
+        self.shareBonusClaimed = shareBonusClaimed
+        self.canClaimShareBonus = canClaimShareBonus
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedIsPro = try c.decodeIfPresent(Bool.self, forKey: .isPro) ?? false
+        isPro = decodedIsPro
+        status = try c.decodeIfPresent(String.self, forKey: .status) ?? (decodedIsPro ? "active" : "free")
+        productId = try c.decodeIfPresent(String.self, forKey: .productId)
+        expiresAt = try c.decodeIfPresent(String.self, forKey: .expiresAt)
+        willRenew = try c.decodeIfPresent(Bool.self, forKey: .willRenew) ?? false
+        dayKey = try c.decodeIfPresent(String.self, forKey: .dayKey) ?? ""
+        timezone = try c.decodeIfPresent(String.self, forKey: .timezone) ?? TimeZone.current.identifier
+        resetsAt = try c.decodeIfPresent(String.self, forKey: .resetsAt) ?? ""
+        platesUsed = try c.decodeIfPresent(Int.self, forKey: .platesUsed) ?? 0
+        platesLimit = try c.decodeIfPresent(Int.self, forKey: .platesLimit) ?? (decodedIsPro ? 100 : 3)
+        platesRemaining = try c.decodeIfPresent(Int.self, forKey: .platesRemaining) ?? max(0, platesLimit - platesUsed)
+        let defaultLB = decodedIsPro ? 100 : 1
+        letterboxdPlatesUsed = try c.decodeIfPresent(Int.self, forKey: .letterboxdPlatesUsed) ?? 0
+        letterboxdPlatesLimit = try c.decodeIfPresent(Int.self, forKey: .letterboxdPlatesLimit) ?? defaultLB
+        letterboxdPlatesRemaining = try c.decodeIfPresent(Int.self, forKey: .letterboxdPlatesRemaining) ?? max(0, letterboxdPlatesLimit - letterboxdPlatesUsed)
+        deepDivesUsed = try c.decodeIfPresent(Int.self, forKey: .deepDivesUsed) ?? 0
+        deepDivesLimit = try c.decodeIfPresent(Int.self, forKey: .deepDivesLimit) ?? (decodedIsPro ? 40 : 1)
+        deepDivesRemaining = try c.decodeIfPresent(Int.self, forKey: .deepDivesRemaining) ?? max(0, deepDivesLimit - deepDivesUsed)
+        suggestionsUsed = try c.decodeIfPresent(Int.self, forKey: .suggestionsUsed) ?? 0
+        suggestionsLimit = try c.decodeIfPresent(Int.self, forKey: .suggestionsLimit) ?? (decodedIsPro ? 100 : 10)
+        suggestionsRemaining = try c.decodeIfPresent(Int.self, forKey: .suggestionsRemaining) ?? max(0, suggestionsLimit - suggestionsUsed)
+        shareBonusClaimed = try c.decodeIfPresent(Bool.self, forKey: .shareBonusClaimed) ?? false
+        canClaimShareBonus = try c.decodeIfPresent(Bool.self, forKey: .canClaimShareBonus) ?? !decodedIsPro
+    }
 
     var resetsAtDate: Date? {
         Self.parseISO8601(resetsAt)
@@ -145,6 +230,10 @@ final class AccessManager {
 
     var isPlateLimitReached: Bool {
         !isPro && snapshot.platesRemaining <= 0
+    }
+
+    var isLetterboxdLimitReached: Bool {
+        !isPro && snapshot.letterboxdPlatesRemaining <= 0
     }
 
     var isDeepDiveLimitReached: Bool {
@@ -482,6 +571,9 @@ final class AccessManager {
         case .plate:
             next.platesRemaining = 0
             next.platesUsed = max(next.platesUsed, next.platesLimit)
+        case .letterboxd:
+            next.letterboxdPlatesRemaining = 0
+            next.letterboxdPlatesUsed = max(next.letterboxdPlatesUsed, next.letterboxdPlatesLimit)
         case .deepDive:
             next.deepDivesRemaining = 0
             next.deepDivesUsed = max(next.deepDivesUsed, next.deepDivesLimit)

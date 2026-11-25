@@ -16,14 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
     tr: {
       "nav.screenshots": "Ekran Görüntüleri",
       "shots.tag": "Uygulamadan Kareler",
-      "shots.title": "Tek dokunuşta fun-fact. Postu ai anlık üretir.",
-      "shots.desc": "Kaynağını da verir. Kategorini aç, ilgini çeken alt konuya dokun, derine in.",
+      "shots.title": "Evet, chatbot'lar öğretici — ama senin sormanı bekliyor.",
+      "shots.desc": "Tek dokunuşta fun-fact, kaynağıyla birlikte. Kategorini aç, alt konuya dokun, derine in.",
       "shots.l1": "Algoritmayı değil, zihnini besle",
       "shots.l2": "Fun-fact + kaynak",
-      "shots.l3": "Alt konular",
+      "shots.l3": "Chatbot beklemez, Omakase beklemez",
       "shots.l4": "Derin İnceleme",
       "shots.l5": "Okuma molası",
       "shots.l6": "Topluluk",
+      "shots.l7": "Son 50 filmin fun-fact'leri",
+      "shots.l8": "Kart olarak dışa aktar",
       "device.feedSource": "Kaynak: Elisabeth Svärdström, Fornvännen — İsveç Eski Eserler Dergisi",
       "device.tag1": "Tarih",
       "device.tag2": "Vikingler",
@@ -42,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       "hero.badge": "iOS 17+ • 7 Dil • Kişisel Kültür Akışı",
       "hero.title": "Algoritmayı değil, zihnini besle.",
-      "hero.subtitle": "Tek dokunuşta fun-fact. Postu ai anlık üretir, kaynağını da verir. 12 kültür disiplini, okuma süresi molası ve Letterboxd günlüğün — günde 3 ücretsiz lokmayla başla.",
+      "hero.subtitle": "Evet, chatbot'lar öğretici — ama senin sormanı bekliyor. Omakase'de tek dokunuşla kaynaklı fun-fact oku, son 50 Letterboxd filmini keşfet, kart olarak paylaş.",
       "hero.appStoreLabel": "App Store",
       "hero.downloadCta": "iOS için İndir",
       "hero.tryDemo": "Canlı Tadımı Dene ↓",
@@ -123,10 +125,10 @@ document.addEventListener('DOMContentLoaded', () => {
       "features.f3Desc": "Postu AI anlık üretir ve birincil kaynağını (Kaynak:) verir. İlgini çektiyse tek dokunuşla derine inebilirsin.",
       "features.f4Title": "Kültürel lokmaları paylaş",
       "features.f4Desc": "Tattığın kültürel lokmayı arkadaşlarınla paylaş. Başkalarının denk geldiği lokmaları da tat: Keşfet, takip et, beğen, yorumla.",
-      "features.f5Title": "Letterboxd Günlüğü Bağlantısı",
-      "features.f5Desc": "Şifre vermeden kullanıcı adını yaz, son 50 filmin bağlansın. İzlediğin filmlerin kamera arkası yapım hikayelerini oku.",
-      "features.f6Title": "Kağıt Paylaşım Kartı & Arşiv",
-      "features.f6Desc": "Beğendiğin yazıları 1080×1350 kağıt kart olarak dışa aktar veya 12 kategorilik çevrimdışı arşivine kaydet.",
+      "features.f5Title": "Letterboxd'ı bağla",
+      "features.f5Desc": "Son 50 filmine dair fun-fact'ler oku. Şifre gerekmez.",
+      "features.f6Title": "Kart olarak dışa aktar",
+      "features.f6Desc": "Beğendiğin postu monokrom kart yap; Instagram, WhatsApp ve X'e hazır.",
 
       "phil.tag": "Felsefemiz",
       "phil.title": "Şefe Güvenmek",
@@ -151,9 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
       "faq.q3": "İçeriklerin doğruluğu nasıl korunuyor?",
       "faq.a3": "Arka uç mimarimiz, katı doğruluk kuralları ve çok katmanlı moderasyon filtreleriyle kurgusal uydurmaları engeller; yüzeysel özetler yerine belgelenmiş tarihsel kayıtlara, bilimsel çalışmalara ve birincil kaynaklara odaklanır.",
       "faq.q4": "Letterboxd entegrasyonu nasıl çalışır?",
-      "faq.a4": "Film kategorisindeki Letterboxd kartına veya Profil sekmesine sadece kullanıcı adınızı girmeniz yeterlidir; şifreniz asla istenmez. Uygulama herkese açık RSS günlüğünüzden son 50 filminizi okur ve her dokunuşta izlediğiniz bir filmin belgelenmiş kamera arkası prodüksiyon hikayesini üretir.",
+      "faq.a4": "Film kategorisindeki Letterboxd kartına sadece kullanıcı adınızı girmeniz yeterlidir; şifreniz asla istenmez. Uygulama herkese açık RSS günlüğünüzden izlediğiniz son 50 filmi çeker ve bu filmlere dair doğrulanmış kamera arkası fun-fact'ler üretir (Ücretsiz günde 1, Pro'da sınırsız).",
       "faq.q5": "Topluluk ve koleksiyon özelliklerinde neler var?",
-      "faq.a5": "Beğendiğiniz bir şef yazısını @kullanıcı_adı profilinizle topluluk akışında paylaşabilir, #F5F0E8 kağıt tasarımlı görsel kart olarak dışa aktarabilir veya 12 kategoriye göre otomatik düzenlenen çevrimdışı koleksiyonlarınıza kaydedebilirsiniz.",
+      "faq.a5": "Beğendiğiniz bir şef yazısını @kullanıcı_adı profilinizle topluluk akışında paylaşabilir, Hikaye (9:16), Gönderi (4:5) veya Kare (1:1) formatında monokrom getomakase.app kartı olarak Instagram, WhatsApp ve X'e görsel şeklinde aktarabilir ya da çevrimdışı arşivinize kaydedebilirsiniz.",
       "faq.q6": "Veri gizliliği ve hesap güvenliği nasıl sağlanıyor?",
       "faq.a6": "Omakase reklam göstermez, uygulamalar arası takip (IDFA) yapmaz ve verilerinizi üçüncü taraflara satmaz. Sign in with Apple desteği sunar ve dilediğiniz an Profil sekmesinden hesabınızı ve tüm verilerinizi tek dokunuşla kalıcı olarak silmenize olanak tanır.",
 
@@ -170,14 +172,16 @@ document.addEventListener('DOMContentLoaded', () => {
     en: {
       "nav.screenshots": "Screenshots",
       "shots.tag": "From the App",
-      "shots.title": "Fun-facts in one tap. AI crafts each post live.",
-      "shots.desc": "Always with its source. Open any discipline, tap the subtopic that sparks you, dive deeper.",
+      "shots.title": "Yes, AI chatbots teach well — but they wait for you to ask.",
+      "shots.desc": "Fun-facts in one tap, always with their source. Open a discipline, tap a subtopic, dive deeper.",
       "shots.l1": "Feed your mind, not the algorithm",
       "shots.l2": "Fun-fact + source",
-      "shots.l3": "Subtopics",
+      "shots.l3": "Chatbots wait. Omakase does not.",
       "shots.l4": "Deep Dive",
       "shots.l5": "Reading pause",
       "shots.l6": "Community",
+      "shots.l7": "Fun-facts from your last 50 films",
+      "shots.l8": "Export as a monochrome card",
       "device.feedSource": "Source: L. W. B. Brockliss, The University of Oxford: A History",
       "device.tag1": "History",
       "device.tag2": "Timelines",
@@ -196,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       "hero.badge": "iOS 17+ • 7 Languages • Personal Culture Feed",
       "hero.title": "Feed your mind, not the algorithm.",
-      "hero.subtitle": "Fun-facts in one tap. AI crafts each post live, always with its source. 12 disciplines, a reading pause and your Letterboxd diary — start with 3 free bites a day.",
+      "hero.subtitle": "Yes, AI chatbots teach well — but they wait for you to ask. Omakase brings sourced fun-facts in one tap, stories from your last 50 Letterboxd films, and sleek export cards.",
       "hero.appStoreLabel": "App Store",
       "hero.downloadCta": "Download for iOS",
       "hero.tryDemo": "Try Live Tasting ↓",
@@ -277,10 +281,10 @@ document.addEventListener('DOMContentLoaded', () => {
       "features.f3Desc": "AI crafts each post live and always cites its primary source. Caught your interest? Dive deeper in one tap.",
       "features.f4Title": "Share the cultural bites",
       "features.f4Desc": "Share the cultural bites you loved with friends. Taste what others discovered too: Discover, follow, like, comment.",
-      "features.f5Title": "Letterboxd Diary Synthesis",
-      "features.f5Desc": "Enter your handle with zero passwords to pull your last 50 watched films and read verified behind-the-scenes stories.",
-      "features.f6Title": "Paper Share Card & Offline Archive",
-      "features.f6Desc": "Export stories as crisp 1080×1350 paper cards or save them into 12 offline category collections.",
+      "features.f5Title": "Connect your Letterboxd",
+      "features.f5Desc": "Read fun-facts from your last 50 watched films. No password needed.",
+      "features.f6Title": "Export as a monochrome card",
+      "features.f6Desc": "Turn any post into a monochrome card, ready for Instagram, WhatsApp & X.",
 
       "phil.tag": "Our Philosophy",
       "phil.title": "Trust the Chef",
@@ -305,9 +309,9 @@ document.addEventListener('DOMContentLoaded', () => {
       "faq.q3": "How is factual accuracy maintained?",
       "faq.a3": "Our backend uses strict factual grounding rules and a multi-layer moderation pipeline to prevent fabrication, prioritizing documented historical records, peer-reviewed research, and primary sources.",
       "faq.q4": "How does the Letterboxd integration work?",
-      "faq.a4": "Simply enter your Letterboxd handle in the Film Bento card or Profile tab—no password required. Omakase reads your public RSS diary of 50 recent films and generates verified behind-the-scenes production trivia from a randomly locked film.",
+      "faq.a4": "Simply enter your Letterboxd handle in the Film Bento card—no password required. Omakase reads your public RSS diary of 50 recent films and serves verified behind-the-scenes fun-facts (1/day free, unlimited with Pro).",
       "faq.q5": "What can I do with Community & Collections?",
-      "faq.a5": "Share favorite stories to the Community timeline under your @username handle, export 1080×1350 #F5F0E8 paper cards, or bookmark posts into 12 automatically categorized offline collections.",
+      "faq.a5": "Share favorite stories to the Community timeline under your @username handle, export monochrome getomakase.app cards in Story (9:16), Post (4:5), or Square (1:1) formats to Instagram, WhatsApp & X, or bookmark posts into 12 offline collections.",
       "faq.q6": "How are privacy and account security handled?",
       "faq.a6": "Omakase displays zero ads, performs zero cross-app tracking (IDFA), and never sells your data. It supports Sign in with Apple and includes one-tap permanent Account Deletion directly in the Profile tab.",
 
@@ -1159,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function openLightbox(i) {
-    lightboxIndex = (i + 6) % 6;
+    lightboxIndex = (i + 8) % 8;
     lightboxImg.src = shotPath(lightboxIndex);
     lightboxImg.alt = translations[currentLang][shotLabels[lightboxIndex]];
     lightbox.classList.add('open');

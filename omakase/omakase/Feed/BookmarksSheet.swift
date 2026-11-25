@@ -356,6 +356,7 @@ struct BookmarkDetailView: View {
     private var l10n: L10n { L10n(lang: appLanguage) }
 
     @State private var showDeepDiveSheet = false
+    @State private var showExportSheet = false
     @State private var isShared = false
     @State private var isSharePending = false
     @State private var toastMessage: String?
@@ -468,9 +469,10 @@ struct BookmarkDetailView: View {
                     .buttonStyle(.borderless)
                     .disabled(isSharePending)
 
-                    // iOS Share Sheet
+                    // Export Studio
                     Button {
-                        ShareService.presentShareSheet(post: post, language: appLanguage)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showExportSheet = true
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "square.and.arrow.up")
@@ -509,6 +511,10 @@ struct BookmarkDetailView: View {
                 title: l10n.deepDiveTitle
             )
             .environment(\.appLanguage, appLanguage)
+        }
+        .sheet(isPresented: $showExportSheet) {
+            ExportPostSheet(post: post)
+                .environment(\.appLanguage, appLanguage)
         }
         .toast(message: $toastMessage)
         .task {

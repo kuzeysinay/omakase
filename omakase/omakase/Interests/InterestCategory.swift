@@ -480,6 +480,64 @@ final class SubTopicDiscoveryStore {
         return selected
     }
 
+    /// Picks a single fresh, unseen sub-topic across a diverse category (or within `preferredCategory`),
+    /// preferring pre-warmed AI sub-topics and falling back to the curated local pool.
+    func pickSurpriseTopic(
+        language: AppLanguage,
+        preferredCategory: InterestCategory? = nil,
+        recentCategoryIds: [String] = [],
+        excludedTopics: [String] = []
+    ) -> (topic: String, category: InterestCategory) {
+        let category: InterestCategory
+        if let preferredCategory {
+            category = preferredCategory
+        } else {
+            let recentSet = Set(recentCategoryIds.suffix(3).map { $0.lowercased() })
+            let diversePool = InterestCategory.presets.filter { !recentSet.contains($0.id.lowercased()) }
+            category = (diversePool.isEmpty ? InterestCategory.presets : diversePool).randomElement()
+                ?? InterestCategory.presets[0]
+        }
+
+        let key = storageKey(categoryId: category.id, language: language)
+        let hardExclude = Set(
+            excludedTopics
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+        )
+        let seenSet = Set((seenByKey[key] ?? []).map { $0.lowercased() })
+
+        if var batch = prefetchedByKey[key], !batch.isEmpty {
+            if let matchIdx = batch.firstIndex(where: { item in
+                let lower = item.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return !lower.isEmpty && !hardExclude.contains(lower) && !seenSet.contains(lower)
+            }) {
+                let picked = batch.remove(at: matchIdx)
+                if batch.isEmpty {
+                    prefetchedByKey.removeValue(forKey: key)
+                } else {
+                    prefetchedByKey[key] = batch
+                }
+                savePrefetchedToDisk()
+                recordSeen([picked], for: category.id, language: language)
+                if batch.count < 4 {
+                    replenishInBackground(for: category, language: language, additionalExcludes: excludedTopics + [picked])
+                }
+                return (picked, category)
+            }
+        }
+
+        let drawn = drawUnseenCuratedBatch(
+            for: category,
+            language: language,
+            additionalExcludes: excludedTopics,
+            count: 1
+        )
+        let fallbackTopic = drawn.first
+            ?? category.fallbackInterests(for: language).randomElement()
+            ?? category.localizedName(for: language)
+        return (fallbackTopic, category)
+    }
+
     /// Picks `count` unseen topics across diverse categories for daily notifications,
     /// avoiding previously seen sub-topics, excluded titles, and consecutive same-category repeats.
     func pickUnseenNotificationCandidates(

@@ -156,6 +156,57 @@ class BillingAndQuotaTests(unittest.TestCase):
         self.assertIn("resets_at", body)
         self.assertEqual(body["access"]["plates_remaining"], 0)
 
+    def test_free_letterboxd_quota_is_one_per_day_while_regular_plates_remain(self) -> None:
+        films = [{"title": "Parasite", "year": 2019, "rating": 5.0}]
+        with patch.object(access_service, "get_firestore_client", return_value=self.fake_db), patch.object(
+            gemini_service, "GEMINI_API_KEY", "test-key"
+        ), patch.object(gemini_service, "genai_client", _FakeClient()), patch.object(
+            gemini_service, "_TOKEN_DRIP_DELAY", 0.0
+        ):
+            first_lb = self.client.post(
+                "/feed/stream",
+                json={
+                    "interests": ["Film"],
+                    "seen_count": 0,
+                    "language": "en",
+                    "timezone": "Europe/Istanbul",
+                    "letterboxd_films": films,
+                },
+            )
+            self.assertEqual(first_lb.status_code, 200)
+            self.assertIn("event: done", first_lb.text)
+
+            second_lb = self.client.post(
+                "/feed/stream",
+                json={
+                    "interests": ["Film"],
+                    "seen_count": 1,
+                    "language": "en",
+                    "timezone": "Europe/Istanbul",
+                    "letterboxd_films": films,
+                },
+            )
+            self.assertEqual(second_lb.status_code, 402)
+            lb_body = second_lb.json()
+            self.assertEqual(lb_body["code"], ErrorCode.QUOTA_EXCEEDED)
+            self.assertEqual(lb_body["kind"], "letterboxd")
+            self.assertEqual(lb_body["access"]["letterboxd_plates_remaining"], 0)
+            self.assertEqual(lb_body["access"]["plates_remaining"], 2)
+
+            regular = self.client.post(
+                "/feed/stream",
+                json={
+                    "interests": ["Cinema"],
+                    "seen_count": 1,
+                    "language": "en",
+                    "timezone": "Europe/Istanbul",
+                },
+            )
+            self.assertEqual(regular.status_code, 200)
+            status = self.client.get("/billing/status")
+            self.assertEqual(status.json()["plates_remaining"], 1)
+            self.assertEqual(status.json()["letterboxd_plates_remaining"], 0)
+
     def test_failed_stream_does_not_consume_quota(self) -> None:
         with patch.object(access_service, "get_firestore_client", return_value=self.fake_db), patch.object(
             gemini_service, "GEMINI_API_KEY", None

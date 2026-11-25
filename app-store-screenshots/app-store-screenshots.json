@@ -115,27 +115,27 @@
           "ko": "12가지 교양"
         },
         "headline": {
-          "tr": "\n\ntek dokunuşta fun-fact.\n\npostu ai anlık üretir.\n\nkaynağını da verir.",
-          "en": "\n\nfun-facts in one tap.\n\nai crafts each post live.\n\nalways with its source.",
-          "ja": "\n\nひと触れでfun-fact。\n\nAIがその場で紡ぎ、\n\n一次出典まで添える。",
-          "de": "\n\nFun-Facts mit einem Tipp.\n\nKI erstellt ihn sofort.\n\nImmer mit Quelle.",
-          "fr": "\n\nDes fun-facts en un geste.\n\nL'IA rédige à l'instant.\n\nToujours avec sa source.",
-          "es": "\n\nFun-facts en un toque.\n\nLa IA lo crea al instante.\n\nSiempre con su fuente.",
-          "ko": "\n\n한 번의 터치로 fun-fact.\n\nAI가 즉시 글을 짓고,\n\n출처까지 함께 전해요."
+          "tr": "tek dokunuşta fun-fact.\n\npostu ai anlık üretir.\n\nkaynağını da verir.",
+          "en": "fun-facts in one tap.\n\nwritten live by ai.\n\nalways with its source.",
+          "ja": "ひと触れでfun-fact。\nAIが即座に執筆。\n出典も明記。",
+          "de": "Fun-Facts mit einem Tipp.\nLive von KI verfasst.\nImmer mit Quelle.",
+          "fr": "Des fun-facts en un geste.\nRédigé en direct par l'IA.\nToujours avec sa source.",
+          "es": "Fun-facts en un toque.\nCreado al instante por IA.\nSiempre con su fuente.",
+          "ko": "한 번의 터치로 fun-fact.\nAI가 즉시 작성합니다.\n출처도 함께 제공합니다."
         },
         "screenshot": "/screenshots/apple/iphone/{locale}/02.png",
         "transforms": {
           "caption": {
-            "x": 9.599922740218517,
-            "y": 157.42881077266034,
-            "width": 1297,
-            "height": 851,
+            "x": 9.599872841993829,
+            "y": 277.4287993042831,
+            "width": 1361,
+            "height": 731,
             "rotation": 0,
             "zIndex": 4
           },
           "device": {
-            "x": 146.0624223776224,
-            "y": 1174.8772027972009,
+            "x": 126.00647832167874,
+            "y": 1026.4632167832165,
             "width": 1011.8303999999999,
             "height": 2064.96,
             "rotation": 0,
@@ -149,7 +149,7 @@
       },
       {
         "id": "omakase_slide_06",
-        "layout": "device-bottom",
+        "layout": "hero",
         "label": {
           "en": "SUBTOPICS",
           "tr": "ALT KONULAR",
@@ -160,31 +160,23 @@
           "ko": "세부 주제"
         },
         "headline": {
-          "tr": "kategorini aç.\n\nilginç bir alt konuya dokun.",
-          "en": "open any discipline.\n\ntap the subtopic that sparks you.",
-          "ja": "分野を開く。\n\n惹かれる小テーマをタップ。",
-          "de": "Öffne eine Disziplin.\n\nTippe auf dein Unterthema.",
-          "fr": "Ouvre une discipline.\n\nTouche le sous-thème qui t'attire.",
-          "es": "Abre una disciplina.\n\nToca el subtema que te atrape.",
-          "ko": "분야를 여세요.\n\n끌리는 세부 주제를 탭하세요."
+          "tr": "evet chatbotlar öğretici.\n\nama senin yazmanı bekliyorlar.\n\nomakase beklemez.",
+          "en": "yes, ai chatbots teach well,\n\nbut they wait for you to ask.\n\nomakase does not.",
+          "ja": "AIチャットは賢い。\nでも、聞くまで答えない。",
+          "de": "Klar, KI-Chats lehren viel —\naber sie warten, bis du fragst.",
+          "fr": "Oui, les chatbots IA instruisent —\nmais ils attendent ta question.",
+          "es": "Sí, los chatbots de IA enseñan —\npero esperan a que preguntes.",
+          "ko": "맞아요, AI 챗봇은 똑똑하죠.\n하지만 당신이 묻길 기다려요."
         },
         "screenshot": "/screenshots/apple/iphone/{locale}/06.png",
         "transforms": {
           "caption": {
-            "x": 13.6,
-            "y": 165,
-            "width": 1293,
-            "height": 800,
+            "x": 25.600058402540526,
+            "y": 258.1200042582972,
+            "width": 1277,
+            "height": 803,
             "rotation": 0,
             "zIndex": 4
-          },
-          "device": {
-            "x": 154.0848000000001,
-            "y": 745.68,
-            "width": 1011.8304,
-            "height": 2064.96,
-            "rotation": 0,
-            "zIndex": 3
           }
         },
         "hideLabel": true,
@@ -216,7 +208,7 @@
         "screenshot": "/screenshots/apple/iphone/{locale}/03.png",
         "transforms": {
           "device": {
-            "x": 154.0848000000001,
+            "x": 154.08480000000054,
             "y": 745.68,
             "width": 1011.8303999999999,
             "height": 2064.96,
@@ -224,10 +216,10 @@
             "zIndex": 3
           },
           "caption": {
-            "x": 105.5999573864533,
-            "y": 205.43999838625183,
+            "x": 105.59993105711465,
+            "y": 141.4400014623862,
             "width": 1109,
-            "height": 827,
+            "height": 891,
             "rotation": 0,
             "zIndex": 4
           }
@@ -328,6 +320,96 @@
             "x": 154.08479999999963,
             "y": 745.68,
             "width": 1011.8303999999999,
+            "height": 2064.96,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        },
+        "hideLabel": true,
+        "typography": {
+          "headlineScale": 0.85
+        }
+      },
+      {
+        "id": "omakase_slide_07",
+        "layout": "device-bottom",
+        "label": {
+          "en": "LETTERBOXD",
+          "tr": "LETTERBOXD",
+          "ja": "LETTERBOXD",
+          "de": "LETTERBOXD",
+          "fr": "LETTERBOXD",
+          "es": "LETTERBOXD",
+          "ko": "LETTERBOXD"
+        },
+        "headline": {
+          "tr": "letterboxd'ı bağla.\n\nson 50 filmine dair\nfun-fact'ler oku.",
+          "en": "connect your letterboxd.\n\nfun-facts from your\nlast 50 watched films.",
+          "ja": "Letterboxdを連携。\n\n最近観た50本の映画から\nfun-factを。",
+          "de": "Verbinde dein Letterboxd.\n\nFun-Facts zu deinen\nletzten 50 Filmen.",
+          "fr": "Connecte ton Letterboxd.\n\nDes fun-facts sur tes\n50 derniers films.",
+          "es": "Conecta tu Letterboxd.\n\nFun-facts de tus\núltimas 50 películas.",
+          "ko": "Letterboxd를 연결하세요.\n\n최근 본 50편의\n영화 속 펀팩트."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/07.png",
+        "transforms": {
+          "caption": {
+            "x": 13.6,
+            "y": 165,
+            "width": 1293,
+            "height": 800,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 154.08480000000054,
+            "y": 745.68,
+            "width": 1011.8304,
+            "height": 2064.96,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        },
+        "hideLabel": true,
+        "typography": {
+          "headlineScale": 0.85
+        }
+      },
+      {
+        "id": "omakase_slide_08",
+        "layout": "device-bottom",
+        "label": {
+          "en": "EXPORT",
+          "tr": "DIŞA AKTAR",
+          "ja": "書き出し",
+          "de": "EXPORT",
+          "fr": "EXPORTER",
+          "es": "EXPORTAR",
+          "ko": "내보내기"
+        },
+        "headline": {
+          "tr": "beğendiğin postu\nkart olarak dışa aktar.\n\ninstagram, whatsapp ve x'e hazır.",
+          "en": "export any post as\na monochrome card.\n\nready for instagram, whatsapp & x.",
+          "ja": "お気に入りの投稿を\nモノクロカードで書き出し。\n\nInstagramやXにすぐ共有。",
+          "de": "Exportiere jeden Post\nals monochrome Karte.\n\nBereit für Instagram, WhatsApp & X.",
+          "fr": "Exporte chaque post\nen carte monochrome.\n\nPrêt pour Instagram, WhatsApp & X.",
+          "es": "Exporta cualquier post\nen tarjeta monocroma.\n\nLista para Instagram, WhatsApp y X.",
+          "ko": "마음에 든 게시물을\n모노크롬 카드로 내보내세요.\n\n인스타그램, 왓츠앱, X에 바로 공유."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/08.png",
+        "transforms": {
+          "caption": {
+            "x": 13.6,
+            "y": 165,
+            "width": 1293,
+            "height": 800,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 154.08480000000054,
+            "y": 745.68,
+            "width": 1011.8304,
             "height": 2064.96,
             "rotation": 0,
             "zIndex": 3

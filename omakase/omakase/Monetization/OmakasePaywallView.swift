@@ -14,6 +14,7 @@ enum PaywallSource: String, Identifiable, Sendable {
     case firstPlateSoft
     case plateLimit
     case deepDiveLimit
+    case letterboxdLimit
     case profile
 
     var id: String { rawValue }
@@ -103,6 +104,7 @@ struct OmakasePaywallView: View {
         switch source {
         case .plateLimit: return l10n.proEyebrowPlateLimit
         case .deepDiveLimit: return l10n.proEyebrowDeepDiveLimit
+        case .letterboxdLimit: return l10n.proEyebrowLetterboxdLimit
         case .firstPlateSoft, .profile: return "OMAKASE PRO"
         }
     }
@@ -111,6 +113,7 @@ struct OmakasePaywallView: View {
         switch source {
         case .plateLimit: return l10n.proHeadlinePlateLimit
         case .deepDiveLimit: return l10n.proHeadlineDeepDiveLimit
+        case .letterboxdLimit: return l10n.proHeadlineLetterboxdLimit
         case .firstPlateSoft, .profile: return l10n.proHeadline
         }
     }
@@ -226,7 +229,7 @@ struct OmakasePaywallView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 7) {
-            if source == .plateLimit || source == .deepDiveLimit {
+            if source == .plateLimit || source == .deepDiveLimit || source == .letterboxdLimit {
                 HStack(spacing: 6) {
                     Circle()
                         .fill(OmakaseTheme.ink)
@@ -314,10 +317,10 @@ struct OmakasePaywallView: View {
                 .padding(.leading, 40)
 
             comparisonRow(
-                icon: "sparkles",
-                title: l10n.proCompareSubtopicsLabel,
-                freeValue: l10n.proCompareSubtopicsFree,
-                proValue: l10n.proCompareFull
+                icon: "film",
+                title: l10n.proCompareLetterboxdLabel,
+                freeValue: l10n.proCompareLetterboxdFree,
+                proValue: l10n.proCompareUnlimited
             )
             Divider()
                 .overlay(OmakaseTheme.stroke.opacity(0.6))

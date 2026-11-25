@@ -13,7 +13,9 @@ enum ScreenshotScene: String {
     case feed
     case bento
     case subtopics
+    case letterboxd
     case deepdive
+    case export
     case cooldown
     case community
 }
@@ -60,6 +62,7 @@ struct ScreenshotPreviewHarness: View {
     @State private var toastMessage: String?
     @State private var selectedTab: AppTab = .feed
     @State private var showDeepDiveSheet = false
+    @State private var showExportSheet = false
 
     private var l10n: L10n { L10n(lang: config.language) }
     private var content: LocalizedScreenshotContent { .forLanguage(config.language) }
@@ -68,6 +71,10 @@ struct ScreenshotPreviewHarness: View {
         self.config = config
         _selectedTab = State(initialValue: config.scene == .community ? .community : .feed)
         _showDeepDiveSheet = State(initialValue: config.scene == .deepdive)
+        _showExportSheet = State(initialValue: config.scene == .export)
+        if config.scene == .letterboxd {
+            UserDefaults.standard.set("kuzey", forKey: "omakase.letterboxd_username")
+        }
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = .systemBackground
@@ -111,7 +118,7 @@ struct ScreenshotPreviewHarness: View {
         NavigationStack {
             Group {
                 switch config.scene {
-                case .feed, .deepdive:
+                case .feed, .deepdive, .export:
                     ReelsPostCard(
                         post: content.heroPost,
                         isLastPost: true,
@@ -124,21 +131,7 @@ struct ScreenshotPreviewHarness: View {
                     )
                 case .bento:
                     BentoTasteBox(
-                        allInterests: content.allChips,
-                        activeInterests: $activeInterests,
-                        onAddInterest: { _ in },
-                        onRemoveInterest: { _ in },
-                        isLetterboxdActive: $isLetterboxdActive,
-                        isGenerating: false,
-                        isOffline: false,
-                        isCooldownActive: false,
-                        cooldownRemaining: 0,
-                        cooldownTotal: 0,
-                        hasExistingPosts: true
-                    )
-                case .subtopics:
-                    BentoTasteBox(
-                        allInterests: content.allChips,
+                        allInterests: [],
                         activeInterests: $activeInterests,
                         onAddInterest: { _ in },
                         onRemoveInterest: { _ in },
@@ -149,8 +142,43 @@ struct ScreenshotPreviewHarness: View {
                         cooldownRemaining: 0,
                         cooldownTotal: 0,
                         hasExistingPosts: true,
+                        onTriggerChefPick: { _, _ in }
+                    )
+                case .subtopics:
+                    BentoTasteBox(
+                        allInterests: [],
+                        activeInterests: $activeInterests,
+                        onAddInterest: { _ in },
+                        onRemoveInterest: { _ in },
+                        isLetterboxdActive: $isLetterboxdActive,
+                        isGenerating: false,
+                        isOffline: false,
+                        isCooldownActive: false,
+                        cooldownRemaining: 0,
+                        cooldownTotal: 0,
+                        hasExistingPosts: true,
+                        onTriggerChefPick: { _, _ in },
                         initialSubtopicCategory: InterestCategory.category(forId: "history") ?? InterestCategory.presets.first,
                         initialSubtopics: content.historySubtopics
+                    )
+                case .letterboxd:
+                    BentoTasteBox(
+                        allInterests: [],
+                        activeInterests: $activeInterests,
+                        onAddInterest: { _ in },
+                        onRemoveInterest: { _ in },
+                        isLetterboxdActive: $isLetterboxdActive,
+                        isGenerating: false,
+                        isOffline: false,
+                        isCooldownActive: false,
+                        cooldownRemaining: 0,
+                        cooldownTotal: 0,
+                        hasExistingPosts: true,
+                        onPromptLetterboxdUsername: {},
+                        onSelectLetterboxdPost: {},
+                        onTriggerChefPick: { _, _ in },
+                        initialSubtopicCategory: InterestCategory.category(forId: "film") ?? InterestCategory.presets.first,
+                        initialSubtopics: content.filmSubtopics
                     )
                 case .cooldown:
                     ReelsPostCard(
@@ -182,6 +210,13 @@ struct ScreenshotPreviewHarness: View {
                 .environment(\.locale, Locale(identifier: config.language.localeIdentifier))
                 .preferredColorScheme(config.colorScheme)
                 .tint(OmakaseTheme.ink)
+            }
+            .sheet(isPresented: $showExportSheet) {
+                ExportPostSheet(post: content.heroPost)
+                    .environment(\.appLanguage, config.language)
+                    .environment(\.locale, Locale(identifier: config.language.localeIdentifier))
+                    .preferredColorScheme(config.colorScheme)
+                    .tint(OmakaseTheme.ink)
             }
         }
     }
@@ -334,6 +369,7 @@ private struct LocalizedScreenshotContent {
     let allChips: [String]
     let activeChips: [String]
     let historySubtopics: [String]
+    let filmSubtopics: [String]
     let communityPosts: [SharedPost]
 
     static func forLanguage(_ lang: AppLanguage) -> LocalizedScreenshotContent {
@@ -384,6 +420,12 @@ private struct LocalizedScreenshotContent {
                     "WWII Ghost Army", "Napoleon's Rabbits", "1904 Marathon Chaos",
                     "Roman Street Food", "Samurai & Fax Era", "Viking Runes in Istanbul",
                     "Ottoman Coffee Spies", "Tulip Mania Crash", "Lost Library Myths"
+                ],
+                filmSubtopics: [
+                    "Kubrick f/0.7 Lens", "Kuleshov Effect", "Kurosawa's Ink Rain",
+                    "Akira 24fps Cels", "1917 Single-Take Rig", "Foley Sound Secrets",
+                    "Vertigo Dolly Zoom", "Tarkovsky Polaroids", "Ghibli Painted Skies",
+                    "Leone Silence Pacing", "Neon Noir Lighting"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -444,18 +486,18 @@ private struct LocalizedScreenshotContent {
         case .turkish:
             return LocalizedScreenshotContent(
                 heroPost: Post(
-                    title: "Ayasofya'nın Mermerindeki 1100 Yıllık Viking İmzası",
+                    title: "Oxford Üniversitesi, Aztek İmparatorluğu'ndan Daha Eski",
                     text: """
-                    İstanbul'da Ayasofya'nın üst mermer galerisine çıkıp korkuluğa yakından baktığınızda, 6. yüzyıl taşının üzerine kazınmış **İskandinav rünleri** görürsünüz.
+                    Oxford'da dersler **1096** yılında zaten başlamıştı; 1249'da ise üniversitenin ilk resmi kolejleri kurulmuştu—Azteklerin Tenochtitlan'ı 1325'te kurmasından *iki yüzyıldan fazla* önce.
 
-                    1964'te çözülen yazıt tek bir cümle söylüyor: *"Halfdan buradaydı."* Halfdan, Bizans İmparatoru'nun seçkin **Vareg Muhafızları** arasında görev yapan ve uzun bir ayin sırasında sıkılıp mermeri kazıyan 9. yüzyıl bir Viking askeriydi.
+                    **1428**'de Aztek İmparatorluğu şekillenirken Oxford 300 yılı aşkın süredir mezun veriyordu. Tarihin zaman çizgileri, ders kitaplarının sandığından çok daha şaşırtıcı biçimde kesişir.
 
-                    Kaynak: Elisabeth Svärdström, Fornvännen — İsveç Eski Eserler Dergisi (1970)
+                    Kaynak: L. W. B. Brockliss, The University of Oxford: A History (2016)
                     """,
                     isComplete: true,
-                    tags: ["Tarih", "Vikingler", "İstanbul"],
+                    tags: ["Tarih", "Zaman Çizelgesi", "Kültür"],
                     categoryId: "history",
-                    postFormat: "CURSED TRIVIA",
+                    postFormat: "TIMELINE",
                     createdAt: Date().addingTimeInterval(-420)
                 ),
                 cooldownPost: Post(
@@ -474,11 +516,11 @@ private struct LocalizedScreenshotContent {
                     createdAt: Date().addingTimeInterval(-180)
                 ),
                 deepDiveBody: """
-                Bizans imparatorları yaklaşık üç yüzyıl boyunca kişisel korumalarını özellikle İskandinav savaşçılardan seçti; çünkü Konstantinopolis'te yerel siyasi bağları olmadığı için saray entrikalarına karışmıyorlardı.
+                1428'de Aztek Üçlü İttifakı Meksika Vadisi'ni birleştirdiğinde, Oxford'un en eski kütüphanesi çoktan genişletiliyordu ve Machu Picchu'nun inşasına bile henüz yirmi yıl vardı.
 
-                Doğu Avrupa nehirlerinden inip şehre Miklagarðr ("Büyük Şehir") adını veren Varegler, Ayasofya'dan bugün Venedik'te duran Pire Aslanı'na kadar mermerlere rünik izler bıraktı.
+                Daha da geriye gidersek Fas'taki Karaviyyin Üniversitesi (859) ve Bologna (1088), kıtalar arasında yüzyıllardır öğrenci yetiştiriyordu; modern tarih hafızamızın ne kadar sıkışık olduğunu kanıtlarcasına.
 
-                Kaynak: Sigfús Blöndal, The Varangians of Byzantium (1978)
+                Kaynak: Michael E. Smith, The Aztecs (2012)
                 """,
                 allChips: ["Bauhaus", "Japon Sineması", "Stoacılık", "Tarih"],
                 activeChips: ["Bauhaus", "Tarih"],
@@ -487,6 +529,12 @@ private struct LocalizedScreenshotContent {
                     "Şişme Hayalet Ordu", "Napolyon'un Tavşanları", "1904 Maraton Kaosu",
                     "Roma Sokak Yemekleri", "Samuray & Faks Çağı", "Ayasofya Viking Yazısı",
                     "Osmanlı Kahve Casusları", "Lale Çılgınlığı", "İskenderiye Mitleri"
+                ],
+                filmSubtopics: [
+                    "Kubrick f/0.7 Lensi", "Kuleşov Etkisi", "Kurosawa Mürekkep Yağmuru",
+                    "Akira 24fps Kareleri", "1917 Tek Plan Sistemi", "Foley Ses Sırları",
+                    "Vertigo Dolly Zoom", "Tarkovski Polaroidleri", "Ghibli Gökyüzü Boyası",
+                    "Leone Sessizlik Kurgusu", "Neon Noir Işıklandırma"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -509,8 +557,8 @@ private struct LocalizedScreenshotContent {
                     ),
                     SharedPost(
                         authorId: "u_kenji",
-                        authorName: "Emre",
-                        authorUsername: "emre",
+                        authorName: "Kuzey",
+                        authorUsername: "kuzey",
                         title: "Tokyo İstasyonlarının 7 Saniyelik Melodileri",
                         text: """
                         Yamanote hattındaki her peron, yolcu stresini azaltmak için bestelenmiş özgün bir hassha melodisi çalar.
@@ -590,6 +638,12 @@ private struct LocalizedScreenshotContent {
                     "空気注入の幽霊軍", "ナポレオンと兎", "1904年マラソン騒動",
                     "ローマの屋台飯", "侍とFAXの時代", "大聖堂のルーン文字",
                     "オスマン珈琲諜報", "チューリップバブル", "アレクサンドリア謎"
+                ],
+                filmSubtopics: [
+                    "キューブリック f/0.7", "クレショフ効果", "黒澤の墨入り雨",
+                    "AKIRA 24fps作画", "1917 ワンカット撮影", "フォーリー効果音の秘密",
+                    "めまい ドリーズーム", "タルコフスキー写真", "ジブリの手描き空",
+                    "レオーネの間の美学", "ネオン・ノワール照明"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -694,6 +748,12 @@ private struct LocalizedScreenshotContent {
                     "Römisches Streetfood", "Samurai & Faxgerät", "Wikinger-Runen",
                     "Osmanische Kaffee-Spione", "Tulpenmanie", "Bibliothek-Mythen"
                 ],
+                filmSubtopics: [
+                    "Kubrick f/0,7-Linse", "Kuleschow-Effekt", "Kurosawas Tinte-Regen",
+                    "Akira 24fps-Cels", "1917 One-Shot-Rig", "Geheimnisse des Foley",
+                    "Vertigo Dolly-Zoom", "Tarkowskis Polaroids", "Ghiblis Wolkenkunst",
+                    "Leones Stille-Schnitt", "Neon-Noir-Licht"
+                ],
                 communityPosts: [
                     SharedPost(
                         authorId: "u_mira",
@@ -796,6 +856,12 @@ private struct LocalizedScreenshotContent {
                     "Armée fantôme 1944", "Lapins de Napoléon", "Marathon fou 1904",
                     "Street-food romaine", "Samouraïs & fax", "Runes à Istanbul",
                     "Espions des cafés", "Crise des tulipes", "Mythes d'Alexandrie"
+                ],
+                filmSubtopics: [
+                    "Objectif Kubrick f/0.7", "Effet Koulechov", "Pluie d'encre Kurosawa",
+                    "Akira 24 images/s", "Plan-séquence 1917", "Secrets du bruitage",
+                    "Dolly-zoom Vertigo", "Polaroïds Tarkovski", "Ciels peints Ghibli",
+                    "Silences de Sergio Leone", "Éclairage néon noir"
                 ],
                 communityPosts: [
                     SharedPost(
@@ -900,6 +966,12 @@ private struct LocalizedScreenshotContent {
                     "Comida callejera romana", "Samuráis y el fax", "Runas en Estambul",
                     "Espías del café otomano", "Fiebre de tulipanes", "Mitos de Alejandría"
                 ],
+                filmSubtopics: [
+                    "Lente Kubrick f/0.7", "Efecto Kuleshov", "Lluvia tinta Kurosawa",
+                    "Akira a 24 fps", "Plano secuencia 1917", "Secretos del foley",
+                    "Dolly zoom de Vertigo", "Polaroids Tarkovski", "Cielos pintados Ghibli",
+                    "Silencios de Leone", "Luz neón noir"
+                ],
                 communityPosts: [
                     SharedPost(
                         authorId: "u_mira",
@@ -1002,6 +1074,12 @@ private struct LocalizedScreenshotContent {
                     "풍선 유령 군대", "나폴레옹과 토끼", "1904 마라톤 대혼란",
                     "고대 로마 길거리 음식", "사무라이와 팩스", "아야 소피아 룬 문자",
                     "오스만 커피하우스 첩보", "튤립 광풍", "알렉산드리아 미스터리"
+                ],
+                filmSubtopics: [
+                    "큐브릭 f/0.7 렌즈", "쿨레쇼프 효과", "구로사와 먹물 비",
+                    "아키라 24fps 작화", "1917 원테이크 리그", "폴리 사운드 비밀",
+                    "현기증 달리 줌", "타르콥스키 폴라로이드", "지브리 수채화 하늘",
+                    "레오네의 정적 편집", "네온 누아르 조명"
                 ],
                 communityPosts: [
                     SharedPost(

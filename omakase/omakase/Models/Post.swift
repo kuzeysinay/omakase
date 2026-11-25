@@ -11,6 +11,13 @@ struct ParsedPostContent: Equatable, Sendable {
     let source: String?
 }
 
+struct ExtractedLeadingMetadata: Equatable, Sendable {
+    let title: String?
+    let tags: [String]?
+    let body: String
+    let hasIncompleteHeader: Bool
+}
+
 /// A single AI-generated post in the feed. `text` grows over time as SSE
 /// tokens stream in, and `isComplete` flips to true when the `done` event
 /// arrives.
@@ -90,8 +97,118 @@ final class Post: Identifiable, @unchecked Sendable {
         pattern: #"(?<=[.!?。”"»)—–])\s+(?:[—–\-]\s*)?(\(?)([\*_]{0,3})(?:Primary\s+Source|Sources?|Kaynak(?:ça|lar)?|Quellen?|Fuentes?|出典|출처)([\*_]{0,3})\s*[:：]([\*_]{0,3})\s*([^\n]+)$"#
     )
 
+    private static let leadingTitleLineRegex = try? NSRegularExpression(
+        pattern: #"^[#\*_`>\-\s]*TITLE\s*[\*_`]*\s*[:：]\s*[\*_`]*\s*(.+?)\s*[\*_`]*$"#,
+        options: [.caseInsensitive]
+    )
+
+    private static let leadingTagsLineRegex = try? NSRegularExpression(
+        pattern: #"^[#\*_`>\-\s]*TAGS\s*[\*_`]*\s*[:：]\s*[\*_`]*\s*(.+?)\s*[\*_`]*$"#,
+        options: [.caseInsensitive]
+    )
+
+    static func extractLeadingMetadata(from rawText: String, isStreaming: Bool = false) -> ExtractedLeadingMetadata {
+        let normalized = rawText
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+
+        guard !normalized.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return ExtractedLeadingMetadata(title: nil, tags: nil, body: "", hasIncompleteHeader: false)
+        }
+
+        let lines = normalized.components(separatedBy: "\n")
+        var idx = 0
+
+        while idx < lines.count, lines[idx].trimmingCharacters(in: .whitespaces).isEmpty {
+            idx += 1
+        }
+
+        var extractedTitle: String?
+        var extractedTags: [String]?
+
+        if idx < lines.count {
+            let line = lines[idx].trimmingCharacters(in: .whitespaces)
+            if isStreaming, idx == lines.count - 1, isIncompleteLeadingHeaderLine(line) {
+                return ExtractedLeadingMetadata(title: nil, tags: nil, body: "", hasIncompleteHeader: true)
+            }
+            if let title = matchLeadingHeaderLine(line, regex: leadingTitleLineRegex) {
+                let cleanTitle = title.trimmingCharacters(in: CharacterSet(charactersIn: "*_`\"' "))
+                if !cleanTitle.isEmpty {
+                    extractedTitle = cleanTitle
+                }
+                idx += 1
+                while idx < lines.count, lines[idx].trimmingCharacters(in: .whitespaces).isEmpty {
+                    idx += 1
+                }
+            }
+        }
+
+        if idx < lines.count {
+            let line = lines[idx].trimmingCharacters(in: .whitespaces)
+            if isStreaming, idx == lines.count - 1, isIncompleteLeadingHeaderLine(line) {
+                return ExtractedLeadingMetadata(
+                    title: extractedTitle,
+                    tags: nil,
+                    body: "",
+                    hasIncompleteHeader: true
+                )
+            }
+            if let rawTags = matchLeadingHeaderLine(line, regex: leadingTagsLineRegex) {
+                let parsedTags = rawTags
+                    .split(separator: ",")
+                    .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "*_`# \"'")) }
+                    .filter { !$0.isEmpty }
+                if !parsedTags.isEmpty {
+                    extractedTags = parsedTags
+                }
+                idx += 1
+                while idx < lines.count, lines[idx].trimmingCharacters(in: .whitespaces).isEmpty {
+                    idx += 1
+                }
+            }
+        }
+
+        let remainingBody = idx < lines.count
+            ? lines[idx...].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            : ""
+
+        return ExtractedLeadingMetadata(
+            title: extractedTitle,
+            tags: extractedTags,
+            body: remainingBody,
+            hasIncompleteHeader: false
+        )
+    }
+
+    private static func matchLeadingHeaderLine(_ line: String, regex: NSRegularExpression?) -> String? {
+        guard let regex else { return nil }
+        let nsLine = line as NSString
+        guard let match = regex.firstMatch(in: line, range: NSRange(location: 0, length: nsLine.length)),
+              match.range(at: 1).location != NSNotFound else {
+            return nil
+        }
+        return nsLine.substring(with: match.range(at: 1))
+    }
+
+    private static func isIncompleteLeadingHeaderLine(_ line: String) -> Bool {
+        let stripped = line.trimmingCharacters(in: CharacterSet(charactersIn: "#*_`>- \t")).uppercased()
+        guard !stripped.isEmpty else { return false }
+        if "TITLE".hasPrefix(stripped) || "TAGS".hasPrefix(stripped) {
+            return true
+        }
+        if stripped.hasPrefix("TITLE") || stripped.hasPrefix("TAGS") {
+            let remainder = stripped.hasPrefix("TITLE")
+                ? String(stripped.dropFirst(5))
+                : String(stripped.dropFirst(4))
+            let trimmedRem = remainder.trimmingCharacters(in: CharacterSet(charactersIn: "*_` "))
+            return trimmedRem.isEmpty || trimmedRem.hasPrefix(":") || trimmedRem.hasPrefix("：")
+        }
+        return false
+    }
+
     static func splitBodyAndSource(from rawText: String, isStreaming: Bool = false) -> ParsedPostContent {
-        let sanitized = sanitizeTemplateLabels(from: rawText)
+        let metadata = extractLeadingMetadata(from: rawText, isStreaming: isStreaming)
+        let sanitized = sanitizeTemplateLabels(from: metadata.body)
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)

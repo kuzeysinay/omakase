@@ -24,3 +24,4 @@ __pycache__/
 # Firebase & Cloudflare deploy caches
 .firebase/
 .wrangler/
+app-store-screenshots/exports/

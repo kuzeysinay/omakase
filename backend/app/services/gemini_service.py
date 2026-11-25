@@ -34,8 +34,12 @@ from app.prompts import (
 from app.schemas import DeepDiveRequest, ExpandCategoryRequest, SuggestRequest
 from app.services.metrics_service import record_api_error_async, record_generation_async
 
-_TITLE_LINE = re.compile(r"(?i)^TITLE:\s*(.+)$")
-_TAGS_LINE = re.compile(r"(?i)^TAGS:\s*(.+)$")
+_TITLE_LINE = re.compile(
+    r"(?i)^[#*_`>\-\s]*TITLE\s*[*_`]*\s*[:：]\s*[*_`]*\s*(.+?)\s*[*_`]*$"
+)
+_TAGS_LINE = re.compile(
+    r"(?i)^[#*_`>\-\s]*TAGS\s*[*_`]*\s*[:：]\s*[*_`]*\s*(.+?)\s*[*_`]*$"
+)
 
 # Gemini often emits the entire post body in one stream delta. Clients expect multiple small
 # `token` SSE events so the Swift UI can animate like Gemini in the browser.
@@ -180,41 +184,68 @@ def _feed_tokens_from_stream_chunks(
             continue
         saw_text = True
         carry += text
-        if not title_done:
-            if "\n" not in carry:
-                continue
+        while not title_done and "\n" in carry:
             first_line, carry = carry.split("\n", 1)
-            m = _TITLE_LINE.match(first_line.strip())
+            stripped = first_line.strip()
+            if not stripped:
+                continue
+            m = _TITLE_LINE.match(stripped)
             if m:
-                loop.call_soon_threadsafe(
-                    queue.put_nowait,
-                    ("title", m.group(1).strip()),
-                )
+                clean_title = m.group(1).strip().strip("*_`").strip()
+                if clean_title:
+                    loop.call_soon_threadsafe(
+                        queue.put_nowait,
+                        ("title", clean_title),
+                    )
             else:
                 carry = first_line + "\n" + carry
             title_done = True
-        if title_done and not tags_done:
-            if "\n" not in carry:
-                continue
+        while title_done and not tags_done and "\n" in carry:
             second_line, rest = carry.split("\n", 1)
-            mt = _TAGS_LINE.match(second_line.strip())
+            stripped = second_line.strip()
+            if not stripped:
+                carry = rest
+                continue
+            mt = _TAGS_LINE.match(stripped)
             if mt:
-                raw_tags = [t.strip() for t in mt.group(1).split(",") if t.strip()]
+                raw_tags = [
+                    t.strip().strip("*_`#").strip()
+                    for t in mt.group(1).split(",")
+                    if t.strip().strip("*_`#").strip()
+                ]
                 loop.call_soon_threadsafe(
                     queue.put_nowait,
                     ("tags", raw_tags),
                 )
-                carry = rest
+                carry = rest.lstrip("\r\n")
             else:
                 carry = second_line + "\n" + rest
             tags_done = True
-        if carry:
+        if title_done and tags_done and carry:
             _enqueue_stream_body_fragment(loop, queue, carry)
             carry = ""
-    if not title_done and carry:
-        loop.call_soon_threadsafe(queue.put_nowait, ("token", carry))
-    elif title_done and carry:
-        _enqueue_stream_body_fragment(loop, queue, carry)
+    if carry:
+        if not title_done:
+            m = _TITLE_LINE.match(carry.strip())
+            if m:
+                clean_title = m.group(1).strip().strip("*_`").strip()
+                if clean_title:
+                    loop.call_soon_threadsafe(queue.put_nowait, ("title", clean_title))
+            else:
+                _enqueue_stream_body_fragment(loop, queue, carry)
+        elif not tags_done:
+            mt = _TAGS_LINE.match(carry.strip())
+            if mt:
+                raw_tags = [
+                    t.strip().strip("*_`#").strip()
+                    for t in mt.group(1).split(",")
+                    if t.strip().strip("*_`#").strip()
+                ]
+                loop.call_soon_threadsafe(queue.put_nowait, ("tags", raw_tags))
+            else:
+                _enqueue_stream_body_fragment(loop, queue, carry)
+        else:
+            _enqueue_stream_body_fragment(loop, queue, carry)
     return False
 
 
@@ -275,6 +306,7 @@ async def _stream_post(
                 # For Letterboxd film posts, retain a compact 128-token budget and 0.25 temp.
                 thinking_budget = 128 if letterboxd_films else 0
                 temp = 0.25 if letterboxd_films else 0.35
+                max_tokens = 1024 if letterboxd_films else 600
                 response = genai_client.models.generate_content_stream(
                     model=GEMINI_MODEL,
                     contents=prompt,
@@ -282,7 +314,7 @@ async def _stream_post(
                         system_instruction=_feed_system_instruction(language),
                         temperature=temp,
                         top_p=0.85,
-                        max_output_tokens=360,
+                        max_output_tokens=max_tokens,
                         thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
                         safety_settings=SAFETY_SETTINGS,
                     ),
@@ -295,7 +327,7 @@ async def _stream_post(
 
         producer = asyncio.create_task(asyncio.to_thread(_produce))
 
-        saw_any_output = False
+        saw_body_output = False
         saw_error = False
         while True:
             kind, payload = await queue.get()
@@ -306,15 +338,14 @@ async def _stream_post(
                 )
                 return
             if kind == "token":
-                saw_any_output = True
+                if str(payload).strip():
+                    saw_body_output = True
                 yield _sse_event({"text": payload}, event="token")
                 yield ": flush\n\n"
                 await asyncio.sleep(_TOKEN_DRIP_DELAY)
             elif kind == "title":
-                saw_any_output = True
                 yield _sse_event({"title": str(payload)}, event="title")
             elif kind == "tags":
-                saw_any_output = True
                 final_tags = list(payload)
                 if letterboxd_films and "Letterboxd" not in final_tags:
                     final_tags.insert(0, "Letterboxd")
@@ -352,8 +383,8 @@ async def _stream_post(
         if saw_error:
             return
 
-        if not saw_any_output:
-            logger.warning("Gemini returned empty stream for model=%s", GEMINI_MODEL)
+        if not saw_body_output:
+            logger.warning("Gemini returned empty body stream for model=%s (post_id=%s)", GEMINI_MODEL, post_id)
             await record_api_error_async(ErrorCode.GENERATION_FAILED, status_code=502)
             yield _sse_event(
                 {

@@ -13,6 +13,15 @@
 			</array>
 		</dict>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram-stories</string>
+		<string>instagram</string>
+		<string>whatsapp</string>
+		<string>twitter</string>
+	</array>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Omakase saves your exported post cards to your Photos library.</string>
 	<key>OMAKASE_API_URL</key>
 	<string>https://omakase-backend-20235796246.us-central1.run.app</string>
 	<key>REVENUECAT_API_KEY</key>

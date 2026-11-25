@@ -13,11 +13,14 @@ import Foundation
 
 enum QuotaKind: String, Equatable, Sendable {
     case plate
+    case letterboxd
     case deepDive = "deep_dive"
     case suggestion
 
     nonisolated init(backendValue: String?) {
         switch backendValue?.lowercased() {
+        case "letterboxd":
+            self = .letterboxd
         case "deep_dive":
             self = .deepDive
         case "suggestion":

@@ -12,9 +12,11 @@ from firebase_admin import firestore
 
 from app.config import (
     FREE_DAILY_DEEP_DIVES,
+    FREE_DAILY_LETTERBOXD_PLATES,
     FREE_DAILY_PLATES,
     FREE_DAILY_SUGGESTIONS,
     PRO_DAILY_DEEP_DIVES,
+    PRO_DAILY_LETTERBOXD_PLATES,
     PRO_DAILY_PLATES,
     PRO_DAILY_SUGGESTIONS,
     SHARE_BONUS_DEEP_DIVES,
@@ -86,6 +88,7 @@ def _default_entitlement() -> dict[str, Any]:
 def _default_usage() -> dict[str, Any]:
     return {
         "plates_used": 0,
+        "letterboxd_plates_used": 0,
         "deep_dives_used": 0,
         "suggestions_used": 0,
         "bonus_deep_dives": 0,
@@ -128,6 +131,10 @@ def _normalize_usage_doc(data: Optional[dict[str, Any]]) -> dict[str, Any]:
         return _default_usage()
     return {
         "plates_used": max(0, int(data.get("platesUsed", data.get("plates_used", 0)) or 0)),
+        "letterboxd_plates_used": max(
+            0,
+            int(data.get("letterboxdPlatesUsed", data.get("letterboxd_plates_used", 0)) or 0),
+        ),
         "deep_dives_used": max(
             0, int(data.get("deepDivesUsed", data.get("deep_dives_used", 0)) or 0)
         ),
@@ -210,6 +217,10 @@ def get_device_usage(device_hash: Optional[str], day_key: str) -> dict[str, Any]
 def _merge_usage(user_usage: dict[str, Any], device_usage: dict[str, Any]) -> dict[str, Any]:
     return {
         "plates_used": max(int(user_usage["plates_used"]), int(device_usage["plates_used"])),
+        "letterboxd_plates_used": max(
+            int(user_usage["letterboxd_plates_used"]),
+            int(device_usage["letterboxd_plates_used"]),
+        ),
         "deep_dives_used": max(int(user_usage["deep_dives_used"]), int(device_usage["deep_dives_used"])),
         "suggestions_used": max(int(user_usage["suggestions_used"]), int(device_usage["suggestions_used"])),
         "bonus_deep_dives": max(int(user_usage["bonus_deep_dives"]), int(device_usage["bonus_deep_dives"])),
@@ -230,6 +241,9 @@ def _assemble_snapshot(
         plates_limit = PRO_DAILY_PLATES
     else:
         plates_limit = USER_DAILY_PLATES_OVERRIDES.get(uid or "", FREE_DAILY_PLATES)
+    letterboxd_plates_limit = (
+        PRO_DAILY_LETTERBOXD_PLATES if is_pro else FREE_DAILY_LETTERBOXD_PLATES
+    )
     deep_dives_limit = (
         PRO_DAILY_DEEP_DIVES
         if is_pro
@@ -238,6 +252,7 @@ def _assemble_snapshot(
     suggestions_limit = PRO_DAILY_SUGGESTIONS if is_pro else FREE_DAILY_SUGGESTIONS
 
     plates_used = int(usage["plates_used"])
+    letterboxd_plates_used = int(usage["letterboxd_plates_used"])
     deep_dives_used = int(usage["deep_dives_used"])
     suggestions_used = int(usage["suggestions_used"])
     share_bonus_claimed = bool(usage["share_bonus_claimed"])
@@ -254,6 +269,9 @@ def _assemble_snapshot(
         "plates_used": plates_used,
         "plates_limit": plates_limit,
         "plates_remaining": max(0, plates_limit - plates_used),
+        "letterboxd_plates_used": letterboxd_plates_used,
+        "letterboxd_plates_limit": letterboxd_plates_limit,
+        "letterboxd_plates_remaining": max(0, letterboxd_plates_limit - letterboxd_plates_used),
         "deep_dives_used": deep_dives_used,
         "deep_dives_limit": deep_dives_limit,
         "deep_dives_remaining": max(0, deep_dives_limit - deep_dives_used),
@@ -304,6 +322,8 @@ def _check_quota_sync(
     snapshot = build_access_snapshot(uid, tz_name, device_id=device_id)
     if kind == "plate":
         remaining = snapshot["plates_remaining"]
+    elif kind == "letterboxd":
+        remaining = snapshot["letterboxd_plates_remaining"]
     elif kind == "deep_dive":
         remaining = snapshot["deep_dives_remaining"]
     elif kind == "suggestion":
@@ -353,6 +373,7 @@ def _record_usage_sync(
 
     field_map = {
         "plate": "platesUsed",
+        "letterboxd_plate": "platesUsed",
         "deep_dive": "deepDivesUsed",
         "suggestion": "suggestionsUsed",
     }
@@ -379,23 +400,28 @@ def _record_usage_sync(
             dev_existing = dev_snap.to_dict() if dev_snap.exists else {}
             usage = _merge_usage(usage, _normalize_usage_doc(dev_existing))
 
-        if kind == "plate":
+        updates: dict[str, Any] = {"updatedAt": now_iso}
+        if kind == "letterboxd_plate":
             usage["plates_used"] += 1
-            next_val = usage["plates_used"]
+            usage["letterboxd_plates_used"] += 1
+            updates["platesUsed"] = usage["plates_used"]
+            updates["letterboxdPlatesUsed"] = usage["letterboxd_plates_used"]
+        elif kind == "plate":
+            usage["plates_used"] += 1
+            updates["platesUsed"] = usage["plates_used"]
         elif kind == "deep_dive":
             usage["deep_dives_used"] += 1
-            next_val = usage["deep_dives_used"]
+            updates["deepDivesUsed"] = usage["deep_dives_used"]
         else:
             usage["suggestions_used"] += 1
-            next_val = usage["suggestions_used"]
+            updates["suggestionsUsed"] = usage["suggestions_used"]
 
         transaction.set(
             doc_ref,
             {
                 "uid": uid,
                 "dayKey": day_key,
-                target_field: next_val,
-                "updatedAt": now_iso,
+                **updates,
             },
             merge=True,
         )
@@ -405,8 +431,7 @@ def _record_usage_sync(
                 {
                     "deviceHash": device_hash,
                     "dayKey": day_key,
-                    target_field: next_val,
-                    "updatedAt": now_iso,
+                    **updates,
                 },
                 merge=True,
             )

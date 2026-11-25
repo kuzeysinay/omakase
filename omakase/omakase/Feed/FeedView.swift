@@ -23,6 +23,8 @@ struct FeedView: View {
     @State private var showNotificationDeniedAlert = false
     @State private var feedScrollPosition: AnyHashable?
     @State private var isHydratingCache = false
+    @State private var outerCategoryBottomOverscroll: CGFloat = 0
+    @State private var isOuterScrollDragging: Bool = false
 
     // Letterboxd
     @AppStorage("omakase.letterboxd_username") private var storedLetterboxdUsername: String = ""
@@ -135,15 +137,21 @@ struct FeedView: View {
                 Button(l10n.ok) {
                     let trimmed = letterboxdDraft.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !trimmed.isEmpty {
+                        let changed = storedLetterboxdUsername
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                            .caseInsensitiveCompare(trimmed) != .orderedSame
                         storedLetterboxdUsername = trimmed
+                        if changed {
+                            viewModel.clearLetterboxd()
+                        }
                         viewModel.letterboxdUsername = trimmed
-                        viewModel.isLetterboxdActive = true
-                        isLetterboxdActive = true
-                        viewModel.requestLetterboxdDedicatedPost(username: trimmed)
+                        isLetterboxdActive = false
+                        viewModel.isLetterboxdActive = false
+                        viewModel.fetchLetterboxdFilms()
                     } else {
                         storedLetterboxdUsername = ""
                         isLetterboxdActive = false
-                        viewModel.isLetterboxdActive = false
+                        viewModel.clearLetterboxd()
                     }
                     letterboxdDraft = ""
                 }
@@ -240,6 +248,11 @@ struct FeedView: View {
         }
         .onChange(of: isLetterboxdActive) { _, newValue in
             viewModel.isLetterboxdActive = newValue
+        }
+        .onChange(of: storedLetterboxdUsername) { _, newValue in
+            if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                viewModel.clearLetterboxd()
+            }
         }
         .onChange(of: viewModel.pendingToastError) { _, newError in
             guard let newError else { return }
@@ -397,8 +410,9 @@ struct FeedView: View {
                 }
             }
         }
-        .frame(height: viewModel.isCooldownActive ? 3.0 : 0)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isCooldownActive)
+        .frame(height: 3.0)
+        .opacity(viewModel.isCooldownActive ? 1.0 : 0.0)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.isCooldownActive)
     }
 
     /// Instagram Reels-style vertical paging feed.
@@ -474,7 +488,6 @@ struct FeedView: View {
                                     .frame(width: geo.size.width, height: geo.size.height)
                                     .clipped()
                                     .id("category-page")
-                                    .transition(.opacity)
                                     .onAppear {
                                         TelemetryService.shared.track("daily_limit_reached")
                                     }
@@ -491,6 +504,8 @@ struct FeedView: View {
                                         cooldownRemaining: viewModel.readingCooldownRemaining,
                                         cooldownTotal: viewModel.readingCooldownTotal,
                                         hasExistingPosts: !viewModel.posts.isEmpty,
+                                        outerBottomOverscroll: outerCategoryBottomOverscroll,
+                                        isOuterScrollDragging: isOuterScrollDragging,
                                         onScrollToLastPost: {
                                             if let lastID = viewModel.posts.last?.id {
                                                 withAnimation(.spring(response: 0.36, dampingFraction: 0.85)) {
@@ -511,13 +526,34 @@ struct FeedView: View {
                                             guard !viewModel.isGenerating && !viewModel.isCooldownActive else { return }
                                             let clean = storedLetterboxdUsername.trimmingCharacters(in: .whitespacesAndNewlines)
                                             viewModel.requestLetterboxdDedicatedPost(username: clean)
+                                        },
+                                        onTriggerChefPick: { preferredCategory, triggerSource in
+                                            guard !viewModel.isGenerating && !viewModel.isCooldownActive else { return }
+                                            let recentCategories = viewModel.posts.suffix(3).compactMap(\.categoryId)
+                                            let recentTopics = viewModel.posts.suffix(12).flatMap(\.tags)
+                                            let pick = SubTopicDiscoveryStore.shared.pickSurpriseTopic(
+                                                language: appLanguage,
+                                                preferredCategory: preferredCategory,
+                                                recentCategoryIds: recentCategories,
+                                                excludedTopics: recentTopics
+                                            )
+                                            TelemetryService.shared.track(
+                                                "chef_pick_triggered",
+                                                properties: [
+                                                    "category": pick.category.id,
+                                                    "trigger": triggerSource
+                                                ]
+                                            )
+                                            viewModel.requestDedicatedPost(
+                                                topic: pick.topic,
+                                                categoryId: pick.category.id
+                                            )
                                         }
                                     )
                                     .environment(\.appLanguage, appLanguage)
                                     .frame(width: geo.size.width, height: geo.size.height)
                                     .clipped()
                                     .id("category-page")
-                                    .transition(.opacity)
                                 }
                             }
                         }
@@ -529,6 +565,18 @@ struct FeedView: View {
                     .scrollDismissesKeyboard(.interactively)
                     .frame(width: geo.size.width, height: geo.size.height)
                     .clipped()
+                    .onBottomOverscrollChange { overscroll in
+                        let isOnCategoryPage = (feedScrollPosition == AnyHashable("category-page") || viewModel.posts.isEmpty)
+                        if isOnCategoryPage && !viewModel.isGenerating {
+                            outerCategoryBottomOverscroll = overscroll
+                        } else if outerCategoryBottomOverscroll != 0 {
+                            outerCategoryBottomOverscroll = 0
+                        }
+                    }
+                    .onScrollDraggingChange { dragging in
+                        let isOnCategoryPage = (feedScrollPosition == AnyHashable("category-page") || viewModel.posts.isEmpty)
+                        isOuterScrollDragging = isOnCategoryPage && !viewModel.isGenerating && dragging
+                    }
                     .onChange(of: viewModel.posts.last?.id) { _, newID in
                         if isHydratingCache {
                             let target: AnyHashable = (viewModel.isOffline && newID != nil) ? newID! : "category-page"
@@ -546,17 +594,19 @@ struct FeedView: View {
                         proxy.scrollTo(newID, anchor: .top)
                     }
                     .onChange(of: viewModel.isGenerating) { _, isGenerating in
-                        if !isGenerating {
-                            if let lastID = viewModel.posts.last?.id {
-                                feedScrollPosition = lastID
-                                DispatchQueue.main.async {
-                                    proxy.scrollTo(lastID, anchor: .top)
+                        guard !isGenerating else { return }
+                        if let lastID = viewModel.posts.last?.id {
+                            if feedScrollPosition != AnyHashable(lastID) {
+                                var tx = Transaction()
+                                tx.disablesAnimations = true
+                                withTransaction(tx) {
+                                    feedScrollPosition = lastID
                                 }
-                            } else {
-                                feedScrollPosition = "category-page"
-                                DispatchQueue.main.async {
-                                    proxy.scrollTo("category-page", anchor: .top)
-                                }
+                            }
+                        } else if feedScrollPosition != AnyHashable("category-page") {
+                            feedScrollPosition = "category-page"
+                            DispatchQueue.main.async {
+                                proxy.scrollTo("category-page", anchor: .top)
                             }
                         }
                     }
@@ -692,6 +742,7 @@ struct ReelsPostCard: View {
     @State private var isShared: Bool = false
     @State private var isSharePending: Bool = false
     @State private var isDeepDiveExpanded: Bool = false
+    @State private var showExportSheet: Bool = false
     @State private var swipeOffset: CGFloat = 0
     @State private var showReportDialog: Bool = false
     @State private var showReportConfirmation: Bool = false
@@ -857,6 +908,18 @@ struct ReelsPostCard: View {
             deepDiveSheetContent
                 .environment(\.appLanguage, appLanguage)
         }
+        .sheet(isPresented: $showExportSheet) {
+            ExportPostSheet(post: post) {
+                TelemetryService.shared.track("share_card_shared")
+                guard AccessManager.shared.canClaimShareBonus else { return }
+                Task {
+                    if await AccessManager.shared.claimShareBonus() {
+                        toastMessage.wrappedValue = l10n.toastShareBonusGranted
+                    }
+                }
+            }
+            .environment(\.appLanguage, appLanguage)
+        }
     }
 
     // MARK: - Header
@@ -1006,17 +1069,10 @@ struct ReelsPostCard: View {
             .accessibilityLabel(isShared ? l10n.unsharePost : l10n.sharePost)
             .disabled(isSharePending)
 
-            // iOS Share Sheet button
+            // Export Studio button
             Button {
-                ShareService.presentShareSheet(post: post, language: appLanguage) {
-                    TelemetryService.shared.track("share_card_shared")
-                    guard AccessManager.shared.canClaimShareBonus else { return }
-                    Task {
-                        if await AccessManager.shared.claimShareBonus() {
-                            toastMessage.wrappedValue = l10n.toastShareBonusGranted
-                        }
-                    }
-                }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                showExportSheet = true
             } label: {
                 VStack(spacing: 3) {
                     Image(systemName: "square.and.arrow.up")

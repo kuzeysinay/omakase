@@ -73,6 +73,8 @@ DAILY_DIGEST_HOUR: int = 19
 # Server-enforced daily quota limits ("Today's Menu" freemium model + fair-use Pro caps)
 FREE_DAILY_PLATES: int = 3
 PRO_DAILY_PLATES: int = 100
+FREE_DAILY_LETTERBOXD_PLATES: int = 1
+PRO_DAILY_LETTERBOXD_PLATES: int = PRO_DAILY_PLATES
 FREE_DAILY_DEEP_DIVES: int = 1
 PRO_DAILY_DEEP_DIVES: int = 40
 SHARE_BONUS_DEEP_DIVES: int = 1
