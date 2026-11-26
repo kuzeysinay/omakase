@@ -361,7 +361,7 @@ struct CommentsView: View {
         newCommentText = ""
 
         do {
-            try await FirestoreService.shared.addComment(
+            let commentId = try await FirestoreService.shared.addComment(
                 postId: postId,
                 text: text,
                 authorId: uid,
@@ -372,6 +372,7 @@ struct CommentsView: View {
             NotificationManager.shared.notifySocialEvent(
                 type: "comment",
                 postId: postId,
+                commentId: commentId,
                 actorName: name,
                 commentPreview: text
             )

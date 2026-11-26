@@ -268,6 +268,8 @@ async def _stream_post(
     on_complete: Optional[Callable[[], Awaitable[Optional[dict[str, Any]]]]] = None,
     is_disconnected: Optional[Callable[[], Awaitable[bool]]] = None,
     uid: Optional[str] = None,
+    reserved_access: Optional[dict[str, Any]] = None,
+    on_refund: Optional[Callable[[], Awaitable[None]]] = None,
 ) -> AsyncIterator[str]:
     """Yield SSE frames for one generated post."""
     post_id = str(uuid.uuid4())
@@ -280,6 +282,8 @@ async def _stream_post(
     yield _sse_event({"format": format_name}, event="format")
 
     if not GEMINI_API_KEY or genai_client is None:
+        if on_refund is not None:
+            await on_refund()
         yield _sse_event(
             {
                 "code": ErrorCode.SERVICE_UNAVAILABLE,
@@ -333,7 +337,7 @@ async def _stream_post(
             kind, payload = await queue.get()
             if is_disconnected is not None and await is_disconnected():
                 logger.info(
-                    "Client disconnected mid-stream %s; skipping quota deduction",
+                    "Client disconnected mid-stream %s; keeping pre-reserved quota",
                     post_id,
                 )
                 return
@@ -381,10 +385,14 @@ async def _stream_post(
         await producer
 
         if saw_error:
+            if on_refund is not None:
+                await on_refund()
             return
 
         if not saw_body_output:
             logger.warning("Gemini returned empty body stream for model=%s (post_id=%s)", GEMINI_MODEL, post_id)
+            if on_refund is not None:
+                await on_refund()
             await record_api_error_async(ErrorCode.GENERATION_FAILED, status_code=502)
             yield _sse_event(
                 {
@@ -401,13 +409,15 @@ async def _stream_post(
 
     if is_disconnected is not None and await is_disconnected():
         logger.info(
-            "Client disconnected before completion %s; skipping quota deduction",
+            "Client disconnected before completion %s; keeping pre-reserved quota",
             post_id,
         )
         return
 
     done_payload: dict[str, Any] = {"id": post_id}
-    if on_complete is not None:
+    if reserved_access is not None:
+        done_payload["access"] = reserved_access
+    elif on_complete is not None:
         access_snapshot = await on_complete()
         if access_snapshot is not None:
             done_payload["access"] = access_snapshot
@@ -429,12 +439,16 @@ async def _stream_deep_dive(
     on_complete: Optional[Callable[[], Awaitable[Optional[dict[str, Any]]]]] = None,
     is_disconnected: Optional[Callable[[], Awaitable[bool]]] = None,
     uid: Optional[str] = None,
+    reserved_access: Optional[dict[str, Any]] = None,
+    on_refund: Optional[Callable[[], Awaitable[None]]] = None,
 ) -> AsyncIterator[str]:
     """Yield SSE frames for a deep-dive expansion of an existing post."""
     post_id = str(uuid.uuid4())
     yield _sse_event({"id": post_id}, event="start")
 
     if not GEMINI_API_KEY or genai_client is None:
+        if on_refund is not None:
+            await on_refund()
         yield _sse_event(
             {
                 "code": ErrorCode.SERVICE_UNAVAILABLE,
@@ -481,7 +495,7 @@ async def _stream_deep_dive(
             kind, payload = await queue.get()
             if is_disconnected is not None and await is_disconnected():
                 logger.info(
-                    "Client disconnected mid-stream %s; skipping quota deduction",
+                    "Client disconnected mid-stream %s; keeping pre-reserved quota",
                     post_id,
                 )
                 return
@@ -527,6 +541,8 @@ async def _stream_deep_dive(
         await producer
 
         if saw_error:
+            if on_refund is not None:
+                await on_refund()
             return
 
         if not saw_any_output:
@@ -534,6 +550,8 @@ async def _stream_deep_dive(
                 "Gemini deep-dive returned empty stream for model=%s",
                 GEMINI_DEEP_DIVE_MODEL,
             )
+            if on_refund is not None:
+                await on_refund()
             await record_api_error_async(ErrorCode.GENERATION_FAILED, status_code=502)
             yield _sse_event(
                 {
@@ -550,13 +568,15 @@ async def _stream_deep_dive(
 
     if is_disconnected is not None and await is_disconnected():
         logger.info(
-            "Client disconnected before deep-dive completion %s; skipping quota deduction",
+            "Client disconnected before deep-dive completion %s; keeping pre-reserved quota",
             post_id,
         )
         return
 
     done_payload: dict[str, Any] = {"id": post_id}
-    if on_complete is not None:
+    if reserved_access is not None:
+        done_payload["access"] = reserved_access
+    elif on_complete is not None:
         access_snapshot = await on_complete()
         if access_snapshot is not None:
             done_payload["access"] = access_snapshot

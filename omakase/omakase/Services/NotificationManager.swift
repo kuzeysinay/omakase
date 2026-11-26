@@ -715,6 +715,7 @@ final class NotificationManager: NSObject {
         type: String,
         targetUid: String? = nil,
         postId: String? = nil,
+        commentId: String? = nil,
         actorName: String? = nil,
         commentPreview: String? = nil
     ) {
@@ -723,6 +724,7 @@ final class NotificationManager: NSObject {
             var payload: [String: Any] = ["event_type": type]
             if let targetUid, !targetUid.isEmpty { payload["target_uid"] = targetUid }
             if let postId, !postId.isEmpty { payload["post_id"] = postId }
+            if let commentId, !commentId.isEmpty { payload["comment_id"] = commentId }
             if let actorName, !actorName.isEmpty { payload["actor_name"] = String(actorName.prefix(100)) }
             if let commentPreview, !commentPreview.isEmpty {
                 payload["comment_preview"] = String(commentPreview.prefix(160))

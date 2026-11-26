@@ -31,6 +31,11 @@ REQUIRE_AUTH: bool = os.getenv("OMAKASE_REQUIRE_AUTH", "true").strip().lower() n
     "false",
     "no",
 )
+REQUIRE_DEVICE_ID: bool = os.getenv("OMAKASE_REQUIRE_DEVICE_ID", "true").strip().lower() not in (
+    "0",
+    "false",
+    "no",
+)
 
 REVENUECAT_SECRET_API_KEY: Optional[str] = os.getenv("REVENUECAT_SECRET_API_KEY")
 REVENUECAT_V2_SECRET_API_KEY: Optional[str] = os.getenv("REVENUECAT_V2_SECRET_API_KEY")
@@ -42,7 +47,7 @@ ADMIN_ALERT_WEBHOOK_URL: Optional[str] = os.getenv("ADMIN_ALERT_WEBHOOK_URL")
 
 ADMIN_UIDS: set[str] = {
     uid.strip()
-    for uid in os.getenv("ADMIN_UIDS", "Kp6J1wDQd5huj8FRrp3Vb3EuJ333").split(",")
+    for uid in os.getenv("ADMIN_UIDS", "").split(",")
     if uid.strip()
 }
 ADMIN_EMAILS: set[str] = {
@@ -81,10 +86,28 @@ SHARE_BONUS_DEEP_DIVES: int = 1
 FREE_DAILY_SUGGESTIONS: int = 10
 PRO_DAILY_SUGGESTIONS: int = 100
 
-# Per-user daily plate limit overrides (e.g., owner/tester accounts without Pro entitlement)
-USER_DAILY_PLATES_OVERRIDES: dict[str, int] = {
-    "Kp6J1wDQd5huj8FRrp3Vb3EuJ333": 50,
-}
+def _parse_plate_overrides(raw: str) -> dict[str, int]:
+    """Parse `uid:limit,uid2:limit2` env var for per-user daily plate overrides (S-21)."""
+    overrides: dict[str, int] = {}
+    for entry in (raw or "").split(","):
+        item = entry.strip()
+        if not item or ":" not in item:
+            continue
+        uid_part, limit_part = item.split(":", 1)
+        uid_clean = uid_part.strip()
+        try:
+            limit_val = int(limit_part.strip())
+        except ValueError:
+            continue
+        if uid_clean and limit_val > 0:
+            overrides[uid_clean] = limit_val
+    return overrides
+
+
+# Per-user daily plate limit overrides loaded from environment (no hardcoded UIDs, S-21)
+USER_DAILY_PLATES_OVERRIDES: dict[str, int] = _parse_plate_overrides(
+    os.getenv("USER_DAILY_PLATES_OVERRIDES", "")
+)
 
 ALLOWED_CORS_ORIGINS: list[str] = [
     "https://getomakase.app",

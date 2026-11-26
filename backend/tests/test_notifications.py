@@ -154,9 +154,24 @@ class NotificationServiceTests(unittest.TestCase):
 
         app.dependency_overrides[verify_firebase_user] = _fake_user
 
-        # Seed post and recipient device + Istanbul preferences
+        # Seed post, author/actor profiles, comments, reactions, and recipient device + prefs
         self.fake_db.collection("shared_posts").document("post-1").set(
             {"authorId": "recipient-1", "title": "Cinema"}
+        )
+        self.fake_db.collection("users").document("actor-1").set({"username": "Ada"})
+        self.fake_db.collection("users").document("actor-2").set({"username": "Ece"})
+        self.fake_db.collection("users").document("actor-3").set({"username": "Can"})
+        self.fake_db.collection("shared_posts").document("post-1").collection("comments").document("c-1").set(
+            {"authorId": "actor-1", "text": "Harika yazı"}
+        )
+        self.fake_db.collection("shared_posts").document("post-1").collection("comments").document("c-2").set(
+            {"authorId": "actor-2", "text": "Güzelmiş"}
+        )
+        self.fake_db.collection("shared_posts").document("post-1").collection("comments").document("c-3").set(
+            {"authorId": "actor-3", "text": "Katılıyorum"}
+        )
+        self.fake_db.collection("shared_posts").document("post-1").collection("reactions").document("actor-2").set(
+            {"emoji": "✨"}
         )
         self.fake_db.collection("users").document("recipient-1").collection("notification_prefs").document("settings").set(
             {
@@ -189,9 +204,12 @@ class NotificationServiceTests(unittest.TestCase):
         now = datetime(2026, 11, 22, 11, 0, tzinfo=timezone.utc)  # 14:00 Istanbul
         with patch.object(notification_service, "get_firestore_client", return_value=self.fake_db):
             # Self comment
+            self.fake_db.collection("shared_posts").document("post-1").collection("comments").document("c-self").set(
+                {"authorId": "recipient-1", "text": "Hi"}
+            )
             self_res = notification_service.record_social_event(
                 "recipient-1",
-                SocialNotificationEventRequest(event_type="comment", post_id="post-1", comment_preview="Hi"),
+                SocialNotificationEventRequest(event_type="comment", post_id="post-1", comment_id="c-self"),
                 now_utc=now,
                 multicast_sender=self._fake_send,
             )
@@ -203,12 +221,72 @@ class NotificationServiceTests(unittest.TestCase):
             )
             blocked_res = notification_service.record_social_event(
                 "actor-1",
-                SocialNotificationEventRequest(event_type="comment", post_id="post-1", comment_preview="Hi"),
+                SocialNotificationEventRequest(event_type="comment", post_id="post-1", comment_id="c-1"),
                 now_utc=now,
                 multicast_sender=self._fake_send,
             )
             self.assertEqual(blocked_res["reason"], "blocked")
             self.assertEqual(len(self.sent_messages), 0)
+
+    def test_forged_comment_reaction_and_spoofed_actor_name_blocked(self) -> None:
+        now = datetime(2026, 11, 22, 11, 0, tzinfo=timezone.utc)
+        with patch.object(notification_service, "get_firestore_client", return_value=self.fake_db):
+            # Missing comment doc -> ignored
+            forged_c = notification_service.record_social_event(
+                "actor-1",
+                SocialNotificationEventRequest(
+                    event_type="comment",
+                    post_id="post-1",
+                    comment_id="nonexistent",
+                    comment_preview="Phishing link",
+                ),
+                now_utc=now,
+                multicast_sender=self._fake_send,
+            )
+            self.assertEqual(forged_c["reason"], "target_not_found")
+
+            # Spoofed preview & actor_name are ignored in favor of Firestore docs
+            real_c = notification_service.record_social_event(
+                "actor-1",
+                SocialNotificationEventRequest(
+                    event_type="comment",
+                    post_id="post-1",
+                    comment_id="c-1",
+                    actor_name="Omakase Support",
+                    comment_preview="Spoofed text",
+                ),
+                now_utc=now,
+                multicast_sender=self._fake_send,
+            )
+            self.assertEqual(real_c["status"], "sent")
+            self.assertIn("Ada", self.sent_messages[0].notification.title)
+            self.assertIn("Harika yazı", self.sent_messages[0].notification.body)
+            self.assertNotIn("Spoofed text", self.sent_messages[0].notification.body)
+
+            # Missing reaction doc -> ignored
+            forged_r = notification_service.record_social_event(
+                "actor-1",
+                SocialNotificationEventRequest(event_type="reaction", post_id="post-1"),
+                now_utc=now,
+                multicast_sender=self._fake_send,
+            )
+            self.assertEqual(forged_r["reason"], "target_not_found")
+
+            # Duplicate reaction by actor-2 does not inflate reactionsCount
+            notification_service.record_social_event(
+                "actor-2",
+                SocialNotificationEventRequest(event_type="reaction", post_id="post-1"),
+                now_utc=now,
+                multicast_sender=self._fake_send,
+            )
+            notification_service.record_social_event(
+                "actor-2",
+                SocialNotificationEventRequest(event_type="reaction", post_id="post-1"),
+                now_utc=now + timedelta(minutes=1),
+                multicast_sender=self._fake_send,
+            )
+            digest_doc = self.fake_db.collection("notification_queue").document("digest_recipient-1_20261122").get().to_dict()
+            self.assertEqual(digest_doc["reactionsCount"], 1)
 
     def test_comment_immediate_then_30min_cooldown_grouped(self) -> None:
         t1 = datetime(2026, 11, 22, 11, 0, tzinfo=timezone.utc)  # 14:00 Istanbul
@@ -222,6 +300,7 @@ class NotificationServiceTests(unittest.TestCase):
                 SocialNotificationEventRequest(
                     event_type="comment",
                     post_id="post-1",
+                    comment_id="c-1",
                     actor_name="Ada",
                     comment_preview="Harika yazı",
                 ),
@@ -237,13 +316,13 @@ class NotificationServiceTests(unittest.TestCase):
             # Second & third comments within 30 min cooldown get grouped in queue
             res2 = notification_service.record_social_event(
                 "actor-2",
-                SocialNotificationEventRequest(event_type="comment", post_id="post-1", actor_name="Ece"),
+                SocialNotificationEventRequest(event_type="comment", post_id="post-1", comment_id="c-2", actor_name="Ece"),
                 now_utc=t2,
                 multicast_sender=self._fake_send,
             )
             res3 = notification_service.record_social_event(
                 "actor-3",
-                SocialNotificationEventRequest(event_type="comment", post_id="post-1", actor_name="Can"),
+                SocialNotificationEventRequest(event_type="comment", post_id="post-1", comment_id="c-3", actor_name="Can"),
                 now_utc=t3,
                 multicast_sender=self._fake_send,
             )
@@ -267,7 +346,7 @@ class NotificationServiceTests(unittest.TestCase):
         with patch.object(notification_service, "get_firestore_client", return_value=self.fake_db):
             res = notification_service.record_social_event(
                 "actor-1",
-                SocialNotificationEventRequest(event_type="comment", post_id="post-1", actor_name="Ada"),
+                SocialNotificationEventRequest(event_type="comment", post_id="post-1", comment_id="c-1", actor_name="Ada"),
                 now_utc=quiet_utc,
                 multicast_sender=self._fake_send,
             )

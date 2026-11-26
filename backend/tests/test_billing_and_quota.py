@@ -108,6 +108,7 @@ class BillingAndQuotaTests(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
         self.fake_db = _FakeFirestore()
+        self.dev_headers = {"X-Omakase-Device-Id": "test-device-billing-001"}
         app.dependency_overrides.clear()
         _RATE_BUCKETS.clear()
 
@@ -129,6 +130,7 @@ class BillingAndQuotaTests(unittest.TestCase):
             for i in range(3):
                 resp = self.client.post(
                     "/feed/stream",
+                    headers=self.dev_headers,
                     json={
                         "interests": ["Cinema"],
                         "seen_count": i,
@@ -142,6 +144,7 @@ class BillingAndQuotaTests(unittest.TestCase):
 
             fourth = self.client.post(
                 "/feed/stream",
+                headers=self.dev_headers,
                 json={
                     "interests": ["Cinema"],
                     "seen_count": 3,
@@ -165,6 +168,7 @@ class BillingAndQuotaTests(unittest.TestCase):
         ):
             first_lb = self.client.post(
                 "/feed/stream",
+                headers=self.dev_headers,
                 json={
                     "interests": ["Film"],
                     "seen_count": 0,
@@ -178,6 +182,7 @@ class BillingAndQuotaTests(unittest.TestCase):
 
             second_lb = self.client.post(
                 "/feed/stream",
+                headers=self.dev_headers,
                 json={
                     "interests": ["Film"],
                     "seen_count": 1,
@@ -195,6 +200,7 @@ class BillingAndQuotaTests(unittest.TestCase):
 
             regular = self.client.post(
                 "/feed/stream",
+                headers=self.dev_headers,
                 json={
                     "interests": ["Cinema"],
                     "seen_count": 1,
@@ -213,6 +219,7 @@ class BillingAndQuotaTests(unittest.TestCase):
         ), patch.object(gemini_service, "genai_client", None):
             resp = self.client.post(
                 "/feed/stream",
+                headers=self.dev_headers,
                 json={"interests": ["Cinema"], "seen_count": 0, "language": "en"},
             )
             self.assertEqual(resp.status_code, 200)
@@ -231,6 +238,7 @@ class BillingAndQuotaTests(unittest.TestCase):
         ):
             first = self.client.post(
                 "/feed/deep-dive",
+                headers=self.dev_headers,
                 json={
                     "original_title": "Test Dish",
                     "original_text": "Original body text.",
@@ -244,6 +252,7 @@ class BillingAndQuotaTests(unittest.TestCase):
 
             second = self.client.post(
                 "/feed/deep-dive",
+                headers=self.dev_headers,
                 json={
                     "original_title": "Test Dish",
                     "original_text": "Original body text.",
@@ -257,7 +266,11 @@ class BillingAndQuotaTests(unittest.TestCase):
             self.assertEqual(second.json()["kind"], "deep_dive")
             self.assertTrue(second.json()["access"]["can_claim_share_bonus"])
 
-            reward1 = self.client.post("/feed/reward-share", json={"timezone": "UTC"})
+            reward1 = self.client.post(
+                "/feed/reward-share",
+                headers=self.dev_headers,
+                json={"timezone": "UTC"},
+            )
             self.assertEqual(reward1.status_code, 200)
             r1 = reward1.json()
             self.assertTrue(r1["granted"])
@@ -266,13 +279,18 @@ class BillingAndQuotaTests(unittest.TestCase):
             self.assertEqual(r1["access"]["deep_dives_remaining"], 1)
             self.assertFalse(r1["access"]["can_claim_share_bonus"])
 
-            reward2 = self.client.post("/feed/reward-share", json={"timezone": "UTC"})
+            reward2 = self.client.post(
+                "/feed/reward-share",
+                headers=self.dev_headers,
+                json={"timezone": "UTC"},
+            )
             self.assertEqual(reward2.status_code, 200)
             self.assertFalse(reward2.json()["granted"])
             self.assertEqual(reward2.json()["bonus_added"], 0)
 
             third = self.client.post(
                 "/feed/deep-dive",
+                headers=self.dev_headers,
                 json={
                     "original_title": "Test Dish",
                     "original_text": "Original body text.",
@@ -432,9 +450,11 @@ class BillingAndQuotaTests(unittest.TestCase):
         self.assertEqual(body["product_id"], "omakase.pro.yearly")
 
     def test_per_user_daily_plate_limit_override(self) -> None:
-        with patch.object(access_service, "get_firestore_client", return_value=self.fake_db):
+        with patch.object(access_service, "get_firestore_client", return_value=self.fake_db), patch.object(
+            access_service, "USER_DAILY_PLATES_OVERRIDES", {"override-user-1": 50}
+        ):
             owner_snapshot = access_service.build_access_snapshot(
-                "Kp6J1wDQd5huj8FRrp3Vb3EuJ333",
+                "override-user-1",
                 "Europe/Istanbul",
             )
             regular_snapshot = access_service.build_access_snapshot(
@@ -450,52 +470,61 @@ class BillingAndQuotaTests(unittest.TestCase):
         self.assertEqual(regular_snapshot["plates_limit"], 3)
         self.assertEqual(regular_snapshot["plates_remaining"], 3)
 
-    def test_disconnected_stream_does_not_deduct_quota(self) -> None:
-        async def _run() -> int:
-            completed_calls = 0
-
-            async def _on_complete() -> dict:
-                nonlocal completed_calls
-                completed_calls += 1
-                return {}
-
-            async def _always_disconnected() -> bool:
-                return True
-
-            class _Chunk:
-                def __init__(self, text: str) -> None:
-                    self.text = text
-
-            def _fake_stream(**_kwargs: object):
-                yield _Chunk("Title\nTags: Tech\n\nBody paragraph.")
-
-            with patch.object(gemini_service, "GEMINI_API_KEY", "test-key"), patch.object(
-                gemini_service, "genai_client", object()
-            ):
-                class _FakeModels:
-                    @staticmethod
-                    def generate_content_stream(**kwargs: object):
-                        return _fake_stream(**kwargs)
-
-                fake_client = type("Client", (), {"models": _FakeModels()})()
-                with patch.object(gemini_service, "genai_client", fake_client):
-                    frames = []
-                    async for frame in gemini_service._stream_post(
-                        ["Tech"],
-                        0,
-                        "en",
-                        on_complete=_on_complete,
-                        is_disconnected=_always_disconnected,
-                    ):
-                        frames.append(frame)
-                    self.assertTrue(any("event: start" in f for f in frames))
-                    self.assertFalse(any("event: done" in f for f in frames))
-            return completed_calls
-
+    def test_disconnected_stream_retains_reserved_quota_and_missing_device_id_rejected(self) -> None:
         import asyncio
 
-        calls = asyncio.run(_run())
-        self.assertEqual(calls, 0)
+        async def _always_disconnected() -> bool:
+            return True
+
+        class _Chunk:
+            def __init__(self, text: str) -> None:
+                self.text = text
+
+        def _fake_stream(**_kwargs: object):
+            yield _Chunk("Title\nTags: Tech\n\nBody paragraph.")
+
+        class _FakeModels:
+            @staticmethod
+            def generate_content_stream(**kwargs: object):
+                return _fake_stream(**kwargs)
+
+        fake_client = type("Client", (), {"models": _FakeModels()})()
+        refunded = 0
+
+        async def _on_refund() -> None:
+            nonlocal refunded
+            refunded += 1
+
+        async def _run() -> list[str]:
+            frames = []
+            async for frame in gemini_service._stream_post(
+                ["Tech"],
+                0,
+                "en",
+                reserved_access={"plates_used": 1, "plates_remaining": 2},
+                on_refund=_on_refund,
+                is_disconnected=_always_disconnected,
+            ):
+                frames.append(frame)
+            return frames
+
+        with patch.object(gemini_service, "GEMINI_API_KEY", "test-key"), patch.object(
+            gemini_service, "genai_client", fake_client
+        ):
+            frames = asyncio.run(_run())
+        self.assertTrue(any("event: start" in f for f in frames))
+        self.assertFalse(any("event: done" in f for f in frames))
+        # S-16: disconnect must NOT trigger quota refund
+        self.assertEqual(refunded, 0)
+
+        # S-24: free-tier /feed/stream without X-Omakase-Device-Id returns 400
+        with patch.object(access_service, "get_firestore_client", return_value=self.fake_db):
+            missing_dev = self.client.post(
+                "/feed/stream",
+                json={"interests": ["Cinema"], "seen_count": 0, "language": "en"},
+            )
+        self.assertEqual(missing_dev.status_code, 400)
+        self.assertEqual(missing_dev.json()["code"], ErrorCode.INVALID_REQUEST)
 
     def test_device_quota_prevents_free_account_switching_abuse(self) -> None:
         shared_device = "shared-device-123456"
@@ -520,13 +549,16 @@ class BillingAndQuotaTests(unittest.TestCase):
                 device_id=shared_device,
             )
 
-            for _ in range(3):
-                access_service._record_usage_sync(
-                    "Kp6J1wDQd5huj8FRrp3Vb3EuJ333",
-                    "plate",
-                    "Europe/Istanbul",
-                    device_id=owner_device,
-                )
+            with patch.object(
+                access_service, "USER_DAILY_PLATES_OVERRIDES", {"override-owner-uid": 50}
+            ):
+                for _ in range(3):
+                    access_service._record_usage_sync(
+                        "override-owner-uid",
+                        "plate",
+                        "Europe/Istanbul",
+                        device_id=owner_device,
+                    )
 
             snapshot_free_after_owner = access_service.build_access_snapshot(
                 "free-c",
@@ -540,6 +572,48 @@ class BillingAndQuotaTests(unittest.TestCase):
         self.assertEqual(snapshot_b["plates_remaining"], 0)
         self.assertEqual(snapshot_free_after_owner["plates_used"], 0)
         self.assertEqual(snapshot_free_after_owner["plates_remaining"], 3)
+
+    def test_atomic_reservation_blocks_burst_beyond_limit(self) -> None:
+        with patch.object(access_service, "get_firestore_client", return_value=self.fake_db), patch.object(
+            gemini_service, "GEMINI_API_KEY", "test-key"
+        ), patch.object(gemini_service, "genai_client", _FakeClient()), patch.object(
+            gemini_service, "_TOKEN_DRIP_DELAY", 0.0
+        ):
+            statuses = []
+            for i in range(5):
+                r = self.client.post(
+                    "/feed/stream",
+                    headers=self.dev_headers,
+                    json={"interests": ["Art"], "seen_count": i, "language": "en"},
+                )
+                statuses.append(r.status_code)
+        self.assertEqual(statuses, [200, 200, 200, 402, 402])
+
+    def test_timezone_rotation_does_not_multiply_daily_quota(self) -> None:
+        with patch.object(access_service, "get_firestore_client", return_value=self.fake_db), patch.object(
+            gemini_service, "GEMINI_API_KEY", "test-key"
+        ), patch.object(gemini_service, "genai_client", _FakeClient()), patch.object(
+            gemini_service, "_TOKEN_DRIP_DELAY", 0.0
+        ):
+            for i in range(3):
+                r = self.client.post(
+                    "/feed/stream",
+                    headers=self.dev_headers,
+                    json={"interests": ["Art"], "seen_count": i, "language": "en", "timezone": "Etc/GMT+12"},
+                )
+                self.assertEqual(r.status_code, 200)
+
+            switched = self.client.post(
+                "/feed/stream",
+                headers=self.dev_headers,
+                json={"interests": ["Art"], "seen_count": 3, "language": "en", "timezone": "Pacific/Kiritimati"},
+            )
+            self.assertEqual(switched.status_code, 402)
+
+            b1 = self.client.post("/feed/reward-share", headers=self.dev_headers, json={"timezone": "Etc/GMT+12"})
+            b2 = self.client.post("/feed/reward-share", headers=self.dev_headers, json={"timezone": "Pacific/Kiritimati"})
+            self.assertTrue(b1.json()["granted"])
+            self.assertFalse(b2.json()["granted"])
 
 
 if __name__ == "__main__":

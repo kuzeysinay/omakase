@@ -11,8 +11,8 @@ import time
 from typing import Any, Optional
 
 from fastapi import Header, Request as FastAPIRequest
-from google.auth.transport import requests as google_auth_requests
-from google.oauth2 import id_token
+import firebase_admin
+from firebase_admin import auth as firebase_auth
 
 from app.config import (
     ADMIN_EMAILS,
@@ -23,13 +23,18 @@ from app.config import (
 )
 from app.errors import ErrorCode, OmakaseAPIError
 
-_GOOGLE_AUTH_REQUEST = google_auth_requests.Request()
 _RATE_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
-# Short-lived in-memory cache of verified Firebase token hashes -> (uid, expiry_epoch)
-_VERIFIED_TOKEN_CACHE: dict[str, tuple[str, float]] = {}
-# Short-lived cache for admin claims -> (uid, email, email_verified, expiry_epoch)
-_VERIFIED_ADMIN_CACHE: dict[str, tuple[str, str, bool, float]] = {}
-_TOKEN_CACHE_TTL_SECONDS = 300.0
+_RATE_BUCKET_LAST_SEEN: dict[str, float] = {}
+_MAX_RATE_BUCKET_KEYS = 4096
+_RATE_BUCKET_IDLE_TTL_SECONDS = 300.0
+_LAST_RATE_PRUNE_AT = 0.0
+
+
+def _verify_firebase_id_token(token: str) -> dict[str, Any]:
+    """Verify Firebase ID token with revocation and strict claim checks enabled."""
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(options={"projectId": FIREBASE_PROJECT_ID})
+    return firebase_auth.verify_id_token(token, check_revoked=True)
 
 # ---------------------------------------------------------------------------
 # Content moderation — first-pass guard at the API boundary.
@@ -61,20 +66,46 @@ _MAX_RSS_BYTES = 2_000_000
 _LETTERBOXD_USERNAME_RE = re.compile(r"^[a-zA-Z0-9_-]{1,40}$")
 
 
+def _prune_rate_buckets(now: float) -> None:
+    """Evict idle/expired rate-limit buckets to bound in-memory cardinality (S-20)."""
+    global _LAST_RATE_PRUNE_AT
+    if (
+        len(_RATE_BUCKETS) <= _MAX_RATE_BUCKET_KEYS
+        and (now - _LAST_RATE_PRUNE_AT) < _RATE_BUCKET_IDLE_TTL_SECONDS
+    ):
+        return
+    _LAST_RATE_PRUNE_AT = now
+    stale_keys = [
+        k
+        for k, last_seen in list(_RATE_BUCKET_LAST_SEEN.items())
+        if (now - last_seen) >= _RATE_BUCKET_IDLE_TTL_SECONDS or not _RATE_BUCKETS.get(k)
+    ]
+    for k in stale_keys:
+        _RATE_BUCKETS.pop(k, None)
+        _RATE_BUCKET_LAST_SEEN.pop(k, None)
+    if len(_RATE_BUCKETS) > _MAX_RATE_BUCKET_KEYS:
+        oldest = sorted(_RATE_BUCKET_LAST_SEEN.items(), key=lambda kv: kv[1])
+        for k, _ in oldest[: len(_RATE_BUCKETS) - _MAX_RATE_BUCKET_KEYS]:
+            _RATE_BUCKETS.pop(k, None)
+            _RATE_BUCKET_LAST_SEEN.pop(k, None)
+
+
 def _check_rate_limit(
     caller_id: str,
     bucket: str,
     max_calls: int,
     window_seconds: int = 60,
 ) -> None:
-    """Enforce a per-caller sliding-window rate limit."""
+    """Enforce a per-caller sliding-window rate limit with bounded TTL eviction (S-20)."""
     now = time.monotonic()
+    _prune_rate_buckets(now)
     key = f"{bucket}:{caller_id}"
     q = _RATE_BUCKETS[key]
     cutoff = now - window_seconds
     while q and q[0] < cutoff:
         q.popleft()
     if len(q) >= max_calls:
+        _RATE_BUCKET_LAST_SEEN[key] = now
         retry_after = max(1, math.ceil(window_seconds - (now - q[0])))
         raise OmakaseAPIError(
             status_code=429,
@@ -84,6 +115,7 @@ def _check_rate_limit(
             extra={"retry_after": retry_after},
         )
     q.append(now)
+    _RATE_BUCKET_LAST_SEEN[key] = now
 
 
 async def verify_firebase_user(
@@ -95,30 +127,10 @@ async def verify_firebase_user(
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
         if token:
-            token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-            now_wall = time.time()
-            cached = _VERIFIED_TOKEN_CACHE.get(token_hash)
-            if cached is not None:
-                cached_uid, expires_at = cached
-                if now_wall < expires_at:
-                    return f"uid:{cached_uid}"
-                _VERIFIED_TOKEN_CACHE.pop(token_hash, None)
-
             try:
-                claims = await asyncio.to_thread(
-                    id_token.verify_firebase_token,
-                    token,
-                    _GOOGLE_AUTH_REQUEST,
-                    FIREBASE_PROJECT_ID,
-                )
+                claims = await asyncio.to_thread(_verify_firebase_id_token, token)
                 uid = str(claims.get("user_id") or claims.get("sub") or "")
                 if uid:
-                    exp_claim = float(claims.get("exp") or (now_wall + _TOKEN_CACHE_TTL_SECONDS))
-                    cache_until = min(exp_claim - 10.0, now_wall + _TOKEN_CACHE_TTL_SECONDS)
-                    if cache_until > now_wall:
-                        if len(_VERIFIED_TOKEN_CACHE) > 1024:
-                            _VERIFIED_TOKEN_CACHE.clear()
-                        _VERIFIED_TOKEN_CACHE[token_hash] = (uid, cache_until)
                     return f"uid:{uid}"
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Invalid Firebase ID token from %s: %s", client_host, exc)
@@ -176,28 +188,8 @@ async def verify_admin_user(
             detail="Admin authentication required.",
         )
 
-    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-    now_wall = time.time()
-    cached = _VERIFIED_ADMIN_CACHE.get(token_hash)
-    if cached is not None:
-        c_uid, c_email, c_verified, c_exp = cached
-        if now_wall < c_exp:
-            if not _is_authorized_admin_claims(c_uid, c_email, c_verified):
-                raise OmakaseAPIError(
-                    status_code=403,
-                    code=ErrorCode.FORBIDDEN,
-                    detail="Admin access required.",
-                )
-            return {"uid": c_uid, "email": c_email, "caller_id": f"uid:{c_uid}"}
-        _VERIFIED_ADMIN_CACHE.pop(token_hash, None)
-
     try:
-        claims = await asyncio.to_thread(
-            id_token.verify_firebase_token,
-            token,
-            _GOOGLE_AUTH_REQUEST,
-            FIREBASE_PROJECT_ID,
-        )
+        claims = await asyncio.to_thread(_verify_firebase_id_token, token)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Invalid admin Firebase token from %s: %s", client_host, exc)
         raise OmakaseAPIError(
@@ -215,13 +207,6 @@ async def verify_admin_user(
             code=ErrorCode.UNAUTHORIZED,
             detail="Invalid authentication token.",
         )
-
-    exp_claim = float(claims.get("exp") or (now_wall + _TOKEN_CACHE_TTL_SECONDS))
-    cache_until = min(exp_claim - 10.0, now_wall + _TOKEN_CACHE_TTL_SECONDS)
-    if cache_until > now_wall:
-        if len(_VERIFIED_ADMIN_CACHE) > 256:
-            _VERIFIED_ADMIN_CACHE.clear()
-        _VERIFIED_ADMIN_CACHE[token_hash] = (uid, email, email_verified, cache_until)
 
     if not _is_authorized_admin_claims(uid, email, email_verified):
         logger.warning("Unauthorized admin access attempt uid=%s email=%s", uid, email or "-")

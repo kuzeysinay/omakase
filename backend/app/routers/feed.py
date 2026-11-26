@@ -12,9 +12,9 @@ from app.errors import ErrorCode, OmakaseAPIError
 from app.schemas import DeepDiveRequest, FeedRequest, RewardShareRequest
 from app.security import _check_rate_limit, extract_uid, verify_firebase_user
 from app.services.access_service import (
-    assert_quota_available,
     claim_share_bonus,
-    record_quota_usage,
+    refund_quota_slot,
+    reserve_quota_slot,
 )
 from app.services.gemini_service import _stream_deep_dive, _stream_post
 from app.services.metrics_service import record_share_bonus_sync
@@ -42,11 +42,11 @@ async def feed_stream(
     uid = extract_uid(caller_id)
     tz = req.timezone or x_omakase_timezone
     is_letterboxd = bool(req.letterboxd_films)
-    await assert_quota_available(uid, "plate", tz, device_id=x_omakase_device_id)
-    if is_letterboxd:
-        await assert_quota_available(uid, "letterboxd", tz, device_id=x_omakase_device_id)
-
     usage_kind = "letterboxd_plate" if is_letterboxd else "plate"
+    reserved_snapshot = await reserve_quota_slot(
+        uid, usage_kind, tz, device_id=x_omakase_device_id
+    )
+
     headers = {
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
@@ -58,9 +58,16 @@ async def feed_stream(
             req.seen_count,
             req.language,
             letterboxd_films=req.letterboxd_films,
-            on_complete=(lambda: record_quota_usage(uid, usage_kind, tz, device_id=x_omakase_device_id)) if uid else None,
             is_disconnected=request.is_disconnected,
             uid=uid,
+            reserved_access=reserved_snapshot,
+            on_refund=(
+                lambda: refund_quota_slot(
+                    uid, usage_kind, tz, device_id=x_omakase_device_id
+                )
+            )
+            if uid
+            else None,
         ),
         media_type="text/event-stream",
         headers=headers,
@@ -79,14 +86,23 @@ async def deep_dive(
     _check_rate_limit(caller_id, "deep_dive", max_calls=20, window_seconds=60)
     uid = extract_uid(caller_id)
     tz = req.timezone or x_omakase_timezone
-    await assert_quota_available(uid, "deep_dive", tz, device_id=x_omakase_device_id)
+    reserved_snapshot = await reserve_quota_slot(
+        uid, "deep_dive", tz, device_id=x_omakase_device_id
+    )
 
     return StreamingResponse(
         _stream_deep_dive(
             req,
-            on_complete=(lambda: record_quota_usage(uid, "deep_dive", tz, device_id=x_omakase_device_id)) if uid else None,
             is_disconnected=request.is_disconnected,
             uid=uid,
+            reserved_access=reserved_snapshot,
+            on_refund=(
+                lambda: refund_quota_slot(
+                    uid, "deep_dive", tz, device_id=x_omakase_device_id
+                )
+            )
+            if uid
+            else None,
         ),
         media_type="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},

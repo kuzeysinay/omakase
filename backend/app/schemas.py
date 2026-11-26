@@ -232,6 +232,7 @@ class SocialNotificationEventRequest(BaseModel):
     event_type: str = Field(..., description="One of: comment, follow, reaction.")
     target_uid: Optional[str] = Field(default=None, max_length=128)
     post_id: Optional[str] = Field(default=None, max_length=128)
+    comment_id: Optional[str] = Field(default=None, max_length=128)
     actor_name: Optional[str] = Field(default=None, max_length=100)
     comment_preview: Optional[str] = Field(default=None, max_length=160)
 
@@ -243,13 +244,17 @@ class SocialNotificationEventRequest(BaseModel):
             raise ValueError("Unsupported notification event_type.")
         return cleaned
 
-    @field_validator("target_uid", "post_id")
+    @field_validator("target_uid", "post_id", "comment_id")
     @classmethod
     def _clean_identifier(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return None
         cleaned = _sanitize_single_line(v, 128)
-        return cleaned or None
+        if not cleaned:
+            return None
+        if "/" in cleaned or ".." in cleaned:
+            raise ValueError("Invalid identifier.")
+        return cleaned
 
     @field_validator("actor_name")
     @classmethod

@@ -19,6 +19,7 @@ from app.config import (
     PRO_DAILY_LETTERBOXD_PLATES,
     PRO_DAILY_PLATES,
     PRO_DAILY_SUGGESTIONS,
+    REQUIRE_DEVICE_ID,
     SHARE_BONUS_DEEP_DIVES,
     USER_DAILY_PLATES_OVERRIDES,
     logger,
@@ -48,30 +49,22 @@ def parse_iso_datetime(raw: Optional[str]) -> Optional[datetime]:
 
 
 def resolve_user_day(tz_name: Optional[str]) -> tuple[str, str, str]:
-    """Resolve user's local day key (`YYYYMMDD`), validated IANA zone, and UTC reset timestamp."""
-    resolved_tz = "UTC"
-    zone: ZoneInfo
-    if tz_name and isinstance(tz_name, str) and tz_name.strip():
-        candidate = tz_name.strip()
-        try:
-            zone = ZoneInfo(candidate)
-            resolved_tz = candidate
-        except ZoneInfoNotFoundError:
-            zone = ZoneInfo("UTC")
-    else:
-        zone = ZoneInfo("UTC")
+    """Resolve canonical UTC quota day key (`YYYYMMDD`), zone `'UTC'`, and next UTC midnight reset.
 
+    Quota buckets are anchored strictly to UTC so callers cannot rotate timezones
+    per request to multiply daily quotas or share bonuses.
+    """
+    _ = tz_name
     now_utc = datetime.now(timezone.utc)
-    local_now = now_utc.astimezone(zone)
-    day_key = local_now.strftime("%Y%m%d")
-    next_midnight_local = datetime(
-        local_now.year,
-        local_now.month,
-        local_now.day,
-        tzinfo=zone,
+    day_key = now_utc.strftime("%Y%m%d")
+    next_midnight_utc = datetime(
+        now_utc.year,
+        now_utc.month,
+        now_utc.day,
+        tzinfo=timezone.utc,
     ) + timedelta(days=1)
-    resets_at = next_midnight_local.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-    return day_key, resolved_tz, resets_at
+    resets_at = next_midnight_utc.isoformat().replace("+00:00", "Z")
+    return day_key, "UTC", resets_at
 
 
 def _default_entitlement() -> dict[str, Any]:
@@ -187,6 +180,27 @@ def _hash_device_id(device_id: Optional[str]) -> Optional[str]:
     if len(cleaned) < 8 or len(cleaned) > 128:
         return None
     return hashlib.sha256(f"omakase-device-quota:{cleaned}".encode("utf-8")).hexdigest()[:32]
+
+
+def _require_device_id_if_needed(
+    entitlement: dict[str, Any],
+    uid: str,
+    device_id: Optional[str],
+) -> Optional[str]:
+    """Require a valid X-Omakase-Device-Id for free-tier quota operations when enabled (S-24)."""
+    device_hash = _hash_device_id(device_id)
+    if (
+        REQUIRE_DEVICE_ID
+        and not entitlement.get("is_pro")
+        and uid not in USER_DAILY_PLATES_OVERRIDES
+        and not device_hash
+    ):
+        raise OmakaseAPIError(
+            status_code=400,
+            code=ErrorCode.INVALID_REQUEST,
+            detail="Valid X-Omakase-Device-Id header is required.",
+        )
+    return device_hash
 
 
 def get_usage(uid: str, day_key: str) -> dict[str, Any]:
@@ -319,6 +333,12 @@ def _check_quota_sync(
     tz_name: Optional[str],
     device_id: Optional[str] = None,
 ) -> dict[str, Any]:
+    if get_firestore_client() is None:
+        raise OmakaseAPIError(
+            status_code=503,
+            code=ErrorCode.SERVICE_UNAVAILABLE,
+            detail="Quota service is temporarily unavailable.",
+        )
     snapshot = build_access_snapshot(uid, tz_name, device_id=device_id)
     if kind == "plate":
         remaining = snapshot["plates_remaining"]
@@ -459,6 +479,189 @@ async def record_quota_usage(
         return None
 
 
+def _reserve_quota_sync(
+    uid: str,
+    kind: str,
+    tz_name: Optional[str],
+    device_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Atomically verify and increment daily quota before AI generation begins (S-16, S-24)."""
+    db = get_firestore_client()
+    day_key, resolved_tz, resets_at = resolve_user_day(tz_name)
+    entitlement = get_entitlement(uid)
+    device_hash = _require_device_id_if_needed(entitlement, uid, device_id)
+
+    if kind not in ("plate", "letterboxd_plate", "deep_dive", "suggestion"):
+        raise ValueError(f"Unknown quota kind: {kind!r}")
+
+    if db is None:
+        raise OmakaseAPIError(
+            status_code=503,
+            code=ErrorCode.SERVICE_UNAVAILABLE,
+            detail="Quota service is temporarily unavailable.",
+        )
+
+    doc_ref = db.collection("usage").document(f"{uid}_{day_key}")
+    device_ref = (
+        db.collection("device_usage").document(f"{device_hash}_{day_key}")
+        if (device_hash and not entitlement["is_pro"] and uid not in USER_DAILY_PLATES_OVERRIDES)
+        else None
+    )
+    now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    def _reserve(transaction: Any) -> dict[str, Any]:
+        snap = doc_ref.get(transaction=transaction)
+        existing = snap.to_dict() if snap.exists else {}
+        usage = _normalize_usage_doc(existing)
+
+        if device_ref is not None:
+            dev_snap = device_ref.get(transaction=transaction)
+            dev_existing = dev_snap.to_dict() if dev_snap.exists else {}
+            usage = _merge_usage(usage, _normalize_usage_doc(dev_existing))
+
+        pre_snapshot = _assemble_snapshot(
+            entitlement, usage, day_key, resolved_tz, resets_at, uid=uid
+        )
+        if kind in ("plate", "letterboxd_plate") and pre_snapshot["plates_remaining"] <= 0:
+            raise OmakaseAPIError(
+                status_code=402,
+                code=ErrorCode.QUOTA_EXCEEDED,
+                detail="Daily limit reached.",
+                extra={"kind": "plate", "resets_at": pre_snapshot["resets_at"], "access": pre_snapshot},
+            )
+        if kind == "letterboxd_plate" and pre_snapshot["letterboxd_plates_remaining"] <= 0:
+            raise OmakaseAPIError(
+                status_code=402,
+                code=ErrorCode.QUOTA_EXCEEDED,
+                detail="Daily limit reached.",
+                extra={"kind": "letterboxd", "resets_at": pre_snapshot["resets_at"], "access": pre_snapshot},
+            )
+        if kind == "deep_dive" and pre_snapshot["deep_dives_remaining"] <= 0:
+            raise OmakaseAPIError(
+                status_code=402,
+                code=ErrorCode.QUOTA_EXCEEDED,
+                detail="Daily limit reached.",
+                extra={"kind": "deep_dive", "resets_at": pre_snapshot["resets_at"], "access": pre_snapshot},
+            )
+        if kind == "suggestion" and pre_snapshot["suggestions_remaining"] <= 0:
+            raise OmakaseAPIError(
+                status_code=402,
+                code=ErrorCode.QUOTA_EXCEEDED,
+                detail="Daily limit reached.",
+                extra={"kind": "suggestion", "resets_at": pre_snapshot["resets_at"], "access": pre_snapshot},
+            )
+
+        updates: dict[str, Any] = {"updatedAt": now_iso}
+        if kind == "letterboxd_plate":
+            usage["plates_used"] += 1
+            usage["letterboxd_plates_used"] += 1
+            updates["platesUsed"] = usage["plates_used"]
+            updates["letterboxdPlatesUsed"] = usage["letterboxd_plates_used"]
+        elif kind == "plate":
+            usage["plates_used"] += 1
+            updates["platesUsed"] = usage["plates_used"]
+        elif kind == "deep_dive":
+            usage["deep_dives_used"] += 1
+            updates["deepDivesUsed"] = usage["deep_dives_used"]
+        else:
+            usage["suggestions_used"] += 1
+            updates["suggestionsUsed"] = usage["suggestions_used"]
+
+        transaction.set(
+            doc_ref,
+            {"uid": uid, "dayKey": day_key, **updates},
+            merge=True,
+        )
+        if device_ref is not None:
+            transaction.set(
+                device_ref,
+                {"deviceHash": device_hash, "dayKey": day_key, **updates},
+                merge=True,
+            )
+        return usage
+
+    updated_usage = _execute_transaction(db, _reserve)
+    return _assemble_snapshot(
+        entitlement, updated_usage, day_key, resolved_tz, resets_at, uid=uid
+    )
+
+
+async def reserve_quota_slot(
+    uid: Optional[str],
+    kind: str,
+    tz_name: Optional[str],
+    device_id: Optional[str] = None,
+) -> Optional[dict[str, Any]]:
+    """Reserve and increment daily quota atomically before calling Gemini (S-16)."""
+    if not uid:
+        return None
+    return await asyncio.to_thread(_reserve_quota_sync, uid, kind, tz_name, device_id)
+
+
+def _refund_quota_sync(
+    uid: str,
+    kind: str,
+    tz_name: Optional[str],
+    device_id: Optional[str] = None,
+) -> None:
+    """Refund a pre-reserved quota slot ONLY when AI generation fails before producing output."""
+    db = get_firestore_client()
+    if db is None:
+        return
+    day_key, _, _ = resolve_user_day(tz_name)
+    entitlement = get_entitlement(uid)
+    device_hash = _hash_device_id(device_id)
+    doc_ref = db.collection("usage").document(f"{uid}_{day_key}")
+    device_ref = (
+        db.collection("device_usage").document(f"{device_hash}_{day_key}")
+        if (device_hash and not entitlement["is_pro"] and uid not in USER_DAILY_PLATES_OVERRIDES)
+        else None
+    )
+    now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    def _refund(transaction: Any) -> None:
+        snap = doc_ref.get(transaction=transaction)
+        usage = _normalize_usage_doc(snap.to_dict() if snap.exists else {})
+        dev_usage = None
+        if device_ref is not None:
+            dev_snap = device_ref.get(transaction=transaction)
+            dev_usage = _normalize_usage_doc(dev_snap.to_dict() if dev_snap.exists else {})
+
+        def _dec_updates(u: dict[str, Any]) -> dict[str, Any]:
+            upd: dict[str, Any] = {"updatedAt": now_iso}
+            if kind == "letterboxd_plate":
+                upd["platesUsed"] = max(0, u["plates_used"] - 1)
+                upd["letterboxdPlatesUsed"] = max(0, u["letterboxd_plates_used"] - 1)
+            elif kind == "plate":
+                upd["platesUsed"] = max(0, u["plates_used"] - 1)
+            elif kind == "deep_dive":
+                upd["deepDivesUsed"] = max(0, u["deep_dives_used"] - 1)
+            elif kind == "suggestion":
+                upd["suggestionsUsed"] = max(0, u["suggestions_used"] - 1)
+            return upd
+
+        transaction.set(doc_ref, _dec_updates(usage), merge=True)
+        if device_ref is not None and dev_usage is not None:
+            transaction.set(device_ref, _dec_updates(dev_usage), merge=True)
+
+    _execute_transaction(db, _refund)
+
+
+async def refund_quota_slot(
+    uid: Optional[str],
+    kind: str,
+    tz_name: Optional[str],
+    device_id: Optional[str] = None,
+) -> None:
+    """Best-effort refund of a reserved quota slot when Gemini errors before output."""
+    if not uid:
+        return
+    try:
+        await asyncio.to_thread(_refund_quota_sync, uid, kind, tz_name, device_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to refund usage (%s) for %s: %s", kind, uid, exc)
+
+
 def _claim_share_bonus_sync(
     uid: str,
     tz_name: Optional[str],
@@ -466,6 +669,7 @@ def _claim_share_bonus_sync(
 ) -> dict[str, Any]:
     day_key, resolved_tz, resets_at = resolve_user_day(tz_name)
     entitlement = get_entitlement(uid)
+    device_hash = _require_device_id_if_needed(entitlement, uid, device_id)
     db = get_firestore_client()
     if db is None:
         snapshot = _assemble_snapshot(
@@ -481,7 +685,6 @@ def _claim_share_bonus_sync(
         return {"granted": False, "bonus_added": 0, "access": snapshot}
 
     doc_ref = db.collection("usage").document(f"{uid}_{day_key}")
-    device_hash = _hash_device_id(device_id)
     device_ref = (
         db.collection("device_usage").document(f"{device_hash}_{day_key}")
         if (device_hash and uid not in USER_DAILY_PLATES_OVERRIDES)

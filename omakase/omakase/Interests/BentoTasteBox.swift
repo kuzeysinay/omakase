@@ -67,8 +67,8 @@ struct BentoTasteBox: View {
     @State private var isChefPickArmed: Bool = false
     @State private var hasTriggeredChefPick: Bool = false
     @State private var scrollResetTask: Task<Void, Never>?
-    private let chefPickDeadZone: CGFloat = 38
-    private let chefPickThreshold: CGFloat = 155
+    private let chefPickDeadZone: CGFloat = 28
+    private let chefPickThreshold: CGFloat = 86
 
     private var isDraggingScroll: Bool {
         isInnerScrollDragging || isOuterScrollDragging
@@ -603,7 +603,7 @@ struct BentoTasteBox: View {
         let visibleOverscroll = (isDraggingScroll || isChefPickArmed) ? effectiveBottomOverscroll : 0
         let isReady = isChefPickArmed
         let rawProgress = min(1, max(0, (visibleOverscroll - chefPickDeadZone) / max(1, chefPickThreshold - chefPickDeadZone)))
-        let progress: CGFloat = isReady ? 1.0 : pow(rawProgress, 1.65)
+        let progress: CGFloat = isReady ? 1.0 : rawProgress
 
         return Button {
             guard !isGenerationDisabled else { return }

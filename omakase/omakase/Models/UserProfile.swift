@@ -80,6 +80,20 @@ struct UserProfile: Codable, Identifiable, Equatable, Sendable {
         self.profileSetupCompleted = profileSetupCompleted
     }
 
+    enum CodingKeys: String, CodingKey {
+        case id
+        case displayName
+        case username
+        case email
+        case photoURL
+        case interests
+        case createdAt
+        case searchableName
+        case searchableUsername
+        case usernameUpdatedAt
+        case profileSetupCompleted
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -94,6 +108,21 @@ struct UserProfile: Codable, Identifiable, Equatable, Sendable {
         searchableUsername = try c.decodeIfPresent(String.self, forKey: .searchableUsername) ?? username?.lowercased()
         usernameUpdatedAt = try? c.decodeIfPresent(Date.self, forKey: .usernameUpdatedAt)
         profileSetupCompleted = try? c.decodeIfPresent(Bool.self, forKey: .profileSetupCompleted)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(displayName, forKey: .displayName)
+        try c.encodeIfPresent(username, forKey: .username)
+        // `email` is intentionally omitted from Firestore writes (S-04 / S-19).
+        try c.encodeIfPresent(photoURL, forKey: .photoURL)
+        try c.encode(interests, forKey: .interests)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(searchableName, forKey: .searchableName)
+        try c.encodeIfPresent(searchableUsername, forKey: .searchableUsername)
+        try c.encodeIfPresent(usernameUpdatedAt, forKey: .usernameUpdatedAt)
+        try c.encodeIfPresent(profileSetupCompleted, forKey: .profileSetupCompleted)
     }
 
     /// Normalizes a raw string into a valid Twitter-style handle (lowercase a-z, 0-9, underscore, dot).

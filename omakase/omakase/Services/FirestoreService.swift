@@ -577,7 +577,8 @@ final class FirestoreService {
 
     // MARK: - Comments
 
-    func addComment(postId: String, text: String, authorId: String, authorName: String, authorPhotoURL: String?) async throws {
+    @discardableResult
+    func addComment(postId: String, text: String, authorId: String, authorName: String, authorPhotoURL: String?) async throws -> String {
         let batch = db.batch()
 
         let commentRef = db.collection("shared_posts").document(postId)
@@ -599,6 +600,7 @@ final class FirestoreService {
         ], forDocument: postRef)
 
         try await batch.commit()
+        return commentRef.documentID
     }
 
     func fetchComments(postId: String, limit: Int = 50) async throws -> [Comment] {

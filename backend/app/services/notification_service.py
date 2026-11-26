@@ -29,6 +29,7 @@ from app.config import (
 )
 from app.errors import ErrorCode, OmakaseAPIError
 from app.schemas import SocialNotificationEventRequest
+from app.security import _BLOCKLIST_RE, _sanitize_single_line
 from app.services.access_service import parse_iso_datetime
 from app.services.firestore_admin import get_firestore_client
 
@@ -417,7 +418,7 @@ def _resolve_recipient_and_post_title(
     db: Any,
     actor_uid: str,
     req: SocialNotificationEventRequest,
-) -> tuple[Optional[str], str]:
+) -> tuple[Optional[str], str, Optional[str]]:
     if req.event_type in ("comment", "reaction"):
         if not req.post_id:
             raise OmakaseAPIError(
@@ -427,11 +428,48 @@ def _resolve_recipient_and_post_title(
             )
         post_snap = db.collection("shared_posts").document(req.post_id).get()
         if not post_snap.exists:
-            return None, ""
+            return None, "", None
         post_data = post_snap.to_dict() or {}
         author_id = str(post_data.get("authorId") or "").strip()
         post_title = str(post_data.get("title") or "").strip()
-        return (author_id or None), post_title
+
+        if req.event_type == "comment":
+            if not req.comment_id:
+                raise OmakaseAPIError(
+                    status_code=422,
+                    code=ErrorCode.INVALID_REQUEST,
+                    detail="comment_id is required for comment notifications.",
+                )
+            comment_snap = (
+                db.collection("shared_posts")
+                .document(req.post_id)
+                .collection("comments")
+                .document(req.comment_id)
+                .get()
+            )
+            if not comment_snap.exists:
+                return None, "", None
+            comment_data = comment_snap.to_dict() or {}
+            if str(comment_data.get("authorId") or "").strip() != actor_uid:
+                return None, "", None
+            verified_preview = _sanitize_single_line(
+                str(comment_data.get("text") or ""), 160
+            )
+            if not verified_preview or _BLOCKLIST_RE.search(verified_preview):
+                verified_preview = None
+            return (author_id or None), post_title, verified_preview
+
+        # Reaction: verify caller has an active reaction document on the target post (S-17).
+        reaction_snap = (
+            db.collection("shared_posts")
+            .document(req.post_id)
+            .collection("reactions")
+            .document(actor_uid)
+            .get()
+        )
+        if not reaction_snap.exists:
+            return None, "", None
+        return (author_id or None), post_title, None
 
     if not req.target_uid:
         raise OmakaseAPIError(
@@ -448,8 +486,8 @@ def _resolve_recipient_and_post_title(
         .get()
     )
     if not follower_snap.exists:
-        return None, ""
-    return req.target_uid, ""
+        return None, "", None
+    return req.target_uid, "", None
 
 
 def _resolve_recipient_uid(
@@ -457,16 +495,17 @@ def _resolve_recipient_uid(
     actor_uid: str,
     req: SocialNotificationEventRequest,
 ) -> Optional[str]:
-    recipient_uid, _ = _resolve_recipient_and_post_title(db, actor_uid, req)
+    recipient_uid, _, _ = _resolve_recipient_and_post_title(db, actor_uid, req)
     return recipient_uid
 
 
 def _resolve_actor_display_name(
     db: Any,
     actor_uid: str,
-    fallback_name: Optional[str],
+    fallback_name: Optional[str] = None,
 ) -> Optional[str]:
-    """Resolve authoritative actor display name from Firestore to prevent push spoofing."""
+    """Resolve authoritative actor display name from Firestore to prevent push spoofing (S-17)."""
+    _ = fallback_name
     try:
         user_snap = db.collection("users").document(actor_uid).get()
         if user_snap.exists:
@@ -479,8 +518,7 @@ def _resolve_actor_display_name(
                 return display_name
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed reading actor profile for uid=%s: %s", actor_uid, exc)
-    cleaned_fallback = (fallback_name or "").strip()
-    return cleaned_fallback[:100] if cleaned_fallback else None
+    return None
 
 
 def send_fcm_to_user(
@@ -558,7 +596,9 @@ def record_social_event(
         return {"status": "ignored", "reason": "firestore_unavailable"}
 
     now = (now_utc or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    recipient_uid, post_title = _resolve_recipient_and_post_title(db, actor_uid, req)
+    recipient_uid, post_title, verified_comment_preview = _resolve_recipient_and_post_title(
+        db, actor_uid, req
+    )
     if not recipient_uid:
         return {"status": "ignored", "reason": "target_not_found"}
     if recipient_uid == actor_uid:
@@ -576,7 +616,7 @@ def record_social_event(
         if not prefs["commentPushEnabled"]:
             return {"status": "ignored", "reason": "disabled"}
 
-        resolved_actor_name = _resolve_actor_display_name(db, actor_uid, req.actor_name)
+        resolved_actor_name = _resolve_actor_display_name(db, actor_uid)
         assert req.post_id is not None
         cooldown_id = f"{recipient_uid}_{req.post_id}"
         cooldown_ref = db.collection("notification_cooldowns").document(cooldown_id)
@@ -600,7 +640,7 @@ def record_social_event(
                 language,
                 actors,
                 1,
-                req.comment_preview,
+                verified_comment_preview,
                 post_title=post_title,
             )
             delivery = send_fcm_to_user(
@@ -649,7 +689,7 @@ def record_social_event(
                 "postTitle": post_title or existing.get("postTitle") or "",
                 "count": count,
                 "actorNames": actor_names,
-                "lastPreview": req.comment_preview or existing.get("lastPreview") or "",
+                "lastPreview": verified_comment_preview or existing.get("lastPreview") or "",
                 "deliverAt": deliver_at,
                 "updatedAt": now,
             },
@@ -670,6 +710,7 @@ def record_social_event(
         existing = {}
 
     follower_uids: list[str] = list(existing.get("followerUids") or [])
+    reactor_uids: list[str] = list(existing.get("reactorUids") or [])
     followers_count = int(existing.get("followersCount") or 0)
     reactions_count = int(existing.get("reactionsCount") or 0)
 
@@ -678,7 +719,10 @@ def record_social_event(
             follower_uids.append(actor_uid)
             followers_count = max(followers_count + 1, len(follower_uids))
     else:
-        reactions_count += 1
+        reactor_key = f"{actor_uid}:{req.post_id or ''}"
+        if reactor_key not in reactor_uids:
+            reactor_uids.append(reactor_key)
+            reactions_count = max(reactions_count + 1, len(reactor_uids))
 
     existing_deliver = _coerce_utc(existing.get("deliverAt"))
     deliver_at = existing_deliver if existing_deliver else next_digest_delivery_utc(now, resolved_tz)
@@ -689,6 +733,7 @@ def record_social_event(
             "recipientUid": recipient_uid,
             "dayKey": day_key,
             "followerUids": follower_uids[:100],
+            "reactorUids": reactor_uids[:100],
             "followersCount": followers_count,
             "reactionsCount": reactions_count,
             "deliverAt": deliver_at,
