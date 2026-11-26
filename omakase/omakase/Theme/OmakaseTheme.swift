@@ -34,6 +34,20 @@ enum OmakaseTheme {
 
     /// Inactive chip outline.
     static let chipInactiveStroke = Color.primary.opacity(0.28)
+
+    /// High-contrast monochrome tint for Toggles and Pickers (avoids white-on-white in Dark Mode).
+    static var controlTint: Color {
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? UIColor(white: 0.46, alpha: 1.0) : .black
+        })
+    }
+
+    /// Elevated paper surface (white in Light Mode, secondary dark gray in Dark Mode).
+    static var cardSurface: Color {
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? .secondarySystemBackground : .systemBackground
+        })
+    }
 }
 
 /// Prevents the default Button highlight flash on long-press / context-menu release.

@@ -17,10 +17,22 @@ struct OnboardingView: View {
     @AppStorage("omakase.hasOnboarded") private var hasOnboarded: Bool = false
 
     var authService: AuthService? = nil
+    var onSignInDirectly: (() -> Void)? = nil
 
     @State private var introPage: Int = 0
+    @State private var welcomeVisible: Bool = false
+    @State private var slideProgress: CGFloat = 0
 
     private var l10n: L10n { L10n(lang: appLanguage) }
+
+    private func autoAdvanceDuration(for page: Int) -> Double? {
+        switch page {
+        case 0: return 3.8
+        case 1: return 6.5
+        case 2: return 6.0
+        default: return nil
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -48,6 +60,27 @@ struct OnboardingView: View {
 
                     Spacer()
 
+                    LanguagePicker()
+
+                    if let onSignInDirectly {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            onSignInDirectly()
+                        } label: {
+                            Text(l10n.guestTasteSignIn)
+                                .font(.system(size: 13.5, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 11)
+                                .padding(.vertical, 6)
+                                .background(.ultraThinMaterial, in: Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         TelemetryService.shared.track("onboarding_skipped")
@@ -72,9 +105,10 @@ struct OnboardingView: View {
 
                 // Paged intro slides
                 TabView(selection: $introPage) {
-                    introSlide1.tag(0)
-                    introSlide2.tag(1)
-                    introSlide3.tag(2)
+                    introWelcomeSlide.tag(0)
+                    introSlide1.tag(1)
+                    introSlide2.tag(2)
+                    introSlide3.tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: introPage)
@@ -82,17 +116,30 @@ struct OnboardingView: View {
                 // Page indicators + primary CTA
                 VStack(spacing: 18) {
                     HStack(spacing: 7) {
-                        ForEach(0..<3, id: \.self) { index in
-                            Capsule()
-                                .fill(index == introPage ? OmakaseTheme.ink : Color.primary.opacity(0.18))
-                                .frame(width: index == introPage ? 26 : 8, height: 6)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: introPage)
+                        ForEach(0..<4, id: \.self) { index in
+                            let isActive = index == introPage
+                            let showsAutoProgress = isActive && autoAdvanceDuration(for: index) != nil && !reduceMotion
+                            if showsAutoProgress {
+                                ZStack(alignment: .leading) {
+                                    Capsule()
+                                        .fill(Color.primary.opacity(0.18))
+                                    Capsule()
+                                        .fill(OmakaseTheme.ink)
+                                        .frame(width: max(6, 28 * slideProgress))
+                                }
+                                .frame(width: 28, height: 6)
+                            } else {
+                                Capsule()
+                                    .fill(isActive ? OmakaseTheme.ink : Color.primary.opacity(0.18))
+                                    .frame(width: isActive ? 26 : 8, height: 6)
+                            }
                         }
                     }
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: introPage)
 
                     Button {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        if introPage < 2 {
+                        if introPage < 3 {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                                 introPage += 1
                             }
@@ -101,7 +148,7 @@ struct OnboardingView: View {
                         }
                     } label: {
                         HStack(spacing: 8) {
-                            Text(introPage < 2 ? l10n.introNext : l10n.onboardingStartFeed)
+                            Text(introPage < 3 ? l10n.introNext : l10n.onboardingStartFeed)
                                 .font(.system(size: 16.5, weight: .bold))
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 14, weight: .bold))
@@ -124,9 +171,87 @@ struct OnboardingView: View {
         .onAppear {
             TelemetryService.shared.track("onboarding_started")
         }
+        .onChange(of: introPage) { _, _ in
+            HapticManager.selection()
+        }
+        .task(id: introPage) {
+            slideProgress = 0
+            guard let duration = autoAdvanceDuration(for: introPage) else { return }
+            if !reduceMotion {
+                withAnimation(.linear(duration: duration)) {
+                    slideProgress = 1.0
+                }
+            }
+            try? await Task.sleep(for: .seconds(duration))
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                introPage = min(3, introPage + 1)
+            }
+        }
     }
 
     // MARK: - Slides
+
+    private var introWelcomeSlide: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .frame(width: 104, height: 104)
+                Circle()
+                    .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+                    .frame(width: 104, height: 104)
+                Image("AppLogo")
+                    .resizable()
+                    .renderingMode(.template)
+                    .scaledToFit()
+                    .frame(width: 62, height: 62)
+                    .foregroundStyle(OmakaseTheme.ink)
+            }
+            .scaleEffect(welcomeVisible || reduceMotion ? 1.0 : 0.92)
+            .opacity(welcomeVisible || reduceMotion ? 1.0 : 0.0)
+
+            VStack(spacing: 12) {
+                Text("OMAKASE")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .tracking(2.4)
+                    .foregroundStyle(.secondary)
+
+                Text(l10n.introWelcomeTitle)
+                    .font(.system(size: 34, weight: .heavy))
+                    .tracking(-0.6)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("onboarding.slide.0.title")
+
+                Text(l10n.introWelcomeSubtitle)
+                    .font(.system(size: 16, weight: .regular))
+                    .lineSpacing(4)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .opacity(welcomeVisible || reduceMotion ? 1.0 : 0.0)
+            .offset(y: welcomeVisible || reduceMotion ? 0 : 8)
+
+            Spacer()
+        }
+        .padding(.horizontal, 26)
+        .onAppear {
+            guard !welcomeVisible else { return }
+            if reduceMotion {
+                welcomeVisible = true
+            } else {
+                withAnimation(.easeOut(duration: 0.45)) {
+                    welcomeVisible = true
+                }
+            }
+        }
+    }
 
     private var introSlide1: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -174,7 +299,7 @@ struct OnboardingView: View {
                 eyebrow: l10n.introSlide1Eyebrow,
                 title: l10n.introSlide1Title,
                 body: l10n.introSlide1Body,
-                titleIdentifier: "onboarding.slide.0.title"
+                titleIdentifier: "onboarding.slide.1.title"
             )
 
             Spacer()
@@ -235,7 +360,7 @@ struct OnboardingView: View {
                 eyebrow: l10n.introSlide2Eyebrow,
                 title: l10n.introSlide2Title,
                 body: l10n.introSlide2Body,
-                titleIdentifier: "onboarding.slide.1.title"
+                titleIdentifier: "onboarding.slide.2.title"
             )
 
             Spacer()
@@ -286,7 +411,7 @@ struct OnboardingView: View {
                 eyebrow: l10n.introSlide3Eyebrow,
                 title: l10n.introSlide3Title,
                 body: l10n.introSlide3Body,
-                titleIdentifier: "onboarding.slide.2.title"
+                titleIdentifier: "onboarding.slide.3.title"
             )
 
             Spacer()
@@ -334,6 +459,7 @@ struct OnboardingView: View {
     // MARK: - Actions
 
     private func completeOnboarding() {
+        HapticManager.success()
         TelemetryService.shared.track("onboarding_completed")
         hasOnboarded = true
     }

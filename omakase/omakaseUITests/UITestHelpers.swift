@@ -44,6 +44,7 @@ enum UIID {
     static let onboardingSlide0Title = "onboarding.slide.0.title"
     static let onboardingSlide1Title = "onboarding.slide.1.title"
     static let onboardingSlide2Title = "onboarding.slide.2.title"
+    static let onboardingSlide3Title = "onboarding.slide.3.title"
     static let onboardingCompleted = "uitest.onboarding.completed"
     static let profileSetupContinueButton = "profileSetup.continueButton"
 

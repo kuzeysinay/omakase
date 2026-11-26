@@ -8,6 +8,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("omakase.hasOnboarded") private var hasOnboarded: Bool = false
+    @AppStorage("omakase.hasCompletedGuestTaste") private var hasCompletedGuestTaste: Bool = false
     @AppStorage("omakase.language") private var languageCode: String = AppLanguage.systemDefault.rawValue
     @AppStorage("omakase.appearance") private var appearanceCode: String = AppAppearance.system.rawValue
 
@@ -42,20 +43,41 @@ struct ContentView: View {
         ZStack {
             Group {
                 if !authService.isAuthenticated {
-                    // Step 1: Sign in or Sign up (Email / Google / Apple)
-                    AuthView(authService: authService)
+                    if NotificationManager.shared.pendingTopicRequest != nil {
+                        // Direct deep link into a topic: go straight to Sign-In first
+                        AuthView(authService: authService)
+                    } else if !hasOnboarded {
+                        // Step 0: Original 3-slide editorial onboarding
+                        OnboardingView(
+                            authService: authService,
+                            onSignInDirectly: {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    hasOnboarded = true
+                                    hasCompletedGuestTaste = true
+                                }
+                            }
+                        )
+                    } else if !hasCompletedGuestTaste {
+                        // Step 1: 2-post simulated live-streaming tasting feed before mandatory signup
+                        GuestTasteView(authService: authService) {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                hasCompletedGuestTaste = true
+                            }
+                        }
+                    } else {
+                        // Step 2: Mandatory Sign in or Sign up (Email / Google / Apple)
+                        AuthView(authService: authService)
+                    }
                 } else if authService.needsProfileSetup {
-                    // Step 1.5: Choose display name & unique @username (Apple / Google / incomplete profiles)
+                    // Step 2.5: Choose display name & unique @username (Apple / Google / incomplete profiles)
                     ProfileSetupView(authService: authService)
-                } else if !hasOnboarded {
-                    // Step 2: Onboarding introduction
-                    OnboardingView(authService: authService)
                 } else {
                     // Step 3: Main app with tab bar
                     MainTabView(authService: authService)
                 }
             }
             .animation(.default, value: authService.isAuthenticated)
+            .animation(.default, value: hasCompletedGuestTaste)
             .animation(.default, value: authService.needsProfileSetup)
             .animation(.default, value: hasOnboarded)
             .environment(\.locale, Locale(identifier: resolvedLanguage.localeIdentifier))
@@ -77,6 +99,7 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            WidgetDataBridge.syncLanguage(resolvedLanguage)
 #if DEBUG
             if UITestLaunchConfig.shouldSkipSplash {
                 showSplash = false
@@ -122,8 +145,14 @@ struct ContentView: View {
             }
         }
         .onChange(of: languageCode) { _, _ in
+            WidgetDataBridge.syncLanguage(resolvedLanguage)
             Task {
                 await NotificationManager.shared.updatePreferencesForLanguageChange(resolvedLanguage)
+            }
+        }
+        .onChange(of: authService.isAuthenticated) { _, isAuth in
+            if isAuth && !hasCompletedGuestTaste {
+                hasCompletedGuestTaste = true
             }
         }
     }

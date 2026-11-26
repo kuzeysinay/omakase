@@ -68,7 +68,7 @@ struct TimelinePostCard: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
-        .background(Color(.systemBackground))
+        .background(OmakaseTheme.cardSurface)
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
@@ -157,19 +157,19 @@ struct TimelinePostCard: View {
                     if isFollowPending {
                         ProgressView()
                             .controlSize(.mini)
-                            .tint(Color(uiColor: .systemBackground))
+                            .tint(OmakaseTheme.chipActiveText)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 5)
                     } else {
                         Text("+ \(l10n.follow)")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(Color(uiColor: .systemBackground))
+                            .foregroundStyle(OmakaseTheme.chipActiveText)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
                     }
                 }
                 .buttonStyle(.plain)
-                .background(OmakaseTheme.ink, in: Capsule())
+                .background(OmakaseTheme.chipActiveFill, in: Capsule())
                 .disabled(isFollowPending)
                 .accessibilityLabel(l10n.follow)
             }
@@ -265,6 +265,7 @@ struct TimelinePostCard: View {
             // Deep Dive button — only visible if the shared post has a deep dive
             if let deepDive = post.deepDiveText, !deepDive.isEmpty {
                 Button {
+                    HapticManager.light()
                     showDeepDive = true
                 } label: {
                     VStack(spacing: 4) {
@@ -306,6 +307,7 @@ struct TimelinePostCard: View {
 
     private var likeButton: some View {
         Button {
+            HapticManager.light()
             Task { await toggleLike() }
         } label: {
             HStack(spacing: 6) {
@@ -328,6 +330,7 @@ struct TimelinePostCard: View {
 
     private var commentButton: some View {
         Button {
+            HapticManager.light()
             showComments = true
         } label: {
             HStack(spacing: 4) {

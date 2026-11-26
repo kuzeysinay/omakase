@@ -13,7 +13,7 @@
     "es",
     "ko"
   ],
-  "locale": "tr",
+  "locale": "en",
   "device": "iphone",
   "orientation": "portrait",
   "appIcon": "/app-icon.png",
@@ -126,10 +126,10 @@
         "screenshot": "/screenshots/apple/iphone/{locale}/02.png",
         "transforms": {
           "caption": {
-            "x": 9.599872841993829,
-            "y": 277.4287993042831,
+            "x": -22.489637235792316,
+            "y": 325.40643050721644,
             "width": 1361,
-            "height": 731,
+            "height": 675,
             "rotation": 0,
             "zIndex": 4
           },

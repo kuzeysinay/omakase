@@ -82,8 +82,38 @@ struct omakaseApp: App {
             ContentView()
                 .modelContainer(modelContainer)
                 .onOpenURL { url in
+                    if handleOmakaseDeepLink(url) {
+                        return
+                    }
                     GIDSignIn.sharedInstance.handle(url)
                 }
         }
+    }
+
+    @MainActor
+    private func handleOmakaseDeepLink(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "omakase" else { return false }
+        let host = url.host?.lowercased()
+        if host == "topic" {
+            let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            let topic = components?.queryItems?.first(where: { $0.name == "topic" })?.value?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let category = components?.queryItems?.first(where: { $0.name == "category" })?.value?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            NotificationManager.shared.pendingRoute = .feed
+            if let topic, !topic.isEmpty {
+                NotificationManager.shared.pendingTopicRequest = PendingNotificationTopicRequest(
+                    id: UUID(),
+                    topic: topic,
+                    categoryId: category ?? ""
+                )
+            }
+            return true
+        }
+        if host == "feed" {
+            NotificationManager.shared.pendingRoute = .feed
+            return true
+        }
+        return false
     }
 }

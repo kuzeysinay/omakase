@@ -92,10 +92,13 @@ final class FeedViewModel {
                     readingCooldownStartDate = nil
                     readingCooldownEndDate = nil
                     TelemetryService.shared.track("cooldown_completed")
+                    RatingPromptManager.shared.recordCompletedRead()
                     if !AccessManager.shared.isPro,
                        !UserDefaults.standard.bool(forKey: "omakase.hasShownFirstPlatePaywall"),
                        posts.contains(where: { $0.isComplete && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
                         shouldPresentSoftPaywall = true
+                    } else if activeError == nil {
+                        RatingPromptManager.shared.considerPromptingIfEligible(minReads: 3)
                     }
                     break
                 } else {
@@ -731,7 +734,12 @@ final class FeedViewModel {
             if let idx = posts.firstIndex(where: { $0.id == postID }) {
                 let completedPost = posts[idx]
                 let lang = contentLanguage
-                NotificationManager.shared.recordGeneratedPost(completedPost, language: lang)
+                if completedPost.deepDiveText == nil {
+                    WidgetDataBridge.incrementMonthlyReadCount()
+                    NotificationManager.shared.recordGeneratedPost(completedPost, language: lang)
+                } else {
+                    RatingPromptManager.shared.considerPromptingIfEligible(minReads: 2)
+                }
                 Task {
                     await PostCacheService.shared.cachePost(completedPost)
                     await PostCacheService.shared.clearOldPosts()

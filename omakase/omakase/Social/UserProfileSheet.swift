@@ -47,8 +47,11 @@ struct UserProfileSheet: View {
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
-                        Button(l10n.tryAgain) {
+                        Button {
                             Task { await loadProfile() }
+                        } label: {
+                            Text(l10n.tryAgain)
+                                .foregroundStyle(OmakaseTheme.chipActiveText)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(OmakaseTheme.chipActiveFill)
@@ -163,17 +166,29 @@ struct UserProfileSheet: View {
                         Button {
                             Task { await toggleFollow() }
                         } label: {
-                            if isPending {
-                                ProgressView().controlSize(.small)
-                            } else {
-                                Text(isFollowing ? l10n.following : l10n.follow)
-                                    .fontWeight(.semibold)
-                                    .frame(maxWidth: 180)
+                            HStack(spacing: 6) {
+                                if isPending {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .tint(isFollowing ? Color.primary : OmakaseTheme.chipActiveText)
+                                } else {
+                                    Text(isFollowing ? l10n.following : l10n.follow)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(isFollowing ? Color.primary : OmakaseTheme.chipActiveText)
+                                }
                             }
+                            .frame(minWidth: 160, minHeight: 46)
+                            .padding(.horizontal, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(isFollowing ? Color(uiColor: .secondarySystemFill) : OmakaseTheme.chipActiveFill)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .strokeBorder(isFollowing ? OmakaseTheme.stroke : Color.clear, lineWidth: 1)
+                            )
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(isFollowing ? .secondary : .primary)
-                        .controlSize(.large)
+                        .buttonStyle(OmakaseChipButtonStyle())
                         .disabled(isPending)
                     } else {
                         Button {
@@ -328,6 +343,7 @@ struct MyProfileSheet: View {
     @State private var profile: UserProfile?
     @State private var followerCount = 0
     @State private var followingCount = 0
+    @State private var monthlyReadCount = WidgetDataBridge.monthlyReadCount()
     @State private var userPosts: [SharedPost] = []
     @State private var isLoadingPosts = true
     @State private var bookmarkStore = BookmarkStore.shared
@@ -342,6 +358,8 @@ struct MyProfileSheet: View {
     @State private var tempLetterboxdUsername = ""
     @State private var isShowingDeleteAccountAlert = false
     @State private var isDeletingAccount = false
+    @State private var isShowingSignOutDialog = false
+    @State private var isSigningOut = false
     @State private var accountErrorMessage: String?
     @State private var isShowingPaywall = false
     @State private var isShowingEditProfile = false
@@ -393,7 +411,7 @@ struct MyProfileSheet: View {
                             .foregroundStyle(.primary)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 7)
-                            .background(Color(uiColor: .systemBackground), in: Capsule())
+                            .background(OmakaseTheme.cardSurface, in: Capsule())
                             .overlay(
                                 Capsule()
                                     .strokeBorder(OmakaseTheme.ink.opacity(0.28), lineWidth: 1)
@@ -406,10 +424,12 @@ struct MyProfileSheet: View {
                             statCell(value: followerCount, label: l10n.followers)
                             Divider().frame(height: 30)
                             statCell(value: followingCount, label: l10n.followingLabel)
+                            Divider().frame(height: 30)
+                            statCell(value: monthlyReadCount, label: l10n.profileReadsThisMonth)
                         }
                         .background(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(Color(uiColor: .systemBackground))
+                                .fill(OmakaseTheme.cardSurface)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -467,7 +487,7 @@ struct MyProfileSheet: View {
                             .padding(.vertical, 12)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color(uiColor: .systemBackground))
+                                    .fill(OmakaseTheme.cardSurface)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -543,7 +563,7 @@ struct MyProfileSheet: View {
                             .padding(.vertical, 28)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color(uiColor: .systemBackground))
+                                    .fill(OmakaseTheme.cardSurface)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -631,10 +651,12 @@ struct MyProfileSheet: View {
         .toast(message: $profileToastMessage)
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
+                monthlyReadCount = WidgetDataBridge.monthlyReadCount()
                 Task { await notificationManager.refreshAuthorizationStatus() }
             }
         }
         .task {
+            monthlyReadCount = WidgetDataBridge.monthlyReadCount()
             await accessManager.refreshAccessStatus()
             await notificationManager.refreshAuthorizationStatus()
             guard let uid = authService.uid else { return }
@@ -717,7 +739,6 @@ struct MyProfileSheet: View {
                 }
                 .disabled(accessManager.isRestoring)
             }
-            .listRowBackground(Color(uiColor: .systemBackground))
 
             // Preferences
             Section(l10n.profilePreferences) {
@@ -733,6 +754,7 @@ struct MyProfileSheet: View {
                             .foregroundStyle(.primary)
                     }
                 }
+                .tint(.secondary)
 
                 Picker(selection: $appearanceCode) {
                     ForEach(AppAppearance.allCases) { mode in
@@ -747,6 +769,7 @@ struct MyProfileSheet: View {
                             .foregroundStyle(.primary)
                     }
                 }
+                .tint(.secondary)
 
                 Button {
                     tempLetterboxdUsername = storedLetterboxdUsername
@@ -771,7 +794,6 @@ struct MyProfileSheet: View {
                     }
                 }
             }
-            .listRowBackground(Color(uiColor: .systemBackground))
 
             // Notifications
             Section {
@@ -815,6 +837,7 @@ struct MyProfileSheet: View {
                         isOn: Binding(
                             get: { notificationManager.dailyReminderEnabled },
                             set: { newValue in
+                                HapticManager.light()
                                 Task {
                                     await notificationManager.setDailyReminderEnabled(
                                         newValue,
@@ -833,7 +856,7 @@ struct MyProfileSheet: View {
                                 .foregroundStyle(.primary)
                         }
                     }
-                    .tint(OmakaseTheme.ink)
+                    .tint(OmakaseTheme.controlTint)
 
                     if notificationManager.dailyReminderEnabled {
                         DatePicker(
@@ -859,12 +882,14 @@ struct MyProfileSheet: View {
                                     .foregroundStyle(.primary)
                             }
                         }
+                        .tint(OmakaseTheme.controlTint)
                     }
 
                     Toggle(
                         isOn: Binding(
                             get: { notificationManager.commentPushEnabled },
                             set: { newValue in
+                                HapticManager.light()
                                 Task {
                                     await notificationManager.setCommentPushEnabled(newValue)
                                 }
@@ -878,12 +903,13 @@ struct MyProfileSheet: View {
                                 .foregroundStyle(.primary)
                         }
                     }
-                    .tint(OmakaseTheme.ink)
+                    .tint(OmakaseTheme.controlTint)
 
                     Toggle(
                         isOn: Binding(
                             get: { notificationManager.dailyDigestEnabled },
                             set: { newValue in
+                                HapticManager.light()
                                 Task {
                                     await notificationManager.setDailyDigestEnabled(newValue)
                                 }
@@ -897,7 +923,7 @@ struct MyProfileSheet: View {
                                 .foregroundStyle(.primary)
                         }
                     }
-                    .tint(OmakaseTheme.ink)
+                    .tint(OmakaseTheme.controlTint)
                 }
             } header: {
                 Text(l10n.notificationsSectionTitle)
@@ -906,7 +932,6 @@ struct MyProfileSheet: View {
                     Text(l10n.notificationsQuietHoursFooter)
                 }
             }
-            .listRowBackground(Color(uiColor: .systemBackground))
 
             // Support & Legal
             Section(l10n.profileSupportAndLegal) {
@@ -986,7 +1011,6 @@ struct MyProfileSheet: View {
                     }
                 }
             }
-            .listRowBackground(Color(uiColor: .systemBackground))
 
             // Account
             Section(l10n.profileAccount) {
@@ -999,21 +1023,24 @@ struct MyProfileSheet: View {
                 }
 
                 Button {
-                    Task {
-                        await authService.signOutAndCleanup(l10n: l10n)
-                        if authService.isAuthenticated, let err = authService.errorMessage {
-                            accountErrorMessage = err
-                        } else {
-                            dismiss()
-                        }
-                    }
+                    HapticManager.light()
+                    isShowingSignOutDialog = true
                 } label: {
-                    Label(l10n.signOut, systemImage: "rectangle.portrait.and.arrow.right")
-                        .foregroundStyle(.primary)
+                    if isSigningOut {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text(l10n.signOut)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Label(l10n.signOut, systemImage: "rectangle.portrait.and.arrow.right")
+                            .foregroundStyle(.primary)
+                    }
                 }
-                .disabled(isDeletingAccount)
+                .disabled(isDeletingAccount || isSigningOut)
 
                 Button(role: .destructive) {
+                    HapticManager.warning()
                     isShowingDeleteAccountAlert = true
                 } label: {
                     if isDeletingAccount {
@@ -1025,15 +1052,18 @@ struct MyProfileSheet: View {
                         Label(l10n.deleteAccount, systemImage: "trash")
                     }
                 }
-                .disabled(isDeletingAccount)
+                .disabled(isDeletingAccount || isSigningOut)
             }
-            .listRowBackground(Color(uiColor: .systemBackground))
         }
         .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
         .navigationTitle(l10n.settingsTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: languageCode) { _, _ in
+            HapticManager.selection()
+        }
+        .onChange(of: appearanceCode) { _, _ in
+            HapticManager.selection()
+        }
         .alert(l10n.letterboxdUsernamePromptTitle, isPresented: $isShowingLetterboxdPrompt) {
             TextField(l10n.letterboxdUsernamePlaceholder, text: $tempLetterboxdUsername)
                 .autocorrectionDisabled()
@@ -1046,22 +1076,36 @@ struct MyProfileSheet: View {
         } message: {
             Text(l10n.letterboxdUsernamePromptMessage)
         }
-        .alert(l10n.confirmDeleteAccountTitle, isPresented: $isShowingDeleteAccountAlert) {
+        .alert(
+            l10n.confirmSignOutTitle,
+            isPresented: $isShowingSignOutDialog
+        ) {
             Button(l10n.cancel, role: .cancel) { }
-            Button(l10n.deleteAccountConfirmButton, role: .destructive) {
+            Button(l10n.signOut, role: .destructive) {
+                HapticManager.medium()
                 Task {
-                    isDeletingAccount = true
-                    let deleted = await authService.deleteAccount(l10n: l10n)
-                    isDeletingAccount = false
-                    if deleted {
-                        dismiss()
-                    } else if let err = authService.errorMessage {
+                    isSigningOut = true
+                    await authService.signOutAndCleanup(l10n: l10n)
+                    isSigningOut = false
+                    if authService.isAuthenticated, let err = authService.errorMessage {
                         accountErrorMessage = err
+                    } else {
+                        dismiss()
                     }
                 }
             }
         } message: {
-            Text(l10n.confirmDeleteAccountMessage)
+            Text(l10n.confirmSignOutMessage)
+        }
+        .sheet(isPresented: $isShowingDeleteAccountAlert) {
+            DeleteAccountSheet(
+                authService: authService,
+                isPro: accessManager.isPro,
+                onDeleted: {
+                    dismiss()
+                }
+            )
+            .environment(\.appLanguage, appLanguage)
         }
         .alert(
             l10n.errorSomethingWrong,
@@ -1122,6 +1166,235 @@ struct MyProfileSheet: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+    }
+}
+
+// MARK: - Delete Account Confirmation Sheet (Deliberate Friction)
+
+private struct DeleteAccountSheet: View {
+
+    let authService: AuthService
+    let isPro: Bool
+    let onDeleted: () -> Void
+
+    @Environment(\.appLanguage) private var appLanguage
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var confirmationText: String = ""
+    @State private var safetyCountdown: Int = 3
+    @State private var isDeleting: Bool = false
+    @State private var errorMessage: String? = nil
+
+    private var l10n: L10n { L10n(lang: appLanguage) }
+
+    private var requiredKeyword: String { l10n.deleteAccountConfirmKeyword }
+
+    private var typedMatchesKeyword: Bool {
+        let trimmed = confirmationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        let normalizedInput = trimmed.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+        let normalizedTarget = requiredKeyword.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+        return normalizedInput == normalizedTarget
+    }
+
+    private var canConfirmDelete: Bool {
+        safetyCountdown == 0 && typedMatchesKeyword && !isDeleting
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.red.opacity(0.12))
+                            .frame(width: 72, height: 72)
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 30, weight: .semibold))
+                            .foregroundStyle(.red)
+                    }
+                    .padding(.top, 8)
+
+                    VStack(spacing: 6) {
+                        Text(l10n.deleteAccountSheetTitle)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.center)
+
+                        Text(l10n.deleteAccountSheetSubtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    // Impact checklist card
+                    VStack(alignment: .leading, spacing: 12) {
+                        impactRow(icon: "person.crop.circle.badge.xmark", text: l10n.deleteAccountImpactProfile)
+                        Divider().overlay(OmakaseTheme.stroke)
+                        impactRow(icon: "bubble.left.and.exclamationmark.bubble.right", text: l10n.deleteAccountImpactPosts)
+                        Divider().overlay(OmakaseTheme.stroke)
+                        impactRow(icon: "bookmark.slash", text: l10n.deleteAccountImpactBookmarks)
+
+                        if isPro {
+                            Divider().overlay(OmakaseTheme.stroke)
+                            impactRow(icon: "creditcard.trianglebadge.exclamationmark", text: l10n.deleteAccountImpactSubscription)
+                        }
+                    }
+                    .padding(16)
+                    .background(OmakaseTheme.cardSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Color.red.opacity(0.28), lineWidth: 1)
+                    )
+
+                    // Type keyword confirmation
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(l10n.deleteAccountTypePrompt(requiredKeyword))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        TextField(requiredKeyword, text: $confirmationText)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 13)
+                            .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .strokeBorder(
+                                        typedMatchesKeyword ? Color.red.opacity(0.65) : OmakaseTheme.stroke,
+                                        lineWidth: typedMatchesKeyword ? 1.5 : 1
+                                    )
+                            )
+                    }
+
+                    if let errorMessage {
+                        HStack(spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.red)
+                            Text(errorMessage)
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+
+                    VStack(spacing: 10) {
+                        Button(role: .destructive) {
+                            HapticManager.warning()
+                            Task { await performDelete() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isDeleting {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .tint(.white)
+                                } else {
+                                    Image(systemName: "trash.fill")
+                                        .font(.system(size: 14, weight: .bold))
+                                    Text(
+                                        safetyCountdown > 0
+                                            ? "\(l10n.deleteAccountConfirmButton) (\(safetyCountdown))"
+                                            : l10n.deleteAccountConfirmButton
+                                    )
+                                    .font(.system(size: 16, weight: .bold))
+                                    .monospacedDigit()
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(
+                                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                    .fill(Color.red)
+                            )
+                            .foregroundStyle(Color.white)
+                            .opacity(canConfirmDelete ? 1.0 : 0.4)
+                        }
+                        .buttonStyle(OmakaseChipButtonStyle())
+                        .disabled(!canConfirmDelete)
+
+                        Button {
+                            HapticManager.light()
+                            dismiss()
+                        } label: {
+                            Text(l10n.deleteAccountKeepButton)
+                                .font(.system(size: 15.5, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(OmakaseTheme.cardSurface)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isDeleting)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 28)
+            }
+            .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
+            .navigationTitle(l10n.deleteAccount)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(l10n.cancel) { dismiss() }
+                        .disabled(isDeleting)
+                }
+            }
+            .interactiveDismissDisabled(isDeleting)
+        }
+        .task {
+            while safetyCountdown > 0 && !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { return }
+                safetyCountdown = max(0, safetyCountdown - 1)
+            }
+        }
+    }
+
+    private func impactRow(icon: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.red)
+                .frame(width: 22, alignment: .center)
+                .padding(.top, 1)
+
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func performDelete() async {
+        isDeleting = true
+        errorMessage = nil
+        let deleted = await authService.deleteAccount(l10n: l10n)
+        isDeleting = false
+        if deleted {
+            HapticManager.success()
+            dismiss()
+            onDeleted()
+        } else if let err = authService.errorMessage {
+            errorMessage = err
+        } else {
+            errorMessage = l10n.errorSomethingWrong
+        }
     }
 }
 
@@ -1189,11 +1462,12 @@ struct EditProfileSheet: View {
                             .foregroundStyle(.secondary)
 
                         TextField(l10n.authDisplayNamePlaceholder, text: $displayName)
+                            .foregroundStyle(.primary)
                             .textInputAutocapitalization(.words)
                             .autocorrectionDisabled()
                             .padding(.horizontal, 14)
                             .padding(.vertical, 13)
-                            .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                                     .strokeBorder(OmakaseTheme.ink.opacity(0.25), lineWidth: 1)
@@ -1215,6 +1489,7 @@ struct EditProfileSheet: View {
                                 .foregroundStyle(.secondary)
 
                             TextField(l10n.authUsernamePlaceholder, text: $username)
+                                .foregroundStyle(.primary)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
                                 .disabled(!canEditUsername)
@@ -1237,7 +1512,7 @@ struct EditProfileSheet: View {
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 13)
-                        .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .strokeBorder(
@@ -1274,7 +1549,7 @@ struct EditProfileSheet: View {
                             Spacer()
                         }
                         .padding(12)
-                        .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .strokeBorder(Color.red.opacity(0.35), lineWidth: 1)

@@ -27,6 +27,7 @@ struct AuthView: View {
     @Environment(\.appLanguage) private var appLanguage
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let authService: AuthService
+    var onClose: (() -> Void)? = nil
 
     @State private var step: AuthStep = .welcome
     @State private var email: String = ""
@@ -185,6 +186,23 @@ struct AuthView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(l10n.backA11y)
                     .accessibilityIdentifier("auth.topBar.backButton")
+                } else if let onClose {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onClose()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 40, height: 40)
+                            .background(
+                                Circle()
+                                    .fill(Color.primary.opacity(0.06))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(l10n.closeLabel)
+                    .accessibilityIdentifier("auth.topBar.closeButton")
                 } else {
                     Spacer().frame(width: 40, height: 40)
                 }
@@ -278,6 +296,7 @@ struct AuthView: View {
 
                 // 3. Create account with Email (Starts multi-step wizard)
                 Button {
+                    HapticManager.light()
                     authService.clearMessages()
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                         step = .signUpCredentials
@@ -292,17 +311,21 @@ struct AuthView: View {
                         Text(l10n.authCreateAccountButton)
                             .font(.system(size: 16, weight: .semibold))
                     }
+                    .foregroundStyle(OmakaseTheme.chipActiveText)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(OmakaseTheme.chipActiveFill)
+                    )
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(OmakaseTheme.chipActiveFill)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .buttonStyle(OmakaseChipButtonStyle())
                 .accessibilityIdentifier("auth.welcome.createAccountButton")
             }
 
             // Switch to Sign-In
             Button {
+                HapticManager.light()
                 authService.clearMessages()
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                     step = .signIn
@@ -403,6 +426,7 @@ struct AuthView: View {
                         .onSubmit { advanceFromStep1() }
 
                         Button {
+                            HapticManager.light()
                             isPasswordVisible.toggle()
                         } label: {
                             Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
@@ -442,12 +466,15 @@ struct AuthView: View {
                     Image(systemName: "arrow.right")
                         .font(.system(size: 14, weight: .semibold))
                 }
+                .foregroundStyle(OmakaseTheme.chipActiveText)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(OmakaseTheme.chipActiveFill)
+                )
             }
-            .buttonStyle(.borderedProminent)
-            .tint(OmakaseTheme.chipActiveFill)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .buttonStyle(OmakaseChipButtonStyle())
             .padding(.top, 4)
             .accessibilityIdentifier("auth.signup.step1.continueButton")
         }
@@ -518,12 +545,15 @@ struct AuthView: View {
                     Image(systemName: "arrow.right")
                         .font(.system(size: 14, weight: .semibold))
                 }
+                .foregroundStyle(OmakaseTheme.chipActiveText)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(OmakaseTheme.chipActiveFill)
+                )
             }
-            .buttonStyle(.borderedProminent)
-            .tint(OmakaseTheme.chipActiveFill)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .buttonStyle(OmakaseChipButtonStyle())
             .accessibilityIdentifier("auth.signup.step2.continueButton")
         }
     }
@@ -642,6 +672,7 @@ struct AuthView: View {
                             ForEach(usernameSuggestions, id: \.self) { suggestion in
                                 let isSelected = (sanitizedUsername == suggestion)
                                 Button {
+                                    HapticManager.selection()
                                     username = suggestion
                                     hasManuallyEditedUsername = true
                                 } label: {
@@ -671,17 +702,21 @@ struct AuthView: View {
                     if authService.isSigningIn {
                         ProgressView()
                             .controlSize(.small)
-                            .tint(Color(uiColor: .systemBackground))
+                            .tint(OmakaseTheme.chipActiveText)
                     }
                     Text(l10n.authCompleteSignUpButton)
                         .font(.system(size: 16, weight: .semibold))
                 }
+                .foregroundStyle(OmakaseTheme.chipActiveText)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(OmakaseTheme.chipActiveFill)
+                )
+                .opacity((authService.isSigningIn || isCheckingUsername || isUsernameAvailable == false) ? 0.45 : 1.0)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(OmakaseTheme.chipActiveFill)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .buttonStyle(OmakaseChipButtonStyle())
             .disabled(authService.isSigningIn || isCheckingUsername || isUsernameAvailable == false)
             .padding(.top, 4)
             .accessibilityIdentifier("auth.signup.completeButton")
@@ -783,17 +818,21 @@ struct AuthView: View {
                         if authService.isSigningIn {
                             ProgressView()
                                 .controlSize(.small)
-                                .tint(Color(uiColor: .systemBackground))
+                                .tint(OmakaseTheme.chipActiveText)
                         }
                         Text(l10n.authSignInWithEmailButton)
                             .font(.system(size: 16, weight: .semibold))
                     }
+                    .foregroundStyle(OmakaseTheme.chipActiveText)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(OmakaseTheme.chipActiveFill)
+                    )
+                    .opacity(authService.isSigningIn ? 0.45 : 1.0)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(OmakaseTheme.chipActiveFill)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .buttonStyle(OmakaseChipButtonStyle())
                 .disabled(authService.isSigningIn)
                 .accessibilityIdentifier("auth.signin.submitButton")
 
@@ -854,6 +893,7 @@ struct AuthView: View {
                 if authService.isSigningIn && step == .welcome {
                     ProgressView()
                         .controlSize(.small)
+                        .tint(.primary)
                 } else {
                     Image(systemName: "g.circle.fill")
                         .font(.system(size: 20, weight: .semibold))
@@ -861,6 +901,7 @@ struct AuthView: View {
                 Text(l10n.signInWithGoogle)
                     .font(.system(size: 16, weight: .semibold))
             }
+            .foregroundStyle(.primary)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .background(
@@ -938,7 +979,7 @@ struct AuthView: View {
 
     private func fieldBackground(isFocused: Bool) -> some View {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .fill(Color.primary.opacity(0.05))
+            .fill(Color(uiColor: .secondarySystemBackground))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(
@@ -951,6 +992,7 @@ struct AuthView: View {
     // MARK: - Navigation & Actions
 
     private func navigateBack() {
+        HapticManager.light()
         focusedField = nil
         authService.clearMessages()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
@@ -977,6 +1019,7 @@ struct AuthView: View {
             authService.setError(l10n.authErrorWeakPassword)
             return
         }
+        HapticManager.light()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             step = .signUpDisplayName
         }
@@ -1000,6 +1043,7 @@ struct AuthView: View {
                 username = firstSuggestion
             }
         }
+        HapticManager.light()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             step = .signUpUsername
         }

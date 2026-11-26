@@ -38,6 +38,8 @@ struct OmakasePaywallView: View {
     @State private var accessManager = AccessManager.shared
     @State private var selectedPlan: PaywallPlanSelection = .yearly
     @State private var localToastMessage: String?
+    @State private var showProWelcome: Bool = false
+    @State private var purchasedIsTrial: Bool = false
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -53,12 +55,12 @@ struct OmakasePaywallView: View {
         }
     }
 
-    private var annualPriceString: String {
-        annualPackage?.localizedPriceString ?? "₺499,99"
+    private var annualPriceString: String? {
+        annualPackage?.localizedPriceString
     }
 
-    private var monthlyPriceString: String {
-        monthlyPackage?.localizedPriceString ?? "₺49,99"
+    private var monthlyPriceString: String? {
+        monthlyPackage?.localizedPriceString
     }
 
     private var annualPerMonthString: String? {
@@ -79,10 +81,10 @@ struct OmakasePaywallView: View {
     }
 
     private var yearlyHasFreeTrial: Bool {
-        if let intro = annualPackage?.storeProduct.introductoryDiscount {
-            return intro.paymentMode == .freeTrial
+        guard let intro = annualPackage?.storeProduct.introductoryDiscount else {
+            return false
         }
-        return true
+        return intro.paymentMode == .freeTrial
     }
 
     private var yearlyTrialDays: Int {
@@ -134,42 +136,59 @@ struct OmakasePaywallView: View {
 
     private var disclosureText: String {
         if selectedPlan == .yearly {
-            return l10n.proYearlyDisclosure(annualPriceString)
+            guard let price = annualPriceString else { return "" }
+            return l10n.proYearlyDisclosure(price)
         }
-        return l10n.proMonthlyDisclosure(monthlyPriceString)
+        guard let price = monthlyPriceString else { return "" }
+        return l10n.proMonthlyDisclosure(price)
     }
 
     // MARK: - Body
 
     var body: some View {
-        ZStack(alignment: .top) {
-            Color(uiColor: .systemBackground)
-                .ignoresSafeArea()
+        Group {
+            if showProWelcome {
+                ProWelcomeView(
+                    planName: selectedPlan == .yearly ? l10n.proPlanYearly : l10n.proPlanMonthly,
+                    isTrial: purchasedIsTrial,
+                    trialDays: yearlyTrialDays,
+                    onStartReading: {
+                        dismiss()
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+            } else {
+                ZStack(alignment: .top) {
+                    Color(uiColor: .systemBackground)
+                        .ignoresSafeArea()
 
-            // Full-screen gently swaying monochrome ASCII sushi backdrop
-            OmakaseASCIIBackdrop(reduceMotion: reduceMotion)
-                .ignoresSafeArea()
+                    // Full-screen gently swaying monochrome ASCII sushi backdrop
+                    OmakaseASCIIBackdrop(reduceMotion: reduceMotion)
+                        .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                topBar
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
+                    VStack(spacing: 0) {
+                        topBar
+                            .padding(.horizontal, 20)
+                            .padding(.top, 14)
 
-                Spacer(minLength: 6)
+                        Spacer(minLength: 6)
 
-                heroSection
-                    .padding(.horizontal, 22)
+                        heroSection
+                            .padding(.horizontal, 22)
 
-                Spacer(minLength: 8)
+                        Spacer(minLength: 8)
 
-                comparisonCard
-                    .padding(.horizontal, 20)
+                        comparisonCard
+                            .padding(.horizontal, 20)
 
-                Spacer(minLength: 10)
+                        Spacer(minLength: 10)
 
-                bottomDock
+                        bottomDock
+                    }
+                    .padding(.bottom, 6)
+                }
+                .transition(.opacity)
             }
-            .padding(.bottom, 6)
         }
         .task {
             TelemetryService.shared.track("paywall_viewed", properties: ["source": source.rawValue])
@@ -427,12 +446,14 @@ struct OmakasePaywallView: View {
             .disabled(accessManager.isPurchasing || accessManager.isRestoring)
             .accessibilityIdentifier("paywall.purchaseButton")
 
-            Text(disclosureText)
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 4)
+            if !disclosureText.isEmpty {
+                Text(disclosureText)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
+            }
 
             footerLinks
         }
@@ -487,12 +508,21 @@ struct OmakasePaywallView: View {
                     Spacer(minLength: 8)
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(annualPriceString)
-                            .font(.system(size: 20, weight: .heavy))
-                            .foregroundStyle(.primary)
-                        Text(l10n.proPerYearSuffix)
-                            .font(.system(size: 12.5, weight: .medium))
-                            .foregroundStyle(.secondary)
+                        if let price = annualPriceString {
+                            Text(price)
+                                .font(.system(size: 20, weight: .heavy))
+                                .foregroundStyle(.primary)
+                            Text(l10n.proPerYearSuffix)
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        } else if accessManager.isLoadingOfferings {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Text("—")
+                                .font(.system(size: 20, weight: .heavy))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -555,12 +585,21 @@ struct OmakasePaywallView: View {
                 Spacer(minLength: 8)
 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(monthlyPriceString)
-                        .font(.system(size: 20, weight: .heavy))
-                        .foregroundStyle(.primary)
-                    Text(l10n.proPerMonthSuffix)
-                        .font(.system(size: 12.5, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    if let price = monthlyPriceString {
+                        Text(price)
+                            .font(.system(size: 20, weight: .heavy))
+                            .foregroundStyle(.primary)
+                        Text(l10n.proPerMonthSuffix)
+                            .font(.system(size: 12.5, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    } else if accessManager.isLoadingOfferings {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Text("—")
+                            .font(.system(size: 20, weight: .heavy))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -660,8 +699,10 @@ struct OmakasePaywallView: View {
                 properties: ["source": source.rawValue, "plan": planName]
             )
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            onToast?(l10n.proPurchaseSuccess)
-            dismiss()
+            purchasedIsTrial = (selectedPlan == .yearly && yearlyHasFreeTrial) || accessManager.rcIsTrial
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                showProWelcome = true
+            }
         case .pending:
             localToastMessage = l10n.proPaymentPending
         case .cancelled:

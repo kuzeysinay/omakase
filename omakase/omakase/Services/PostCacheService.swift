@@ -52,7 +52,9 @@ class PostCacheService {
             }
             try? context.save()
         } catch {
+#if DEBUG
             print("Failed to delete cached post: \(error)")
+#endif
         }
     }
 

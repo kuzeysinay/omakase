@@ -1143,4 +1143,100 @@ struct L10n {
         tr("chefPickCategoryHint", fallback: "Surprise me in {category}", ("category", category))
     }
     var chefPickButtonCTA: String { tr("chefPickButtonCTA", fallback: "Surprise") }
+
+    // MARK: - Guest Tasting & Monthly Stats
+
+    func guestTasteBadge(index: Int, total: Int) -> String {
+        tr(
+            "guestTasteBadge",
+            fallback: "TODAY'S TASTE · {index}/{total}",
+            ("index", "\(index)"),
+            ("total", "\(total)")
+        )
+    }
+    var guestTasteSignIn: String { tr("guestTasteSignIn", fallback: "Sign In") }
+    var guestTasteNextCTA: String { tr("guestTasteNextCTA", fallback: "Next Taste") }
+    var guestTasteStartCTA: String { tr("guestTasteStartCTA", fallback: "Continue to Your Daily Menu") }
+    var guestTasteSkipToAuth: String { tr("guestTasteSkipToAuth", fallback: "Create Account or Sign In") }
+    var guestTasteDeepDiveOpen: String { tr("guestTasteDeepDiveOpen", fallback: "Deep Dive") }
+    var guestTasteDeepDiveHide: String { tr("guestTasteDeepDiveHide", fallback: "Hide Deep Dive") }
+    var profileReadsThisMonth: String { tr("profileReadsThisMonth", fallback: "This Month") }
+    var guestLimitTitle: String { tr("guestLimitTitle", fallback: "Your Tasting Menu Is Complete") }
+    var guestLimitSubtitle: String {
+        tr(
+            "guestLimitSubtitle",
+            fallback: "Create a free account to unlock 3 daily personalized posts across 12 cultural disciplines, Deep Dives, and Letterboxd."
+        )
+    }
+    var guestLimitSignUpCTA: String { tr("guestLimitSignUpCTA", fallback: "Create Free Account") }
+    var guestLimitBackToPosts: String { tr("guestLimitBackToPosts", fallback: "Re-read tasting posts") }
+    var guestNextPlateReadyTitle: String { tr("guestNextPlateReadyTitle", fallback: "Ready for Your Second Plate") }
+    var guestNextPlateButton: String { tr("guestNextPlateButton", fallback: "Serve Next Post") }
+    func guestCooldownWaiting(seconds: Int) -> String {
+        tr("guestCooldownWaiting", fallback: "Take a moment to digest · {seconds}s", ("seconds", "\(seconds)"))
+    }
+    var guestShareSignInToast: String {
+        tr("guestShareSignInToast", fallback: "Sign in to share posts with the community.")
+    }
+
+    // MARK: - Pro Welcome (Post-Buy Celebration)
+
+    var proWelcomeTitle: String { tr("proWelcomeTitle", fallback: "Welcome to the Chef's Table") }
+    func proWelcomeSubtitleTrial(_ days: Int) -> String {
+        tr(
+            "proWelcomeSubtitleTrial",
+            fallback: "Your {days}-day free trial is active. Every limit is lifted—read as deeply as curiosity takes you.",
+            ("days", "\(days)")
+        )
+    }
+    var proWelcomeSubtitlePaid: String {
+        tr("proWelcomeSubtitlePaid", fallback: "Your Omakase Pro membership is active. Every limit is lifted—read as deeply as curiosity takes you.")
+    }
+    var proWelcomeUnlockedHeader: String { tr("proWelcomeUnlockedHeader", fallback: "NOW UNLOCKED") }
+    var proWelcomeStartCTA: String { tr("proWelcomeStartCTA", fallback: "Start Unlimited Reading") }
+    var proWelcomeManageNote: String {
+        tr("proWelcomeManageNote", fallback: "You can manage your plan anytime in Profile → Settings.")
+    }
+    var proWelcomeBadgeActive: String { tr("proWelcomeBadgeActive", fallback: "Active") }
+
+    // MARK: - Intro Welcome Slide
+
+    var introWelcomeTitle: String { tr("introWelcomeTitle", fallback: "Welcome to Omakase.") }
+    var introWelcomeSubtitle: String {
+        tr("introWelcomeSubtitle", fallback: "A quiet, source-backed daily feed curated for your curiosity.")
+    }
+
+    // MARK: - Account Confirmation & Deletion Friction
+
+    var confirmSignOutTitle: String { tr("confirmSignOutTitle", fallback: "Sign Out?") }
+    var confirmSignOutMessage: String {
+        tr("confirmSignOutMessage", fallback: "You can sign back in anytime. Your profile and shared posts stay safe.")
+    }
+    var deleteAccountSheetTitle: String {
+        tr("deleteAccountSheetTitle", fallback: "Delete Your Account?")
+    }
+    var deleteAccountSheetSubtitle: String {
+        tr("deleteAccountSheetSubtitle", fallback: "This action is permanent and cannot be undone.")
+    }
+    var deleteAccountImpactProfile: String {
+        tr("deleteAccountImpactProfile", fallback: "Your profile, @username, and follower connections")
+    }
+    var deleteAccountImpactPosts: String {
+        tr("deleteAccountImpactPosts", fallback: "All shared community posts, comments, and likes")
+    }
+    var deleteAccountImpactBookmarks: String {
+        tr("deleteAccountImpactBookmarks", fallback: "Your saved bookmarks and reading preferences")
+    }
+    var deleteAccountImpactSubscription: String {
+        tr("deleteAccountImpactSubscription", fallback: "Active App Store subscriptions must be canceled separately in iOS Settings.")
+    }
+    var deleteAccountConfirmKeyword: String {
+        tr("deleteAccountConfirmKeyword", fallback: "DELETE")
+    }
+    func deleteAccountTypePrompt(_ keyword: String) -> String {
+        tr("deleteAccountTypePrompt", fallback: "Type \"{keyword}\" below to confirm", ("keyword", keyword))
+    }
+    var deleteAccountKeepButton: String {
+        tr("deleteAccountKeepButton", fallback: "Keep My Account")
+    }
 }

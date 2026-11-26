@@ -604,6 +604,11 @@ struct FeedView: View {
                             proxy.scrollTo(newID, anchor: .top)
                         }
                     }
+                    .onChange(of: feedScrollPosition) { oldPos, newPos in
+                        if oldPos != nil, newPos != nil, oldPos != newPos, !viewModel.isGenerating, !isHydratingCache {
+                            HapticManager.soft()
+                        }
+                    }
                     .onChange(of: viewModel.isGenerating) { _, isGenerating in
                         guard !isGenerating else { return }
                         if viewModel.posts.last?.isComplete == true {
@@ -1065,6 +1070,7 @@ struct ReelsPostCard: View {
         HStack(spacing: 24) {
             // Deep Dive button — opens sheet (re-read if already fetched)
             Button {
+                HapticManager.light()
                 if post.deepDiveText == nil {
                     viewModel.requestDeepDive(for: post)
                 } else {
@@ -1140,9 +1146,12 @@ struct ReelsPostCard: View {
             Button {
                 bookmarkStore.toggle(post)
                 if bookmarkStore.contains(postId: post.id) {
+                    HapticManager.medium()
                     TelemetryService.shared.track("post_bookmarked")
                     toastMessage.wrappedValue = l10n.toastBookmarked
+                    RatingPromptManager.shared.considerPromptingIfEligible(minReads: 2)
                 } else {
+                    HapticManager.light()
                     toastMessage.wrappedValue = l10n.toastBookmarkRemoved
                 }
             } label: {
@@ -1372,7 +1381,7 @@ struct ReelsPostCard: View {
 
 /// Compact nigiri sushi icon (arched topping with diagonal score cuts over a rice pillow),
 /// visually distinct from the maki roll used in `AppLogo`.
-private struct NigiriSushiIcon: View {
+struct NigiriSushiIcon: View {
     let isFilled: Bool
     let fillColor: Color
 

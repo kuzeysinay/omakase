@@ -86,8 +86,11 @@ struct UserSearchView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 28)
-                Button(l10n.tryAgain) {
+                Button {
                     Task { await search() }
+                } label: {
+                    Text(l10n.tryAgain)
+                        .foregroundStyle(OmakaseTheme.chipActiveText)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(OmakaseTheme.chipActiveFill)

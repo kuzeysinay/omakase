@@ -46,8 +46,11 @@ struct CommentsView: View {
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 28)
-                        Button(l10n.tryAgain) {
+                        Button {
                             Task { await loadComments() }
+                        } label: {
+                            Text(l10n.tryAgain)
+                                .foregroundStyle(OmakaseTheme.chipActiveText)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(OmakaseTheme.chipActiveFill)
@@ -85,11 +88,14 @@ struct CommentsView: View {
                             .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 4)
-                        Button(l10n.turnOnCTA) {
+                        Button {
                             Task {
                                 _ = await notificationManager.requestAuthorizationIfNeeded()
                                 dismissedNotifPrompt = true
                             }
+                        } label: {
+                            Text(l10n.turnOnCTA)
+                                .foregroundStyle(OmakaseTheme.chipActiveText)
                         }
                         .font(.caption.weight(.bold))
                         .buttonStyle(.borderedProminent)
@@ -293,7 +299,18 @@ struct CommentsView: View {
                 axis: .vertical
             )
             .textFieldStyle(.plain)
+            .foregroundStyle(.primary)
             .lineLimit(1...4)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(uiColor: .secondarySystemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
+            )
             .onChange(of: newCommentText) { _, newValue in
                 moderationErrorMessage = nil
                 if newValue.count > maxCharacters {
@@ -309,6 +326,7 @@ struct CommentsView: View {
             }
 
             Button {
+                HapticManager.light()
                 Task { await sendComment() }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
@@ -369,6 +387,7 @@ struct CommentsView: View {
                 authorPhotoURL: nil
             )
             hasSentCommentInSession = true
+            HapticManager.success()
             NotificationManager.shared.notifySocialEvent(
                 type: "comment",
                 postId: postId,

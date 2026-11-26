@@ -12,6 +12,16 @@
 				<string>com.googleusercontent.apps.20235796246-4c6te2tevmhe1nk6lfbjhbpqvr33shh9</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>kuzeysinay.omakase</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>omakase</string>
+			</array>
+		</dict>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
@@ -24,6 +34,8 @@
 	<string>Omakase saves your exported post cards to your Photos library.</string>
 	<key>OMAKASE_API_URL</key>
 	<string>https://omakase-backend-20235796246.us-central1.run.app</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>REVENUECAT_API_KEY</key>
 	<string>appl_aSOmvGTaNozWPEEZCqafxBSggeh</string>
 	<key>UILaunchScreen</key>

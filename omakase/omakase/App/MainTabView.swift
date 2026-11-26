@@ -64,6 +64,9 @@ struct MainTabView: View {
                 }
         }
         .tint(OmakaseTheme.ink)
+        .onChange(of: selectedTab) { _, _ in
+            HapticManager.selection()
+        }
         .onAppear {
             handlePendingRoute(notificationManager.pendingRoute)
         }

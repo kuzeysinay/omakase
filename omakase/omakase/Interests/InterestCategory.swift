@@ -321,6 +321,7 @@ final class SubTopicDiscoveryStore {
             sessionPreviewTopicsByKey[key] = Array(batch.prefix(2))
         }
         savePrefetchedToDisk()
+        WidgetDataBridge.syncSubtopics(categoryId: categoryId, topics: batch, language: language)
     }
 
     /// Silently pre-warms live AI sub-topics for all categories on app launch so even the 1st tap serves unique AI topics in 0ms.

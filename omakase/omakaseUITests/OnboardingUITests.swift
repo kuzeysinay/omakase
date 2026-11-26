@@ -12,7 +12,7 @@ final class OnboardingUITests: XCTestCase {
         app.terminate()
     }
 
-    func testOnboardingWalkthroughCompletesAfterThreeSlides() throws {
+    func testOnboardingWalkthroughCompletesAfterFourSlides() throws {
         XCTAssertTrue(app.staticTexts[UIID.onboardingSlide0Title].waitForExistence(timeout: 5))
 
         app.buttons[UIID.onboardingPrimaryButton].waitAndTap()
@@ -20,6 +20,9 @@ final class OnboardingUITests: XCTestCase {
 
         app.buttons[UIID.onboardingPrimaryButton].waitAndTap()
         XCTAssertTrue(app.staticTexts[UIID.onboardingSlide2Title].waitForExistence(timeout: 5))
+
+        app.buttons[UIID.onboardingPrimaryButton].waitAndTap()
+        XCTAssertTrue(app.staticTexts[UIID.onboardingSlide3Title].waitForExistence(timeout: 5))
 
         app.buttons[UIID.onboardingPrimaryButton].waitAndTap()
         XCTAssertTrue(app.staticTexts[UIID.onboardingCompleted].waitForExistence(timeout: 5))

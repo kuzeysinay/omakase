@@ -107,6 +107,9 @@ struct TimelineView: View {
                 await viewModel.loadTimeline()
                 followingSet = Set(viewModel.followingUIDs)
             }
+            .onChange(of: viewModel.feedMode) { _, _ in
+                HapticManager.selection()
+            }
             .onChange(of: searchQuery) { _, newValue in
                 let clean = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                 if clean.isEmpty {
@@ -361,6 +364,7 @@ struct TimelineView: View {
             } label: {
                 Text(l10n.tryAgain)
                     .fontWeight(.semibold)
+                    .foregroundStyle(OmakaseTheme.chipActiveText)
             }
             .buttonStyle(.borderedProminent)
             .tint(OmakaseTheme.chipActiveFill)
@@ -392,6 +396,7 @@ struct TimelineView: View {
                 } label: {
                     Label(l10n.exploreDiscoverCTA, systemImage: "sparkles")
                         .fontWeight(.semibold)
+                        .foregroundStyle(OmakaseTheme.chipActiveText)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(OmakaseTheme.chipActiveFill)
@@ -403,6 +408,7 @@ struct TimelineView: View {
                 } label: {
                     Label(l10n.findPeople, systemImage: "person.badge.plus")
                         .fontWeight(.semibold)
+                        .foregroundStyle(OmakaseTheme.chipActiveText)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(OmakaseTheme.chipActiveFill)

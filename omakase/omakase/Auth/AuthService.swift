@@ -81,6 +81,8 @@ final class AuthService: NSObject {
                 await AccessManager.shared.syncAuthUser(uid: user?.uid)
                 await NotificationManager.shared.syncAuthUser(uid: user?.uid)
                 if let uid = user?.uid {
+                    UserDefaults.standard.set(true, forKey: "omakase.hasCompletedGuestTaste")
+                    UserDefaults.standard.set(true, forKey: "omakase.hasOnboarded")
                     _ = try? await FirestoreService.shared.fetchBlockedUIDs(currentUid: uid)
                     await self?.refreshProfileSetupState()
                 } else {
@@ -199,9 +201,10 @@ final class AuthService: NSObject {
 
             let updatedUser = Auth.auth().currentUser ?? authResult.user
 
-            // Ensure new users always go through the full onboarding flow (interest selection)
+            // Mark pre-auth onboarding & tasting completed so new users enter the feed cleanly
             UserDefaults.standard.set("", forKey: "omakase.interests")
-            UserDefaults.standard.set(false, forKey: "omakase.hasOnboarded")
+            UserDefaults.standard.set(true, forKey: "omakase.hasOnboarded")
+            UserDefaults.standard.set(true, forKey: "omakase.hasCompletedGuestTaste")
 
             try await FirestoreService.shared.ensureUserProfile(
                 for: updatedUser,
@@ -412,6 +415,8 @@ final class AuthService: NSObject {
         let resolvedL10n = l10n ?? Self.currentL10n
         do {
             try Auth.auth().signOut()
+            UserDefaults.standard.set(true, forKey: "omakase.hasCompletedGuestTaste")
+            UserDefaults.standard.set(true, forKey: "omakase.hasOnboarded")
             GIDSignIn.sharedInstance.signOut()
             FirestoreService.shared.clearBlockedCache()
             currentUser = nil
