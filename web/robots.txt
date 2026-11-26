@@ -1,0 +1,15 @@
+# Omakase (https://getomakase.app)
+User-agent: *
+Allow: /
+Content-Signal: search=yes, ai-input=yes
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+Sitemap: https://getomakase.app/sitemap.xml

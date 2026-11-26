@@ -1,0 +1,32 @@
+# Omakase
+
+> Feed your mind, not the algorithm. Omakase is an ad-free iOS 17+ cultural micro-story app that serves primary-sourced fun-facts across 12 disciplines with a 15–25 second anti-doomscrolling reading pause, one-tap Deep Dive expansions, Letterboxd recent-50-film synthesis, and monochrome export cards in 7 languages.
+
+## Product Overview
+- Platform: Native iOS 17+ (SwiftUI)
+- Positioning: Anti-doomscrolling daily culture feed — unlike AI chatbots that wait for prompts, Omakase serves curated, primary-sourced micro-stories in one tap.
+- Design Language: Monochrome ink-on-paper reading experience with zero ads and zero cross-app tracking (IDFA = false).
+
+## Core Features
+- 12 Cultural Disciplines & 2x6 Bento Matrix: Film, Music, Science, Food, History, Sports, Tech, Nature, Art, Philosophy, Travel, Gaming — each with refreshable rabbit-hole subtopics.
+- Mandatory Primary Sources: Every post and Deep Dive cites a real primary source (books, peer-reviewed papers, archives, interviews; Wikipedia excluded).
+- Reading Cooldown (15–25s): Enforces a mindful pause proportional to text length before generating the next story.
+- Deep Dive: Instant 150–250 word exploration of any story.
+- Letterboxd Diary Synthesis: Passwordless public RSS integration covering the user's last 50 watched films.
+- Export Studio & Community: Monochrome share cards (1080x1920, 1080x1350, 1080x1080) for Instagram, WhatsApp, and X, plus @username Discover & Following timeline.
+
+## Pricing
+- Free Tier: 3 daily cultural posts (including up to 1 Letterboxd synthesis/day) and 1 Deep Dive per day (+1 bonus Deep Dive/day upon sharing).
+- Omakase Pro: $3.99/month or $29.99/year (with 7-day free trial) for unlimited reading and Deep Dives.
+
+## Supported Languages
+- English (`en`), Turkish (`tr`), Japanese (`ja`), German (`de`), French (`fr`), Spanish (`es`), Korean (`ko`).
+
+## Pages
+- [Homepage (English)](https://getomakase.app/en/): Official English landing page, 8-slide App Store preview, and interactive Live Chef Tasting simulator.
+- [Homepage (Turkish)](https://getomakase.app/): Official Turkish landing page and interactive Live Chef Tasting simulator.
+- [Privacy Policy](https://getomakase.app/privacy.html): Full bilingual (TR/EN) privacy policy and one-tap account deletion details.
+- [Terms of Use](https://getomakase.app/terms.html): Full bilingual (TR/EN) terms, UGC moderation policy, and subscription terms.
+
+## Contact
+- Support & Legal: destek@getomakase.app

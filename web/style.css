@@ -1210,7 +1210,8 @@ button {
   gap: 8px;
 }
 
-.ios-bento-header h4 {
+.ios-bento-header h4,
+.ios-bento-header .ios-bento-title {
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -1638,6 +1639,7 @@ button {
   margin-bottom: 4px;
 }
 
+.sim-control-header h3,
 .sim-control-header h4 {
   font-size: 1.04rem;
   font-weight: 700;

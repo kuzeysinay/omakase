@@ -139,10 +139,11 @@ Uygulama ilk günden tam abonelik ve cihaz-bazlı anti-abuse korumasıyla çıka
   7. `07`: *connect your letterboxd. fun-facts from your last 50 watched films.* (Letterboxd)
   8. `08`: *export any post as a monochrome card. ready for instagram, whatsapp & x.* (Export Studio)
 
-### Küresel ASO Anahtar Kelime Hedeflemesi (US / UK)
-* **Başlık (30 krk):** `Omakase: Daily Culture & Facts`
-* **Alt Başlık (30 krk):** `Sourced Micro-Stories & Essays`
-* **Anahtar Kelimeler:** `microlearning,daily facts,philosophy,history,science,architecture,anti doomscrolling,brainrot,readwise,deepstash,curiosity,trivia,letterboxd,essays`
+### Küresel ASO Anahtar Kelime Hedeflemesi (US / UK & 9 Yerel Ayar)
+* **Başlık (`en-US`, 30/30 krk):** `Omakase: Daily Culture & Facts`
+* **Alt Başlık (`en-US`, 30/30 krk):** `Sourced Micro-Learning & Reads`
+* **Anahtar Kelimeler (`en-US`, 95/100 krk):** `microlearning,trivia,history,science,philosophy,art,cinema,essay,curiosity,brainrot,smart,focus`
+* **Tam 9 Yerel Ayar Paketi (`en-US`, `es-MX` US çapraz indeks, `en-GB`, `tr`, `ja`, `de-DE`, `fr-FR`, `es-ES`, `ko`):** [`docs/aso_ve_seo_raporu.md`](file:///Users/kuzey/projects/omakase/docs/aso_ve_seo_raporu.md) içinde karakter ve Guideline 2.3.7 doğrulaması yapılmış kopyala-yapıştır formatında yer almaktadır.
 
 ---
 

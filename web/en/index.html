@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-default-lang="en" data-asset-base="../">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Omakase — Daily Sourced Culture Feed &amp; Micro-Stories (iOS)</title>
+
+  <meta name="description" content="Feed your mind, not the algorithm. One-tap primary-sourced fun-facts across 12 disciplines, a 15–25s reading pause, Deep Dive, Letterboxd &amp; 7 languages. iOS 17+.">
+  <meta name="author" content="Omakase">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <!-- <meta name="apple-itunes-app" content="app-id=APP_STORE_ID_AFTER_APPROVAL"> -->
+
+  <link rel="canonical" href="https://getomakase.app/en/">
+  <link rel="alternate" hreflang="tr" href="https://getomakase.app/">
+  <link rel="alternate" hreflang="en" href="https://getomakase.app/en/">
+  <link rel="alternate" hreflang="x-default" href="https://getomakase.app/en/">
+
+  <!-- Open Graph / Social Cards -->
+  <meta property="og:site_name" content="Omakase">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="tr_TR">
+  <meta property="og:title" content="Omakase — Feed your mind, not the algorithm.">
+  <meta property="og:description" content="One-tap primary-sourced fun-facts across 12 cultural disciplines, a 15–25s reading pause, and Letterboxd synthesis. iOS 17+.">
+  <meta property="og:image" content="https://getomakase.app/assets/og-card-en.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Omakase — Daily sourced culture feed iOS app">
+  <meta property="og:url" content="https://getomakase.app/en/">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Omakase — Feed your mind, not the algorithm.">
+  <meta name="twitter:description" content="One-tap primary-sourced fun-facts across 12 cultural disciplines, a 15–25s reading pause, and Letterboxd synthesis. iOS 17+.">
+  <meta name="twitter:image" content="https://getomakase.app/assets/og-card-en.png">
+  <meta name="twitter:image:alt" content="Omakase — Daily sourced culture feed iOS app">
+
+  <!-- Apple & Icons -->
+  <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+  <link rel="apple-touch-icon" href="../assets/app-icon.png">
+  <meta name="theme-color" content="#FAFAFA" id="theme-color-meta">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="../style.css">
+
+  <!-- Structured Data (Schema.org @graph) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://getomakase.app/#organization",
+        "name": "Omakase",
+        "url": "https://getomakase.app/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://getomakase.app/assets/app-icon.png",
+          "width": 1024,
+          "height": 1024
+        },
+        "email": "mailto:destek@getomakase.app"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://getomakase.app/#website",
+        "name": "Omakase",
+        "url": "https://getomakase.app/",
+        "inLanguage": ["en", "tr"],
+        "publisher": {
+          "@id": "https://getomakase.app/#organization"
+        }
+      },
+      {
+        "@type": "MobileApplication",
+        "@id": "https://getomakase.app/#app",
+        "name": "Omakase",
+        "alternateName": "Omakase: Daily Culture & Facts",
+        "operatingSystem": "iOS 17.0+",
+        "applicationCategory": "EducationApplication",
+        "softwareVersion": "1.0",
+        "inLanguage": ["en", "tr", "ja", "de", "fr", "es", "ko"],
+        "description": "An ad-free iOS 17+ micro-learning and cultural story app serving primary-sourced fun-facts across 12 disciplines with a 15–25 second reading pause, one-tap Deep Dive expansions, Letterboxd diary synthesis, and monochrome export cards.",
+        "featureList": [
+          "12 cultural disciplines and 2x6 Bento discovery matrix",
+          "Mandatory clickable primary source citation on every story",
+          "15–25 second anti-doomscrolling reading cooldown",
+          "One-tap 200-word Deep Dive exploration",
+          "Passwordless Letterboxd recent 50-film diary synthesis",
+          "Export Studio monochrome cards (1080x1920, 1080x1350, 1080x1080)",
+          "Full localization in 7 languages (en, tr, ja, de, fr, es, ko)"
+        ],
+        "screenshot": [
+          "https://getomakase.app/assets/screenshots/en/01.png",
+          "https://getomakase.app/assets/screenshots/en/02.png",
+          "https://getomakase.app/assets/screenshots/en/03.png",
+          "https://getomakase.app/assets/screenshots/en/04.png",
+          "https://getomakase.app/assets/screenshots/en/05.png",
+          "https://getomakase.app/assets/screenshots/en/06.png",
+          "https://getomakase.app/assets/screenshots/en/07.png",
+          "https://getomakase.app/assets/screenshots/en/08.png"
+        ],
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Free Tier",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "3 daily cultural posts (including 1 Letterboxd synthesis) and 1 Deep Dive per day"
+          },
+          {
+            "@type": "Offer",
+            "name": "Omakase Pro Monthly",
+            "price": "3.99",
+            "priceCurrency": "USD"
+          },
+          {
+            "@type": "Offer",
+            "name": "Omakase Pro Annual (7-day free trial)",
+            "price": "29.99",
+            "priceCurrency": "USD"
+          }
+        ],
+        "publisher": {
+          "@id": "https://getomakase.app/#organization"
+        }
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://getomakase.app/en/#webpage",
+        "url": "https://getomakase.app/en/",
+        "name": "Omakase — Daily Sourced Culture Feed & Micro-Stories (iOS)",
+        "isPartOf": {
+          "@id": "https://getomakase.app/#website"
+        },
+        "about": {
+          "@id": "https://getomakase.app/#app"
+        },
+        "inLanguage": "en",
+        "dateModified": "2026-11-26"
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- ==========================================================================
+       NAVIGATION BAR
+       ========================================================================== -->
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="#" class="brand" aria-label="Omakase Home">
+        <img src="../assets/logo.svg" alt="Omakase Logo" class="brand-logo" width="26" height="26">
+        <span class="brand-name">omakase</span>
+      </a>
+
+      <nav aria-label="Main Menu">
+        <ul class="nav-links">
+          <li><a href="#screenshots" class="nav-link" data-i18n="nav.screenshots">Screenshots</a></li>
+          <li><a href="#interactive-demo" class="nav-link" data-i18n="nav.demo">Live Tasting</a></li>
+          <li><a href="#features" class="nav-link" data-i18n="nav.features">Features</a></li>
+          <li><a href="#philosophy" class="nav-link" data-i18n="nav.philosophy">Philosophy</a></li>
+          <li><a href="#faq" class="nav-link" data-i18n="nav.faq">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <!-- Language Switcher -->
+        <button id="lang-toggle-btn" class="ctrl-pill" aria-label="Switch Language" title="Switch Language">
+          <span id="current-lang-text">EN</span>
+        </button>
+
+        <!-- Theme Switcher -->
+        <button id="theme-toggle-btn" class="ctrl-pill icon-btn" aria-label="Toggle Theme" title="Toggle Theme">
+          <svg class="theme-icon sun-icon" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="theme-icon moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <!-- CTA Button -->
+        <a href="#download" class="btn-primary nav-cta-desktop" data-i18n="nav.getApp">Get App</a>
+
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-toggle" id="mobile-toggle-btn" aria-label="Open Menu" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="7" x2="21" y2="7"></line>
+            <line x1="3" y1="17" x2="21" y2="17"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Drawer -->
+    <div class="mobile-drawer" id="mobile-drawer">
+      <a href="#screenshots" class="mobile-link" data-i18n="nav.screenshots">Screenshots</a>
+      <a href="#interactive-demo" class="mobile-link" data-i18n="nav.demo">Live Tasting</a>
+      <a href="#features" class="mobile-link" data-i18n="nav.features">Features</a>
+      <a href="#philosophy" class="mobile-link" data-i18n="nav.philosophy">Philosophy</a>
+      <a href="#faq" class="mobile-link" data-i18n="nav.faq">FAQ</a>
+      <a href="#download" class="btn-primary mobile-link mobile-cta-btn" data-i18n="nav.getAppFull">Download the App</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- ==========================================================================
+         HERO SECTION
+         ========================================================================== -->
+    <section class="section hero">
+      <div class="ascii-sushi-backdrop" aria-hidden="true">
+        <pre class="ascii-sushi s1"> _____
+(~~~~~)
+[=====]</pre>
+        <pre class="ascii-sushi s2">.---.
+|(o)|
+'---'</pre>
+        <pre class="ascii-sushi s3">  /\
+ /  \
+/_[]_\</pre>
+        <pre class="ascii-sushi s4">====\  ____
+====/ (~~~~)
+      [====]</pre>
+        <pre class="ascii-sushi s5"> ( )
+|___|
+'---'</pre>
+        <pre class="ascii-sushi s6">\o~o/
+ \ /
+  V</pre>
+        <pre class="ascii-sushi s7">.---. .---.
+|(o)| |(o)|
+'---' '---'</pre>
+        <pre class="ascii-sushi s8"> _____
+(~~~~~)
+[=====]</pre>
+        <pre class="ascii-sushi s9">·  ✦  ·</pre>
+        <pre class="ascii-sushi s10">~  ∘  ~</pre>
+      </div>
+      <div class="container hero-grid">
+        <div class="hero-text-col">
+          <div class="hero-badge">
+            <span class="live-dot"></span>
+            <span data-i18n="hero.badge">iOS 17+ • 7 Languages • Personal Culture Feed</span>
+          </div>
+
+          <h1 class="hero-title" data-i18n="hero.title">
+            Feed your mind, not the algorithm.
+          </h1>
+
+          <p class="hero-subtitle" data-i18n="hero.subtitle">
+            Yes, AI chatbots teach well — but they wait for you to ask. Omakase brings sourced fun-facts in one tap, stories from your last 50 Letterboxd films, and sleek export cards.
+          </p>
+
+          <div class="hero-cta-group">
+            <a href="#download" class="btn-appstore">
+              <img src="../assets/apple-logo.png" alt="Apple" class="apple-logo-img" width="20" height="20">
+              <span>
+                <small class="btn-appstore-sub" data-i18n="hero.appStoreLabel">App Store</small>
+                <strong data-i18n="hero.downloadCta">Download for iOS</strong>
+              </span>
+            </a>
+
+            <a href="#interactive-demo" class="btn-secondary" data-i18n="hero.tryDemo">
+              Try Live Tasting ↓
+            </a>
+          </div>
+
+          <div class="hero-meta">
+            <div class="hero-meta-item">
+              <span class="meta-dot"></span>
+              <span data-i18n="hero.meta1">One-Tap Fun-Facts &amp; Sources</span>
+            </div>
+            <div class="hero-meta-item">
+              <span class="meta-dot"></span>
+              <span data-i18n="hero.meta2">15–25s Reading Pause</span>
+            </div>
+            <div class="hero-meta-item">
+              <span class="meta-dot"></span>
+              <span data-i18n="hero.meta3">7 Languages • Letterboxd &amp; Community</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Live iOS Device Showcase -->
+        <div class="hero-device-wrapper">
+          <div class="device-stage">
+            <div class="device-screen-tabs" role="tablist" aria-label="App Screens">
+              <button class="device-tab-pill active" data-screen="feed" role="tab" aria-selected="true" data-i18n="device.tabFeed">My Feed</button>
+              <button class="device-tab-pill" data-screen="bento" role="tab" aria-selected="false" data-i18n="device.tabBento">Bento Box</button>
+              <button class="device-tab-pill" data-screen="community" role="tab" aria-selected="false" data-i18n="device.tabCommunity">Community</button>
+              <button class="device-tab-pill" data-screen="profile" role="tab" aria-selected="false" data-i18n="device.tabProfile">Profile</button>
+            </div>
+
+            <div class="iphone-frame">
+              <div class="dynamic-island"></div>
+              <div class="iphone-screen">
+                <div class="ios-statusbar">
+                  <span class="ios-time">09:41</span>
+                  <div class="ios-status-icons">
+                    <svg width="14" height="10" viewBox="0 0 16 12" fill="currentColor"><rect x="0" y="8" width="2.5" height="4" rx="1"/><rect x="4" y="5.5" width="2.5" height="6.5" rx="1"/><rect x="8" y="3" width="2.5" height="9" rx="1"/><rect x="12" y="0" width="2.5" height="12" rx="1"/></svg>
+                    <svg width="18" height="10" viewBox="0 0 22 12" fill="none"><rect x="0.75" y="1" width="18" height="10" rx="2.5" stroke="currentColor" stroke-width="1.2"/><rect x="2.5" y="2.8" width="14.5" height="6.4" rx="1.2" fill="currentColor"/><path d="M20.2 4.2v3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                  </div>
+                </div>
+
+                <!-- SCREEN 1: FEED VIEW -->
+                <div class="ios-view active" id="ios-view-feed">
+                  <div class="ios-navbar">
+                    <div class="ios-nav-brand">
+                      <img src="../assets/logo.svg" alt="" role="presentation" width="18" height="18" class="ios-logo-img">
+                      <span>omakase</span>
+                    </div>
+                    <span class="ios-hourglass-pill" data-i18n="device.quotaPill">••• 3/3 Left</span>
+                  </div>
+                  <div class="ios-cooldown-line"><div class="ios-cooldown-fill"></div></div>
+
+                  <div class="ios-feed-card">
+                    <div class="ios-post-header-block">
+                      <div class="ios-post-title-row">
+                        <p class="ios-post-title" data-i18n="device.feedTitle">Oxford University Is Older Than the Aztec Empire</p>
+                        <span class="ios-more-circle" aria-hidden="true">•••</span>
+                      </div>
+                      <div class="ios-post-date-row">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        <span class="ios-post-date" data-i18n="device.feedDate">Today • 09:41</span>
+                      </div>
+                    </div>
+
+                    <p class="ios-post-body" data-i18n="device.feedBody">
+                      Lectures were already echoing through Oxford by 1096, and the university had formal colleges by 1249—more than two centuries before the Aztecs founded Tenochtitlan in 1325. History's timelines overlap in ways school textbooks rarely make feel real.
+                    </p>
+
+                    <div class="ios-source-pill">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                      <span data-i18n="device.feedSource">Source: L. W. B. Brockliss, The University of Oxford: A History</span>
+                      <span>↗</span>
+                    </div>
+
+                    <div class="ios-tag-row">
+                      <span class="ios-tag" data-i18n="device.tag1">History</span>
+                      <span class="ios-tag" data-i18n="device.tag2">Timelines</span>
+                      <span class="ios-tag" data-i18n="device.tag3">Culture</span>
+                    </div>
+
+                    <div class="ios-reels-actionbar">
+                      <button type="button" class="ios-reel-btn" id="hero-btn-dive" title="Deep Dive">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M2 16s3-6 10-6 10 6 10 6-3 6-10 6-10-6-10-6Z"/><circle cx="12" cy="16" r="2"/><path d="M12 10V4m0 0L9 7m3-3 3 3"/></svg>
+                        <span data-i18n="device.actDive">Dive</span>
+                      </button>
+                      <button type="button" class="ios-reel-btn" data-switch-screen="community" title="Share in Community">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        <span data-i18n="action.share">Share</span>
+                      </button>
+                      <button type="button" class="ios-reel-btn" id="hero-btn-export" title="Export Share Card">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                        <span data-i18n="action.export">Export</span>
+                      </button>
+                      <span class="ios-reel-spacer"></span>
+                      <button type="button" class="ios-reel-btn" data-switch-screen="profile" title="Save">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                        <span data-i18n="action.save">Save</span>
+                      </button>
+                    </div>
+
+                    <button type="button" class="ios-swipe-hint" data-switch-screen="bento">
+                      <span>⌄</span>
+                      <span data-i18n="device.swipeForBento">Scroll down for a new post</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- SCREEN 2: FULL-SCREEN 2x6 BENTO TASTE BOX -->
+                <div class="ios-view" id="ios-view-bento">
+                  <button type="button" class="ios-back-post-banner" data-switch-screen="feed">
+                    <span>↑</span>
+                    <span data-i18n="device.backToPost">Tap to return to last post</span>
+                  </button>
+
+                  <div class="ios-bento-header">
+                    <div>
+                      <p class="ios-bento-title" data-i18n="device.bentoHeading">Categories</p>
+                      <p data-i18n="device.bentoSub">Select a category and tap a subtopic to craft a new post</p>
+                    </div>
+                    <span class="ios-hourglass-pill">2×6</span>
+                  </div>
+
+                  <div class="ios-bento-grid">
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">🎬</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.film">Film</div>
+                      <div class="ios-tile-sub" data-i18n="device.subFilm">Kubrick f/0.7 · Kuleshov</div>
+                    </div>
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">🎵</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.music">Music</div>
+                      <div class="ios-tile-sub" data-i18n="device.subMusic">X-Ray Records · Köln Piano</div>
+                    </div>
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">🔬</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.science">Science</div>
+                      <div class="ios-tile-sub" data-i18n="device.subSci">Oklo Reactor · Tardigrades</div>
+                    </div>
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">🍳</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.food">Food</div>
+                      <div class="ios-tile-sub" data-i18n="device.subFood">Garum · 1814 Beer Flood</div>
+                    </div>
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">📜</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.history">History</div>
+                      <div class="ios-tile-sub" data-i18n="device.subHist">1518 Dancing Plague · Voynich</div>
+                    </div>
+                    <div class="ios-bento-tile">
+                      <div class="ios-tile-top"><span class="ios-tile-icon">💻</span><span class="ios-tile-chev">›</span></div>
+                      <div class="ios-tile-name" data-i18n="cat.tech">Tech</div>
+                      <div class="ios-tile-sub" data-i18n="device.subTech">Apollo Rope RAM · Lava Lamps</div>
+                    </div>
+                  </div>
+
+                  <div class="ios-bento-bottom">
+                    <div class="ios-active-chips">
+                      <span class="ios-chip-letterboxd">● Letterboxd</span>
+                      <span class="ios-chip-active">Architecture ×</span>
+                      <span class="ios-chip-inactive">Stoicism</span>
+                    </div>
+                    <div class="ios-custom-input">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <span data-i18n="device.inputPlaceholder">Type a custom topic or add taste…</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SCREEN 3: COMMUNITY TIMELINE VIEW -->
+                <div class="ios-view" id="ios-view-community">
+                  <div class="ios-navbar">
+                    <span class="ios-nav-title" data-i18n="device.tabCommunity">Community</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                  </div>
+
+                  <div class="ios-community-wrap">
+                    <div class="ios-seg-control">
+                      <span class="ios-seg-item active" data-i18n="device.segDiscover">Discover</span>
+                      <span class="ios-seg-item" data-i18n="device.segFollowing">Following</span>
+                    </div>
+
+                    <div class="ios-shared-card">
+                      <div class="ios-author-row">
+                        <div class="ios-avatar">S</div>
+                        <div class="ios-author-meta">
+                          <div class="ios-author-name">Sude <span class="ios-handle">@sude</span></div>
+                          <div class="ios-author-time">18m</div>
+                        </div>
+                        <span class="ios-follow-pill" data-i18n="device.followBtn">+ Follow</span>
+                      </div>
+                      <div class="ios-shared-title" data-i18n="device.shared1Title">Miles Davis and the Modal Silence of Kind of Blue</div>
+                      <p class="ios-shared-body" data-i18n="device.shared1Body">In the spring of 1959, Miles Davis handed Bill Evans and John Coltrane scraps of paper containing modal scales rather than traditional chord changes…</p>
+                      <div class="ios-social-actions">
+                        <span class="ios-social-act">♥ 24</span>
+                        <span class="ios-social-act">💬 6</span>
+                        <span class="ios-social-act accent" data-i18n="device.actDive">Dive ↗</span>
+                      </div>
+                    </div>
+
+                    <div class="ios-shared-card">
+                      <div class="ios-author-row">
+                        <div class="ios-avatar">K</div>
+                        <div class="ios-author-meta">
+                          <div class="ios-author-name">Kuzey <span class="ios-handle">@kuzey</span></div>
+                          <div class="ios-author-time">1h</div>
+                        </div>
+                        <span class="ios-more-dots">•••</span>
+                      </div>
+                      <div class="ios-shared-title" data-i18n="device.shared2Title">Oklo: The 2-Billion-Year-Old Natural Nuclear Reactor</div>
+                      <div class="ios-social-actions">
+                        <span class="ios-social-act">♥ 19</span>
+                        <span class="ios-social-act">💬 5</span>
+                        <span class="ios-social-act accent" data-i18n="device.actDive">Dive ↗</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SCREEN 4: PROFILE TAB VIEW -->
+                <div class="ios-view" id="ios-view-profile">
+                  <div class="ios-navbar">
+                    <span class="ios-nav-title" data-i18n="device.tabProfile">Profile</span>
+                    <span class="ios-hourglass-pill">@kuzey</span>
+                  </div>
+
+                  <div class="ios-profile-wrap">
+                    <div class="ios-profile-hero">
+                      <div class="ios-profile-avatar">K</div>
+                      <div class="ios-profile-name">Kuzey Sınay</div>
+                      <div class="ios-profile-handle">@kuzey</div>
+                      <div class="ios-profile-stats">
+                        <div class="ios-stat-box">
+                          <strong>148</strong>
+                          <span data-i18n="device.followers">Followers</span>
+                        </div>
+                        <div class="ios-stat-divider"></div>
+                        <div class="ios-stat-box">
+                          <strong>92</strong>
+                          <span data-i18n="device.following">Following</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="ios-settings-group">
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left">🔖 <span data-i18n="device.savedPosts">Saved Posts</span></span>
+                        <span class="ios-row-right">24 ›</span>
+                      </div>
+                    </div>
+
+                    <div class="ios-settings-group">
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left">🎬 <span>Letterboxd</span></span>
+                        <span class="ios-row-right ios-lb-connected">@kuzeysinay ›</span>
+                      </div>
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left">🌐 <span data-i18n="device.langRow">Language</span></span>
+                        <span class="ios-row-right" data-i18n="device.langVal">7 Languages</span>
+                      </div>
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left">🌗 <span data-i18n="device.themeRow">Appearance</span></span>
+                        <span class="ios-row-right" data-i18n="device.themeVal">Ink &amp; Paper</span>
+                      </div>
+                    </div>
+
+                    <div class="ios-settings-group">
+                      <div class="ios-settings-row">
+                        <span class="ios-row-left"> <span>Sign in with Apple</span></span>
+                        <span class="ios-row-right">✓</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- iOS Bottom Tab Bar -->
+                <div class="ios-tabbar">
+                  <button type="button" class="ios-tab-item active" data-switch-screen="feed" data-tab-group="feed-bento">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                    <span data-i18n="device.tabFeed">My Feed</span>
+                  </button>
+                  <button type="button" class="ios-tab-item" data-switch-screen="community" data-tab-group="community">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span data-i18n="device.tabCommunity">Community</span>
+                  </button>
+                  <button type="button" class="ios-tab-item" data-switch-screen="profile" data-tab-group="profile">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+                    <span data-i18n="device.tabProfile">Profile</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         APP STORE SCREENSHOTS SHOWCASE
+         ========================================================================== -->
+    <section class="section screenshots-section" id="screenshots">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag" data-i18n="shots.tag">From the App</div>
+          <h2 class="section-title" data-i18n="shots.title">Yes, AI chatbots teach well — but they wait for you to ask.</h2>
+          <p class="section-desc" data-i18n="shots.desc">Fun-facts in one tap, always with their source. Open a discipline, tap a subtopic, dive deeper.</p>
+        </div>
+        <div class="screenshots-grid" id="screenshots-grid">
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="../assets/screenshots/en/01.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="../assets/screenshots/en/01.png" alt="Omakase — Feed your mind, not the algorithm"></picture></div><div class="screenshot-caption"><span class="screenshot-step">01</span><span class="screenshot-label">Feed your mind, not the algorithm</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="../assets/screenshots/en/02.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="../assets/screenshots/en/02.png" alt="Omakase — Fun-fact + source"></picture></div><div class="screenshot-caption"><span class="screenshot-step">02</span><span class="screenshot-label">Fun-fact + source</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="../assets/screenshots/en/03.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="../assets/screenshots/en/03.png" alt="Omakase — Chatbots wait. Omakase does not."></picture></div><div class="screenshot-caption"><span class="screenshot-step">03</span><span class="screenshot-label">Chatbots wait. Omakase does not.</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="../assets/screenshots/en/04.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="../assets/screenshots/en/04.png" alt="Omakase — Deep Dive"></picture></div><div class="screenshot-caption"><span class="screenshot-step">04</span><span class="screenshot-label">Deep Dive</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="../assets/screenshots/en/05.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="../assets/screenshots/en/05.png" alt="Omakase — Reading pause"></picture></div><div class="screenshot-caption"><span class="screenshot-step">05</span><span class="screenshot-label">Reading pause</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="../assets/screenshots/en/06.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="../assets/screenshots/en/06.png" alt="Omakase — Community"></picture></div><div class="screenshot-caption"><span class="screenshot-step">06</span><span class="screenshot-label">Community</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="../assets/screenshots/en/07.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="../assets/screenshots/en/07.png" alt="Omakase — Fun-facts from your last 50 films"></picture></div><div class="screenshot-caption"><span class="screenshot-step">07</span><span class="screenshot-label">Fun-facts from your last 50 films</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="../assets/screenshots/en/08.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="../assets/screenshots/en/08.png" alt="Omakase — Export as a monochrome card"></picture></div><div class="screenshot-caption"><span class="screenshot-step">08</span><span class="screenshot-label">Export as a monochrome card</span></div></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         INTERACTIVE SIMULATOR (LIVE TASTING DEMO)
+         ========================================================================== -->
+    <section class="section demo-section" id="interactive-demo">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">
+            <span class="live-dot"></span>
+            <span data-i18n="demo.tag">Interactive Experience</span>
+          </div>
+          <h2 class="section-title" data-i18n="demo.title">Live Chef Tasting</h2>
+          <p class="section-desc" data-i18n="demo.desc">
+            Pick one of the 12 cultural disciplines, tap a rabbit-hole subtopic, and watch the chef craft an instant micro-story in your browser.
+          </p>
+        </div>
+
+        <div class="simulator-box">
+          <div class="sim-controls">
+            <div class="sim-control-header">
+              <div class="sim-header-row">
+                <h3 data-i18n="demo.bentoTitle">2×6 Bento Discovery Matrix</h3>
+                <button type="button" class="btn-inline-roll" id="btn-spin-tastes" title="Randomize Category">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                  <span data-i18n="demo.spin">Randomize</span>
+                </button>
+              </div>
+              <p data-i18n="demo.bentoSub">Tap one of the 12 core disciplines:</p>
+            </div>
+
+            <div class="tastes-grid" id="tastes-grid">
+              <button type="button" class="taste-chip-btn active" data-topic="film">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.film">Film</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="music">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.music">Music</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="science">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.science">Science</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="food">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.food">Food</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="history">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.history">History</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="sports">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.sports">Sports</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="tech">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.tech">Tech</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="nature">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.nature">Nature</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="art">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.art">Art</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="philosophy">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.philosophy">Philosophy</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="travel">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.travel">Travel</span>
+              </button>
+              <button type="button" class="taste-chip-btn" data-topic="gaming">
+                <span class="chip-dot"></span>
+                <span class="chip-text" data-i18n="cat.gaming">Gaming</span>
+              </button>
+            </div>
+
+            <div class="subtopics-box">
+              <div class="subtopics-header">
+                <span class="subtopics-label" data-i18n="demo.subtopicsLabel">Subtopics (Rabbit Holes)</span>
+              </div>
+              <div class="subtopics-pills" id="sim-subtopics-list"></div>
+            </div>
+
+            <div class="sim-actions">
+              <button type="button" class="btn-generate" id="btn-stream-start">
+                <span class="live-dot"></span>
+                <span data-i18n="demo.startStream">Request New Tasting</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="sim-viewport">
+            <div class="sim-top-cooldown-track">
+              <div class="sim-top-cooldown-bar" id="cooldown-bar" style="width: 0%;"></div>
+            </div>
+
+            <div class="post-card-container">
+              <div class="post-card-header">
+                <div class="post-header-main">
+                  <div class="post-meta">
+                    <span id="sim-post-date">Today • 8:17 PM</span>
+                    <span class="post-meta-sep">·</span>
+                    <span id="cooldown-text" data-i18n="demo.cooldownReady">Reading cooldown ready</span>
+                  </div>
+                  <h3 class="post-title" id="sim-post-title">Oppenheimer and the Physical Gravity of IMAX 70mm</h3>
+                </div>
+
+                <div class="live-badge" id="sim-live-badge">
+                  <span class="live-dot"></span>
+                  <span id="sim-live-text">READY</span>
+                </div>
+              </div>
+
+              <div class="post-body" id="sim-post-body">Christopher Nolan commissioned Kodak to engineer 65mm IMAX black-and-white film for the very first time in cinema history. As the projector spooled the 11-mile, 600-pound platter, the mechanical whirr on set was as hypnotic as the imagery. For Nolan, this was not mere nostalgia; it was an uncompromising quest for tangible optical presence.<span class="typewriter-cursor" id="sim-cursor" style="display:none;"></span></div>
+
+              <div class="post-source-pill">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <span id="sim-post-source">Source: Kodak Motion Picture Film Archives; Hoyte van Hoytema interviews</span>
+              </div>
+
+              <div class="post-tags" id="sim-post-tags">
+                <span class="tag-badge">#Film</span>
+                <span class="tag-badge">#ChristopherNolan</span>
+                <span class="tag-badge">#Imax70Mm</span>
+              </div>
+
+              <div class="post-actions">
+                <div class="action-btn-group">
+                  <button type="button" class="action-icon-btn" id="btn-reread" title="Re-read">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 4v6h6M23 20v-6h-6"/>
+                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                    </svg>
+                    <span data-i18n="action.reread">Re-read</span>
+                  </button>
+
+                  <button type="button" class="action-icon-btn" id="btn-share-demo" title="Share Link">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    <span data-i18n="action.share">Share</span>
+                  </button>
+
+                  <button type="button" class="action-icon-btn" id="btn-export-card" title="Paper Share Card (1080×1350)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                      <polyline points="16 6 12 2 8 6"/>
+                      <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                    <span data-i18n="action.export">Export</span>
+                  </button>
+
+                  <button type="button" class="action-icon-btn" id="btn-bookmark-demo" title="Save to Collection">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span data-i18n="action.save">Save</span>
+                  </button>
+                </div>
+
+                <button type="button" class="deep-dive-btn" id="btn-open-deep-dive">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                  </svg>
+                  <span data-i18n="action.deepdive">Deep Dive</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         FEATURES SECTION
+         ========================================================================== -->
+    <section class="section" id="features">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag" data-i18n="features.tag">System Architecture</div>
+          <h2 class="section-title" data-i18n="features.title">One Tap, Six Lovely Details</h2>
+          <p class="section-desc" data-i18n="features.desc">
+            Feed your mind, not the algorithm — a reading rhythm without endless feeds or blank chatbot prompts.
+          </p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="2"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="2"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="features.f1Title">Open a discipline, tap a subtopic</h3>
+            <p class="feature-desc" data-i18n="features.f1Desc">
+              12 disciplines, each with refreshable subtopics. Open any one and tap what sparks you.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M5 22h14M5 2h14M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"></path>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="features.f2Title">A brief pause to read</h3>
+            <p class="feature-desc" data-i18n="features.f2Desc">
+              A thin bar slides across the top while you read the current post. A 15–25s pause so every bite sinks in.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="features.f3Title">Fun-facts, sources &amp; Deep Dive</h3>
+            <p class="feature-desc" data-i18n="features.f3Desc">
+              AI crafts each post live and always cites its primary source. Caught your interest? Dive deeper in one tap.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="features.f4Title">Share the cultural bites</h3>
+            <p class="feature-desc" data-i18n="features.f4Desc">
+              Share the cultural bites you loved with friends. Taste what others discovered too: Discover, follow, like, comment.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="2" y="2" width="20" height="20" rx="3"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="features.f5Title">Connect your Letterboxd</h3>
+            <p class="feature-desc" data-i18n="features.f5Desc">
+              Read fun-facts from your last 50 watched films. No password needed.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="features.f6Title">Export as a monochrome card</h3>
+            <p class="feature-desc" data-i18n="features.f6Desc">
+              Turn any post into a monochrome card, ready for Instagram, WhatsApp &amp; X.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         PHILOSOPHY SECTION
+         ========================================================================== -->
+    <section class="section" id="philosophy">
+      <div class="container">
+        <div class="philosophy-card">
+          <div class="section-header phil-header">
+            <div class="section-tag" data-i18n="phil.tag">Our Philosophy</div>
+            <h2 class="section-title" data-i18n="phil.title">Trust the Chef</h2>
+            <p class="section-desc" data-i18n="phil.desc">
+              In Japanese dining, 'Omakase' means leaving the menu to the chef. We replaced the endless scroll with focused, thoughtful daily posts.
+            </p>
+          </div>
+
+          <div class="comparison-grid">
+            <div class="comparison-col bad">
+              <div class="comparison-header">
+                <span class="comp-indicator muted"></span>
+                <span data-i18n="phil.badTitle">Algorithmic Endless Stream</span>
+              </div>
+              <ul class="comparison-list">
+                <li class="comparison-item">
+                  <span class="comp-symbol">—</span>
+                  <span data-i18n="phil.bad1">Addictive, insatiable scrolling loops (doomscrolling)</span>
+                </li>
+                <li class="comparison-item">
+                  <span class="comp-symbol">—</span>
+                  <span data-i18n="phil.bad2">Outrage-driven, engagement-baiting headlines</span>
+                </li>
+                <li class="comparison-item">
+                  <span class="comp-symbol">—</span>
+                  <span data-i18n="phil.bad3">Ads, sponsored clutter, and visual noise</span>
+                </li>
+                <li class="comparison-item">
+                  <span class="comp-symbol">—</span>
+                  <span data-i18n="phil.bad4">Mental fatigue and emptiness after closing the app</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="comparison-col good">
+              <div class="comparison-header">
+                <span class="comp-indicator active"></span>
+                <span data-i18n="phil.goodTitle">The Omakase Approach</span>
+              </div>
+              <ul class="comparison-list">
+                <li class="comparison-item">
+                  <span class="comp-symbol">+</span>
+                  <span data-i18n="phil.good1">Mindful 15–25s reading cadence that respects comprehension</span>
+                </li>
+                <li class="comparison-item">
+                  <span class="comp-symbol">+</span>
+                  <span data-i18n="phil.good2">Verified, timeless micro-stories across 12 cultural domains</span>
+                </li>
+                <li class="comparison-item">
+                  <span class="comp-symbol">+</span>
+                  <span data-i18n="phil.good3">Zero ads, pure monochrome ink-on-paper serenity</span>
+                </li>
+                <li class="comparison-item">
+                  <span class="comp-symbol">+</span>
+                  <span data-i18n="phil.good4">Lasting curiosity and mental clarity after every session</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         FAQ SECTION
+         ========================================================================== -->
+    <section class="section" id="faq">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag" data-i18n="faq.tag">Curiosities</div>
+          <h2 class="section-title" data-i18n="faq.title">Frequently Asked Questions</h2>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span data-i18n="faq.q1">How does Omakase work?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a1">
+              Omakase is a native iOS app that transforms your chosen hyper-specific subtopics across 12 cultural disciplines, custom topics, or your Letterboxd diary into verified, real-time micro-stories powered by AI.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span data-i18n="faq.q2">Why is there a reading cooldown timer?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a2">
+              Conventional social feeds condition users to swipe in fractions of a second without absorbing anything. Omakase enforces a 15–25 second digestion window so every story is genuinely read.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span data-i18n="faq.q3">How is factual accuracy maintained?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a3">
+              Our backend uses strict factual grounding rules and a multi-layer moderation pipeline to prevent fabrication, prioritizing documented historical records, peer-reviewed research, and primary sources.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span data-i18n="faq.q4">How does the Letterboxd integration work?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a4">
+              Simply enter your Letterboxd handle in the Film Bento card—no password required. Omakase reads your public RSS diary of 50 recent films and serves verified behind-the-scenes fun-facts (1/day free, unlimited with Pro).
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span data-i18n="faq.q5">What can I do with Community &amp; Collections?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a5">
+              Share favorite stories to the Community timeline under your @username handle, export monochrome getomakase.app cards in Story (9:16), Post (4:5), or Square (1:1) formats to Instagram, WhatsApp &amp; X, or bookmark posts into 12 offline collections.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              <span data-i18n="faq.q6">How are privacy and account security handled?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a6">
+              Omakase displays zero ads, performs zero cross-app tracking (IDFA), and never sells your data. It supports Sign in with Apple and includes one-tap permanent Account Deletion directly in the Profile tab.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         DOWNLOAD / WAITLIST BANNER
+         ========================================================================== -->
+    <section class="section" id="download">
+      <div class="container">
+        <div class="cta-banner">
+          <h2 class="section-title" data-i18n="cta.title">Today's Menu Is Ready</h2>
+          <p class="section-desc" data-i18n="cta.desc">
+            Download free for iOS 17+. 3 free posts + 1 Deep Dive a day; go Pro anytime to remove the limits.
+          </p>
+
+          <div class="cta-actions">
+            <form class="waitlist-form" id="waitlist-form" onsubmit="return false;">
+              <input type="email" class="waitlist-input" id="waitlist-email" placeholder="Your email address..." required>
+              <button type="submit" class="waitlist-submit" id="waitlist-submit-btn" data-i18n="cta.joinBtn">Join TestFlight</button>
+            </form>
+            <p class="waitlist-feedback" id="waitlist-feedback" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==========================================================================
+       FOOTER
+       ========================================================================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <img src="../assets/logo.svg" alt="Omakase Logo" width="20" height="20">
+          <span>omakase</span>
+        </div>
+
+        <ul class="footer-links">
+          <li><a href="#screenshots" data-i18n="nav.screenshots">Screenshots</a></li>
+          <li><a href="#interactive-demo" data-i18n="nav.demo">Live Tasting</a></li>
+          <li><a href="#features" data-i18n="nav.features">Features</a></li>
+          <li><a href="#philosophy" data-i18n="nav.philosophy">Philosophy</a></li>
+          <li><a href="#faq" data-i18n="nav.faq">FAQ</a></li>
+          <li><a href="../privacy.html" data-i18n="footer.privacy">Privacy Policy</a></li>
+          <li><a href="../terms.html" data-i18n="footer.terms">Terms of Use</a></li>
+          <li><a href="mailto:destek@getomakase.app" data-i18n="footer.contact">Contact</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-bottom">
+        <p data-i18n="footer.copy">© 2026 Omakase. Crafted for iOS with ink-and-paper simplicity.</p>
+        <p>iOS 17+ • SwiftUI</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL 1: DEEP DIVE READER SHEET -->
+  <div class="modal-backdrop" id="deep-dive-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-sheet">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-fish-icon">🐟</span>
+          <span id="modal-title">Deep Dive: Kodak's 65mm Monochrome Chemistry</span>
+        </div>
+        <button type="button" class="modal-close-btn" id="btn-close-modal" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: SHARE CARD PREVIEW -->
+  <div class="modal-backdrop" id="share-card-modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-heading">
+    <div class="modal-sheet share-modal-sheet">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span id="share-modal-heading" data-i18n="shareModal.heading">Share Card Preview (1080 × 1350)</span>
+        </div>
+        <button type="button" class="modal-close-btn" id="btn-close-share-modal" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body share-modal-body">
+        <div class="paper-share-card">
+          <div class="paper-card-brand">
+            <span>omakase</span>
+            <span class="paper-card-domain">getomakase.app</span>
+          </div>
+          <div class="paper-card-content">
+            <p class="paper-card-title" id="paper-card-title">Oppenheimer and the Physical Gravity of IMAX 70mm</p>
+            <p class="paper-card-text" id="paper-card-text"></p>
+          </div>
+          <div class="paper-card-footer">
+            <div class="paper-card-tags" id="paper-card-tags"></div>
+            <div class="paper-card-date" id="paper-card-date">Nov 15, 2026</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lightbox-backdrop" id="lightbox" role="dialog" aria-modal="true">
+    <button type="button" class="lightbox-close" id="lightbox-close" aria-label="Close">✕</button>
+    <div class="lightbox-stage">
+      <button type="button" class="lightbox-nav lightbox-prev" id="lightbox-prev" aria-label="Previous">‹</button>
+      <div class="lightbox-img-frame"><img class="lightbox-img" id="lightbox-img" alt=""></div>
+      <button type="button" class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="Next">›</button>
+    </div>
+  </div>
+
+  <script src="../app.js"></script>
+</body>
+</html>

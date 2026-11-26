@@ -1,26 +1,39 @@
 <!DOCTYPE html>
-<html lang="tr" data-theme="light">
+<html lang="tr" data-theme="light" data-default-lang="tr" data-asset-base="">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>omakase</title>
-  
-  <meta name="description" content="Tek dokunuşta fun-fact. Postu AI anlık üretir, kaynağını da verir. 12 kültür disiplini, alt konular, okuma süresi molası, Letterboxd günlüğü ve 7 dil desteği.">
-  <meta name="keywords" content="omakase, fun-fact, kültür akışı, mikro hikayeler, ai feed, ios uygulaması, bento keşif, letterboxd, doomscrolling karşıtı, derin okuma">
+  <title>Omakase — Günlük Kaynaklı Kültür Akışı ve Fun-Fact (iOS)</title>
+
+  <meta name="description" content="Algoritmayı değil, zihnini besle. Tek dokunuşta birincil kaynaklı fun-fact'ler, 12 kültür disiplini, 15–25 sn okuma molası, Letterboxd ve 7 dil desteği. iOS 17+.">
   <meta name="author" content="Omakase">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <!-- <meta name="apple-itunes-app" content="app-id=APP_STORE_ID_AFTER_APPROVAL"> -->
+
+  <link rel="canonical" href="https://getomakase.app/">
+  <link rel="alternate" hreflang="tr" href="https://getomakase.app/">
+  <link rel="alternate" hreflang="en" href="https://getomakase.app/en/">
+  <link rel="alternate" hreflang="x-default" href="https://getomakase.app/en/">
 
   <!-- Open Graph / Social Cards -->
+  <meta property="og:site_name" content="Omakase">
   <meta property="og:type" content="website">
+  <meta property="og:locale" content="tr_TR">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="og:title" content="Omakase — Algoritmayı değil, zihnini besle.">
-  <meta property="og:description" content="Tek dokunuşta fun-fact. Postu AI anlık üretir. Kaynağını da verir.">
-  <meta property="og:image" content="assets/app-icon.png">
-  <meta property="og:url" content="https://getomakase.app">
+  <meta property="og:description" content="Tek dokunuşta birincil kaynaklı fun-fact'ler, 12 kültür disiplini, 15–25 sn okuma molası ve Letterboxd günlüğü. iOS 17+.">
+  <meta property="og:image" content="https://getomakase.app/assets/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Omakase — Günlük kaynaklı kültür akışı iOS uygulaması">
+  <meta property="og:url" content="https://getomakase.app/">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Omakase — Algoritmayı değil, zihnini besle.">
-  <meta name="twitter:description" content="Tek dokunuşta fun-fact. Postu AI anlık üretir. Kaynağını da verir.">
-  <meta name="twitter:image" content="assets/app-icon.png">
+  <meta name="twitter:description" content="Tek dokunuşta birincil kaynaklı fun-fact'ler, 12 kültür disiplini, 15–25 sn okuma molası ve Letterboxd günlüğü. iOS 17+.">
+  <meta name="twitter:image" content="https://getomakase.app/assets/og-card.png">
+  <meta name="twitter:image:alt" content="Omakase — Günlük kaynaklı kültür akışı iOS uygulaması">
 
   <!-- Apple & Icons -->
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
@@ -29,6 +42,106 @@
 
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
+
+  <!-- Structured Data (Schema.org @graph) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://getomakase.app/#organization",
+        "name": "Omakase",
+        "url": "https://getomakase.app/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://getomakase.app/assets/app-icon.png",
+          "width": 1024,
+          "height": 1024
+        },
+        "email": "mailto:destek@getomakase.app"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://getomakase.app/#website",
+        "name": "Omakase",
+        "url": "https://getomakase.app/",
+        "inLanguage": ["tr", "en"],
+        "publisher": {
+          "@id": "https://getomakase.app/#organization"
+        }
+      },
+      {
+        "@type": "MobileApplication",
+        "@id": "https://getomakase.app/#app",
+        "name": "Omakase",
+        "alternateName": "Omakase — Günlük Kültür & Fun-Fact",
+        "operatingSystem": "iOS 17.0+",
+        "applicationCategory": "EducationApplication",
+        "softwareVersion": "1.0",
+        "inLanguage": ["en", "tr", "ja", "de", "fr", "es", "ko"],
+        "description": "12 kültür disiplininde birincil kaynaklı fun-fact'ler, 15–25 saniyelik okuma molası, Derin İnceleme, Letterboxd son 50 film sentezi ve monokrom dışa aktarma kartları sunan iOS uygulaması.",
+        "featureList": [
+          "12 kültür disiplini ve 2x6 Bento keşif matrisi",
+          "Her gönderide zorunlu tıklanabilir birincil kaynakça",
+          "15–25 saniye anti-doomscrolling okuma molası",
+          "Tek dokunuşla 200 kelimelik Derin İnceleme",
+          "Şifresiz Letterboxd son 50 film günlüğü sentezi",
+          "Export Studio monokrom kartlar (1080x1920, 1080x1350, 1080x1080)",
+          "7 dilde yerel arayüz ve içerik (en, tr, ja, de, fr, es, ko)"
+        ],
+        "screenshot": [
+          "https://getomakase.app/assets/screenshots/tr/01.png",
+          "https://getomakase.app/assets/screenshots/tr/02.png",
+          "https://getomakase.app/assets/screenshots/tr/03.png",
+          "https://getomakase.app/assets/screenshots/tr/04.png",
+          "https://getomakase.app/assets/screenshots/tr/05.png",
+          "https://getomakase.app/assets/screenshots/tr/06.png",
+          "https://getomakase.app/assets/screenshots/tr/07.png",
+          "https://getomakase.app/assets/screenshots/tr/08.png"
+        ],
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Ücretsiz Plan",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "Günde 3 ücretsiz kültür postu (1 Letterboxd dahil) ve 1 Derin İnceleme"
+          },
+          {
+            "@type": "Offer",
+            "name": "Omakase Pro Aylık",
+            "price": "3.99",
+            "priceCurrency": "USD"
+          },
+          {
+            "@type": "Offer",
+            "name": "Omakase Pro Yıllık (7 gün ücretsiz deneme)",
+            "price": "29.99",
+            "priceCurrency": "USD"
+          }
+        ],
+        "publisher": {
+          "@id": "https://getomakase.app/#organization"
+        }
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://getomakase.app/#webpage",
+        "url": "https://getomakase.app/",
+        "name": "Omakase — Günlük Kaynaklı Kültür Akışı ve Fun-Fact (iOS)",
+        "isPartOf": {
+          "@id": "https://getomakase.app/#website"
+        },
+        "about": {
+          "@id": "https://getomakase.app/#app"
+        },
+        "inLanguage": "tr",
+        "dateModified": "2026-11-26"
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
@@ -206,7 +319,7 @@
                 <div class="ios-view active" id="ios-view-feed">
                   <div class="ios-navbar">
                     <div class="ios-nav-brand">
-                      <img src="assets/logo.svg" alt="" width="18" height="18" class="ios-logo-img">
+                      <img src="assets/logo.svg" alt="" role="presentation" width="18" height="18" class="ios-logo-img">
                       <span>omakase</span>
                     </div>
                     <span class="ios-hourglass-pill" data-i18n="device.quotaPill">••• Kalan: 3/3</span>
@@ -217,7 +330,7 @@
                   <div class="ios-feed-card">
                     <div class="ios-post-header-block">
                       <div class="ios-post-title-row">
-                        <h4 class="ios-post-title" data-i18n="device.feedTitle">Ayasofya'nın Mermerindeki 1100 Yıllık Viking İmzası</h4>
+                        <p class="ios-post-title" data-i18n="device.feedTitle">Ayasofya'nın Mermerindeki 1100 Yıllık Viking İmzası</p>
                         <span class="ios-more-circle" aria-hidden="true">•••</span>
                       </div>
                       <div class="ios-post-date-row">
@@ -279,7 +392,7 @@
 
                   <div class="ios-bento-header">
                     <div>
-                      <h4 data-i18n="device.bentoHeading">Kategoriler</h4>
+                      <p class="ios-bento-title" data-i18n="device.bentoHeading">Kategoriler</p>
                       <p data-i18n="device.bentoSub">Bir kategori seç ve alt konuya dokunarak yeni post üret</p>
                     </div>
                     <span class="ios-hourglass-pill">2×6</span>
@@ -469,7 +582,16 @@
           <h2 class="section-title" data-i18n="shots.title">Evet, chatbot'lar öğretici — ama senin sormanı bekliyor.</h2>
           <p class="section-desc" data-i18n="shots.desc">Ne soracağını düşünme. Konunu seç ya da Letterboxd'ını bağla; kaynaklı fun-fact oku ve dışa aktar.</p>
         </div>
-        <div class="screenshots-grid" id="screenshots-grid"></div>
+        <div class="screenshots-grid" id="screenshots-grid">
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="assets/screenshots/tr/01.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="assets/screenshots/tr/01.png" alt="Omakase — Algoritmayı değil, zihnini besle"></picture></div><div class="screenshot-caption"><span class="screenshot-step">01</span><span class="screenshot-label">Algoritmayı değil, zihnini besle</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="assets/screenshots/tr/02.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="assets/screenshots/tr/02.png" alt="Omakase — Fun-fact + kaynak"></picture></div><div class="screenshot-caption"><span class="screenshot-step">02</span><span class="screenshot-label">Fun-fact + kaynak</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="assets/screenshots/tr/03.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="assets/screenshots/tr/03.png" alt="Omakase — Chatbot beklemez, Omakase beklemez"></picture></div><div class="screenshot-caption"><span class="screenshot-step">03</span><span class="screenshot-label">Chatbot beklemez, Omakase beklemez</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="assets/screenshots/tr/04.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="assets/screenshots/tr/04.png" alt="Omakase — Derin İnceleme"></picture></div><div class="screenshot-caption"><span class="screenshot-step">04</span><span class="screenshot-label">Derin İnceleme</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="assets/screenshots/tr/05.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="assets/screenshots/tr/05.png" alt="Omakase — Okuma molası"></picture></div><div class="screenshot-caption"><span class="screenshot-step">05</span><span class="screenshot-label">Okuma molası</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="assets/screenshots/tr/06.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="assets/screenshots/tr/06.png" alt="Omakase — Topluluk"></picture></div><div class="screenshot-caption"><span class="screenshot-step">06</span><span class="screenshot-label">Topluluk</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="assets/screenshots/tr/07.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="assets/screenshots/tr/07.png" alt="Omakase — Son 50 filmin fun-fact'leri"></picture></div><div class="screenshot-caption"><span class="screenshot-step">07</span><span class="screenshot-label">Son 50 filmin fun-fact'leri</span></div></button>
+          <button type="button" class="screenshot-card"><div class="screenshot-img-wrap"><picture><source srcset="assets/screenshots/tr/08.webp" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="assets/screenshots/tr/08.png" alt="Omakase — Kart olarak dışa aktar"></picture></div><div class="screenshot-caption"><span class="screenshot-step">08</span><span class="screenshot-label">Kart olarak dışa aktar</span></div></button>
+        </div>
       </div>
     </section>
 
@@ -494,7 +616,7 @@
           <div class="sim-controls">
             <div class="sim-control-header">
               <div class="sim-header-row">
-                <h4 data-i18n="demo.bentoTitle">2×6 Bento Keşif Matrisi</h4>
+                <h3 data-i18n="demo.bentoTitle">2×6 Bento Keşif Matrisi</h3>
                 <button type="button" class="btn-inline-roll" id="btn-spin-tastes" title="Rastgele Kategori">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                     <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
@@ -1041,7 +1163,7 @@
             <span class="paper-card-domain">getomakase.app</span>
           </div>
           <div class="paper-card-content">
-            <h4 class="paper-card-title" id="paper-card-title">Oppenheimer ve IMAX 70mm'nin Görsel Ağırlığı</h4>
+            <p class="paper-card-title" id="paper-card-title">Oppenheimer ve IMAX 70mm'nin Görsel Ağırlığı</p>
             <p class="paper-card-text" id="paper-card-text"></p>
           </div>
           <div class="paper-card-footer">

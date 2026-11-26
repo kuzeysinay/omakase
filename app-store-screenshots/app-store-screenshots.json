@@ -29,7 +29,7 @@
           "fr": "OMAKASE",
           "es": "OMAKASE",
           "ko": "오마카세",
-          "tr": "-"
+          "tr": "OMAKASE"
         },
         "headline": {
           "en": "feed your mind,\nnot the algorithm.",
@@ -162,11 +162,11 @@
         "headline": {
           "tr": "evet chatbotlar öğretici.\n\nama senin yazmanı bekliyorlar.\n\nomakase beklemez.",
           "en": "yes, ai chatbots teach well,\n\nbut they wait for you to ask.\n\nomakase does not.",
-          "ja": "AIチャットは賢い。\nでも、聞くまで答えない。",
-          "de": "Klar, KI-Chats lehren viel —\naber sie warten, bis du fragst.",
-          "fr": "Oui, les chatbots IA instruisent —\nmais ils attendent ta question.",
-          "es": "Sí, los chatbots de IA enseñan —\npero esperan a que preguntes.",
-          "ko": "맞아요, AI 챗봇은 똑똑하죠.\n하지만 당신이 묻길 기다려요."
+          "ja": "AIチャットは賢い。\n\nでも、聞くまで答えない。\n\nomakaseは待たない。",
+          "de": "Klar, KI-Chats lehren viel —\n\naber sie warten, bis du fragst.\n\nomakase wartet nicht.",
+          "fr": "Oui, les chatbots IA instruisent —\n\nmais ils attendent ta question.\n\nomakase n'attend pas.",
+          "es": "Sí, los chatbots de IA enseñan —\n\npero esperan a que preguntes.\n\nomakase no espera.",
+          "ko": "맞아요, AI 챗봇은 똑똑하죠.\n\n하지만 당신이 묻길 기다려요.\n\nomakase는 기다리지 않아요."
         },
         "screenshot": "/screenshots/apple/iphone/{locale}/06.png",
         "transforms": {

@@ -618,7 +618,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================================================
   // 3. STATE MANAGEMENT
   // ==========================================================================
-  let currentLang = localStorage.getItem('omakase_lang') || 'tr';
+  const htmlEl = document.documentElement;
+  const defaultLang = htmlEl.getAttribute('data-default-lang') || 'tr';
+  const assetBase = htmlEl.getAttribute('data-asset-base') || '';
+  let currentLang = defaultLang;
   let currentTheme = localStorage.getItem('omakase_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   let currentTopic = 'film';
   let activeSubtopicIndex = 0;
@@ -627,7 +630,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let cooldownTimer = null;
 
   // DOM Elements
-  const htmlEl = document.documentElement;
   const langToggleBtn = document.getElementById('lang-toggle-btn');
   const currentLangText = document.getElementById('current-lang-text');
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -792,6 +794,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (langToggleBtn) {
     langToggleBtn.addEventListener('click', () => {
       const nextLang = currentLang === 'tr' ? 'en' : 'tr';
+      localStorage.setItem('omakase_lang', nextLang);
+      if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+        window.location.href = nextLang === 'en' ? '/en/' : '/';
+        return;
+      }
+      document.title = nextLang === 'en'
+        ? 'Omakase — Daily Sourced Culture Feed & Micro-Stories (iOS)'
+        : 'Omakase — Günlük Kaynaklı Kültür Akışı ve Fun-Fact (iOS)';
       applyLanguage(nextLang);
     });
   }
@@ -1136,14 +1146,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   let lightboxIndex = 0;
-  const shotLabels = ['shots.l1', 'shots.l2', 'shots.l3', 'shots.l4', 'shots.l5', 'shots.l6'];
+  const shotLabels = ['shots.l1', 'shots.l2', 'shots.l3', 'shots.l4', 'shots.l5', 'shots.l6', 'shots.l7', 'shots.l8'];
   const shotsGrid = document.getElementById('screenshots-grid');
   const lightbox = document.getElementById('lightbox');
   const lightboxImg = document.getElementById('lightbox-img');
 
-  function shotPath(i) {
+  function shotPath(i, ext = 'png') {
     const lang = currentLang === 'en' ? 'en' : 'tr';
-    return `assets/screenshots/${lang}/0${i + 1}.png`;
+    return `${assetBase}assets/screenshots/${lang}/0${i + 1}.${ext}`;
   }
 
   function renderScreenshots() {
@@ -1154,18 +1164,19 @@ document.addEventListener('DOMContentLoaded', () => {
       card.type = 'button';
       card.className = 'screenshot-card';
       const label = translations[currentLang][key];
-      card.innerHTML = `<div class="screenshot-img-wrap"><img class="screenshot-img" loading="lazy" src="${shotPath(i)}" alt="${label}"></div>` +
+      const altText = `Omakase — ${label}`;
+      card.innerHTML = `<div class="screenshot-img-wrap"><picture><source srcset="${shotPath(i, 'webp')}" type="image/webp"><img class="screenshot-img" loading="lazy" decoding="async" width="750" height="1624" src="${shotPath(i, 'png')}" alt="${altText}"></picture></div>` +
         `<div class="screenshot-caption"><span class="screenshot-step">0${i + 1}</span><span class="screenshot-label">${label}</span></div>`;
       card.addEventListener('click', () => openLightbox(i));
       shotsGrid.appendChild(card);
     });
-    if (lightbox && lightbox.classList.contains('open')) lightboxImg.src = shotPath(lightboxIndex);
+    if (lightbox && lightbox.classList.contains('open')) lightboxImg.src = shotPath(lightboxIndex, 'webp');
   }
 
   function openLightbox(i) {
     lightboxIndex = (i + 8) % 8;
-    lightboxImg.src = shotPath(lightboxIndex);
-    lightboxImg.alt = translations[currentLang][shotLabels[lightboxIndex]];
+    lightboxImg.src = shotPath(lightboxIndex, 'webp');
+    lightboxImg.alt = `Omakase — ${translations[currentLang][shotLabels[lightboxIndex]]}`;
     lightbox.classList.add('open');
     document.body.style.overflow = 'hidden';
   }

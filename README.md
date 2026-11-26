@@ -175,6 +175,7 @@ Detaylı rapor ve analizler için `docs/` klasörünü inceleyebilirsiniz:
 | [📊 Proje Durum & Teknik Mimari Raporu](docs/proje_durum_ve_mimari_raporu.md) | Faz 1–4 durumu, RevenueCat monetizasyon, APNs/FCM bildirimleri, Crashlytics, 7 dil ve birincil kaynakça mimarisi. |
 | [🧪 100 Müşteri Simülasyon Raporu](docs/founder_100_musteri_raporu.md) | `founder-skill` 100 müşteri simülasyonu (1. Tur `%1` → 2. Tur `%72`) ve Van Westendorp fiyatlandırma analizi. |
 | [📄 App Store Raporu](docs/appstore_raporu.md) | Apple Agent Kit tabanlı App Review, `PrivacyInfo.xcprivacy`, Xcode yapılandırma ve Archive/Validate denetimi. |
+| [🎯 **ASO & Web SEO / GEO Raporu**](docs/aso_ve_seo_raporu.md) | 9 yerel ayar App Store Connect kopyala-yapıştır metadata paketi, kategori/anahtar kelime analizi ve `getomakase.app` SEO/GEO optimizasyonu. |
 | [🛡️ Siber Güvenlik Raporu](docs/siber_guvenlik_raporu.md) | API anahtarları, Cloud Run backend, Firestore kuralları (`5/5`), iOS istemci ve Web siber güvenlik analizi (`S-01`–`S-12`). |
 | [🚀 Küresel Pazarlama & Dağıtım Stratejisi](docs/pazarlama_ve_dagitim_stratejisi.md) | Tier-1 küresel açılım (US/UK), otomatize TikTok Photo Mode büyüme motoru, Paid UA matematiği ve sıfır bütçeli dağıtım kanalları. |
 | [📈 Ürün Analizi & PMF Raporu](docs/urun_analizi_ve_pazarlama.md) | Product-Market Fit hipotezi, hedef personalar (ICP), AARRR hunisi, birim ekonomisi ve App Store (ASO) vitrin stratejisi. |
