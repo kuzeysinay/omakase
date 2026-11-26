@@ -30,7 +30,7 @@
 | **Mission Control, Web & Görseller** | ✅ **Canlı & Hazır** | Firebase Hosting'de izole **Mission Control** ([`admin-web/`](file:///Users/kuzey/projects/omakase/admin-web) — 5 sekme, RevenueCat v2, `FeedbackSheetView`, `Agent'a Aktar`), Cloudflare'de yenilenen `getomakase.app` ([`web/`](file:///Users/kuzey/projects/omakase/web) — 8 slayt & 4 ekranlı canlı maket), **8 slayt × 7 dil** App Store görselleri, **38/38** backend testi ve **12** XCUITest hazır. | [`proje_durum_ve_mimari_raporu.md`](file:///Users/kuzey/projects/omakase/docs/proje_durum_ve_mimari_raporu.md) |
 | **100 Müşteri & Fiyat Doğrulaması** | ✅ **1. Tur %1 → 2. Tur %72** | `founder-skill` ile 100 persona test edildi: 5 tabak + kaynakçasız teklifte `%1` olan dönüşüm; 3 post + birincil kaynakça + `\$2.49/ay` yıllık çerçevesinde **`%72`** sıçradı (Van Westendorp `IPP: $2.53`). Üzerine cihaz kotası ve Letterboxd 1/gün duvarı eklendi. | [`founder_100_musteri_raporu.md`](file:///Users/kuzey/projects/omakase/docs/founder_100_musteri_raporu.md) |
 | **App Store Uyumluluğu** | ✅ **Kod & Manifest Tamamlandı** | `PrivacyInfo.xcprivacy` (`CA92.1` + **7 veri tipi** — `ProductInteraction` dahil), Sign in with Apple + `ProfileSetupView`, tam Hesap Silme (SwiftData + yer imi temizliği dahil), UGC + **AI gönderi raporlama** ve Mission Control Moderasyon triyajı hazır. *(Yasal web sayfaları güncellenmeli.)* | [`appstore_raporu.md`](file:///Users/kuzey/projects/omakase/docs/appstore_raporu.md) |
-| **Siber Güvenlik** | ✅ **27/28 Çözüldü & Canlıda** | `S-01`, `S-02`, `S-04`–`S-28` (`S-16`–`S-24` yeniden denetim + `S-25` UTC kota kilidi, `S-26` fail-closed Firestore `503`, `S-27` admin export kaçışı, `S-28` `check_revoked=True` anlık token doğrulaması) ve 7-dil `firestore.rules` genişletmesi kapatıldı; **38/38** test geçti, Cloud Run (`omakase-backend-00023-68f`) ve Firebase (`firestore:rules`, `hosting`) canlıya alındı (`0965ee9`). Yalnızca **`S-03` GCP konsol kısıtlaması** bekliyor. | [`siber_guvenlik_raporu.md`](file:///Users/kuzey/projects/omakase/docs/siber_guvenlik_raporu.md) |
+| **Siber Güvenlik** | ✅ **28/28 Çözüldü & Canlıda** | `S-01`–`S-28` tamamı kapatıldı (`S-03` iOS/Browser GCP API anahtar kısıtlamaları, `S-16`–`S-24` yeniden denetim + `S-25` UTC kota kilidi, `S-26` fail-closed Firestore `503`, `S-27` admin export kaçışı, `S-28` `check_revoked=True` ve 7-dil `firestore.rules` dahil); **38/38** test geçti, Cloud Run (`omakase-backend-00023-68f`) ve Firebase (`firestore:rules`, `hosting`) canlıya alındı. Açık güvenlik bulgusu kalmadı. | [`siber_guvenlik_raporu.md`](file:///Users/kuzey/projects/omakase/docs/siber_guvenlik_raporu.md) |
 | **Birim Ekonomisi & Küresel Dağıtım** | 🚀 **%96 Brüt Marj & Strateji Hazır** | Yoğun bir kullanıcının aylık AI (`gemini-3.5-flash` + `gemini-3.1-flash-lite`) ve bulut maliyeti **~\$0.10 – \$0.14** (~%96 brüt marj). Tier-1 pazarlar (US/UK/EU) + 7 dil havuzu için TikTok Photo Mode & Export Studio viral döngüsü hazır. | [`urun_analizi_ve_pazarlama.md`](file:///Users/kuzey/projects/omakase/docs/urun_analizi_ve_pazarlama.md), [`pazarlama_ve_dagitim_stratejisi.md`](file:///Users/kuzey/projects/omakase/docs/pazarlama_ve_dagitim_stratejisi.md) |
 
 ---
@@ -106,9 +106,9 @@ Cloudflare [`security-audit-skill`](https://github.com/cloudflare/security-audit
 | **S-26** | 🟠 Orta | Backend / Dayanıklılık | Kalıcı Firestore başlatma hatası kilidi ve fail-open kota atlatma (`503` zorunlu) | ✅ Çözüldü & Canlıda |
 | **S-27** | 🟡 Düşük | Admin / AI | `/admin/export?format=markdown` çıktısında dolaylı prompt / Markdown enjeksiyonu | ✅ Çözüldü & Canlıda |
 | **S-28** | 🟠 Orta | Backend / Kimlik | İptal edilmiş/devre dışı Firebase ID token'larının 300 sn önbellek penceresinde kabulü | ✅ Çözüldü & Canlıda |
-| **S-03** | 🔴 Yüksek (koşullu) | GCP / Anahtar | Firebase iOS API anahtarının GCP kısıtlamaları depodan doğrulanamıyor | ⚠️ Konsol |
+| **S-03** | 🔴 Yüksek (koşullu) | GCP / Anahtar | Firebase iOS API anahtarının GCP kısıtlamaları (`kuzeysinay.omakase` + 7 minimal API; Browser key + 5 API) | ✅ Çözüldü & Canlıda |
 
-**Denetim artefaktları & doğrulama:** `findings.json` (13 bulgu) ve `coverage-ledger.json` (14 kapsam birimi) `validate-findings.cjs` / `validate-coverage-ledger.cjs` doğrulayıcılarından **PASS** almış; tüm `S-16`–`S-28` yamaları sonrasında **38/38 backend birim testi** ile iOS fiziksel cihaz derlemesi geçilmiştir. Ayrıntılı analiz ve uygulanan çözümler [`siber_guvenlik_raporu.md` Bölüm 9](file:///Users/kuzey/projects/omakase/docs/siber_guvenlik_raporu.md#9-bölüm-7-bağımsız-yeniden-denetim-26-kasım-2026--security-audit-skill-run-1) içindedir. **Kalan tek güvenlik adımı:** GCP Console üzerinden `S-03` API anahtarı kısıtlaması.
+**Denetim artefaktları & doğrulama:** `findings.json` (13 bulgu) ve `coverage-ledger.json` (14 kapsam birimi) `validate-findings.cjs` / `validate-coverage-ledger.cjs` doğrulayıcılarından **PASS** almış; tüm `S-03` ve `S-16`–`S-28` kapatmaları sonrasında **38/38 backend birim testi**, iOS fiziksel cihaz derlemesi ve GCP `api-keys` doğrulaması geçilmiştir. Ayrıntılı analiz ve uygulanan çözümler [`siber_guvenlik_raporu.md` Bölüm 9](file:///Users/kuzey/projects/omakase/docs/siber_guvenlik_raporu.md#9-bölüm-7-bağımsız-yeniden-denetim-26-kasım-2026--security-audit-skill-run-1) içindedir. **Tüm 28/28 güvenlik bulgusu kapatılmıştır.**
 
 ---
 
@@ -135,14 +135,15 @@ Cloudflare [`security-audit-skill`](https://github.com/cloudflare/security-audit
   - `S-16` (atomik kota rezervasyon/iade), `S-17` (`/notifications/events` Firestore yorum/reaksiyon kanıtı & metin doğrulaması), `S-18`/`S-19`/`S-23` (`shared_posts` sayaç, `users` `email` yasağı, `reportedBy` append kilidi + 7 dil `language` izni), `S-20`/`S-21`/`S-22`/`S-24` (TTL/LRU bucket, env override, CSP temizliği, zorunlu `X-Omakase-Device-Id`) ve `S-25`–`S-28` (UTC kota, Firestore fail-closed `503`, Markdown export kaçışı, `check_revoked=True`) tamamlandı; **38/38** test geçti.
 - [x] **2. Backend + Firestore Rules + Mission Control Canlı Dağıtımı (`0965ee9`):**
   - Cloud Run `omakase-backend-00023-68f` (`us-central1`) ve Firebase `firestore:rules` + `hosting` (`https://gen-lang-client-0120875563.web.app`) canlıya alındı.
-- [ ] **3. Yasal Web Sayfaları & Tanıtım Sitesi (`web/`):**
+- [x] **3. GCP API Anahtar Kısıtlamaları (`S-03`):**
+  - `gcloud services api-keys update` ile iOS `API_KEY` yalnızca `kuzeysinay.omakase` + 7 minimal Firebase API'sine, Browser `API_KEY` ise Firebase Hosting kökenleri + 5 API'ye kilitlendi (`Generative Language API` kapalı doğrulandı).
+- [ ] **4. Yasal Web Sayfaları & Tanıtım Sitesi (`web/`):**
   - `web/privacy.html` ve `web/terms.html` sayfalarına `ProductInteraction` analitiği, uygulama içi geri bildirim (`user_feedback`), 1/gün Letterboxd sınırı ve anonim cihaz kota özeti maddelerini ekleyin.
   - `web/` tanıtım sitesini Cloudflare (`wrangler.json`) üzerinden canlıya alın.
-- [ ] **4. Google Cloud, Firebase & Bildirim Konsol İşlemleri (`S-03`):**
-  - GCP Console → **Credentials** altından iOS `API_KEY` için `iOS apps` (`kuzeysinay.omakase`) kısıtlaması ekleyin ve `Generative Language API` erişimini kaldırın.
+- [ ] **5. Firebase & Bildirim Konsol İşlemleri:**
   - Firebase Console'da **Apple** Sign-in sağlayıcısını etkinleştirin, **APNs `.p8`** anahtarını yükleyin ve `/notifications/process-queue` için Cloud Scheduler cron'unu bağlayın.
   - *(Opsiyonel ileri aşama)* App Check (App Attest/DeviceCheck) ve Cloud Armor/Redis çoklu örnek hız sınırlandırması ekleyin.
-- [ ] **5. App Store Connect, RevenueCat & Xcode Arşiv Gönderimi:**
+- [ ] **6. App Store Connect, RevenueCat & Xcode Arşiv Gönderimi:**
   - App Store Connect **Paid Apps Agreement (`Active`)**, IAP ürünleri (`omakase.pro.monthly`, `omakase.pro.yearly`), **App Privacy** (7 veri tipi — `ProductInteraction` dahil), **Demo Hesap**, **8 slayt × 7 dil** ekran görüntüleri ve RevenueCat Webhook Sandbox testini tamamlayın.
   - Xcode'da **Any iOS Device (arm64)** seçip **Product → Archive → Generate Privacy Report → Validate App → Distribute App** adımlarını tamamlayın.
 

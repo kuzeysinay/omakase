@@ -30,7 +30,7 @@
 - **PII, Atomik Kullanıcı Adı & Sosyal Grafik (`S-04`, `S-06`, `S-11`, `S-15`):** `users/{uid}` belgelerinden `email` ve üçüncü taraf `photoURL` alanları temizlenmiştir (`FieldValue.delete()`); `usernames/{handle}` koleksiyonu ile atomik benzersizlik ve `firestore.rules` içinde **14 günlük kullanıcı adı değiştirme beklemesi** (`isValidUsernameUpdate`) zorunlu kılınmıştır.
 - **Mission Control İzolasyonu, SSRF, XXE & Prompt Injection (`S-05`, `S-07`, `S-08`, `S-09`, `S-14`):** `admin-web/` paneli `web/`'den tamamen ayrılarak Firebase Hosting üzerinde `noindex, nofollow`, COOP, HSTS ve sıkı CSP ile izole edilmiştir; `web/` (`getomakase.app`) ise Cloudflare (`wrangler.json`) üzerinden sunulur.
 
-> **26 Kasım 2026 Sertleştirme & Dağıtım Güncellemesi:** Cloudflare `security-audit-skill` ile yapılan ikinci tur denetimdeki **9 bulgunun tamamı (`S-16`–`S-24`)**, ek olarak tespit edilen **4 doğrulama/sertleştirme bulgusu (`S-25`–`S-28`)** ve 7 dilli `firestore.rules` genişletmesi kod tabanında kapatıldı; **38/38 backend birim testi** ve iOS fiziksel cihaz derlemesi başarıyla geçti, Cloud Run (`omakase-backend-00023-68f`) ile Firebase (`firestore:rules` + `hosting`) canlıya alındı ve `0965ee9` commit'iyle pushlandı. Kod/yayın tarafında açık kritik veya yüksek bulgu kalmadı; yalnızca GCP Console üzerindeki API anahtarı kısıtlaması (**`S-03`**) manuel konsol işlemi olarak bekliyor.
+> **26 Kasım 2026 Sertleştirme & Dağıtım Güncellemesi:** Cloudflare `security-audit-skill` ile yapılan ikinci tur denetimdeki **9 bulgunun tamamı (`S-16`–`S-24`)**, ek olarak tespit edilen **4 doğrulama/sertleştirme bulgusu (`S-25`–`S-28`)**, 7 dilli `firestore.rules` genişletmesi ve son kalan GCP Console adımı **`S-03`** (`iOS key` → `kuzeysinay.omakase` + 7 minimal API; `Browser key` → Firebase Hosting origin + 5 minimal API) tamamlandı; **38/38 backend birim testi** ve iOS fiziksel cihaz derlemesi başarıyla geçti, Cloud Run (`omakase-backend-00023-68f`) ile Firebase (`firestore:rules` + `hosting`) canlıya alındı (`0965ee9` / `a6f2982`). Tüm **28/28 güvenlik bulgusu** kapatılmıştır.
 
 ### Risk Matrisi (Güncel Durum Tablosu)
 
@@ -38,7 +38,7 @@
 |---|------|-------|------|-------------------------|--------------------------------|
 | **S-01** | 🚨 **KRİTİK (P0)** | ✅ **ÇÖZÜLDÜ** | Backend API / LLM | Kimlik doğrulamasız Gemini uç noktaları (**Denial of Wallet**) | `verify_firebase_user` + `APITokenProvider` Bearer token & 401 retry ([`backend/app/security.py`](file:///Users/kuzey/projects/omakase/backend/app/security.py#L89-L140), [`SSEClient.swift#L16-L133`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L16-L133)) |
 | **S-02** | 🔴 **YÜKSEK (P0)** | ✅ **ÇÖZÜLDÜ** | Backend API / DoS | Rate Limiting yokluğu ve sınırsız `DeepDiveRequest` / `letterboxd_films` girdileri | `_check_rate_limit` (sliding window) + Pydantic boyut/tip sınırları ([`backend/app/security.py#L64-L87`](file:///Users/kuzey/projects/omakase/backend/app/security.py#L64-L87), [`backend/app/schemas.py`](file:///Users/kuzey/projects/omakase/backend/app/schemas.py)) |
-| **S-03** | 🔴 **YÜKSEK (P1)** | ⚠️ **GCP KONSOL** | Secrets / GCP | `GoogleService-Info.plist` içindeki Firebase `API_KEY`'in (`AIzaSyBr65...`) GCP kısıtlama riski | GCP Console → Credentials üzerinden Bundle ID (`kuzeysinay.omakase`) + API kısıtlaması yapılmalı ([Bölüm 3.2](#32-firebase-api_key-googleservice-infoplist-ve-gcp-proje-kısıtlama-riski--s-03--bulut-konsolu-i̇şlemi)) |
+| **S-03** | 🔴 **YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ & CANLIDA** | Secrets / GCP | `GoogleService-Info.plist` içindeki Firebase `API_KEY`'in (`AIzaSyBr65...`) GCP kısıtlama riski | `gcloud services api-keys update` ile iOS key `kuzeysinay.omakase` + 7 minimal API'ye (`Generative Language API` kapalı), Browser key Firebase Hosting origin + 5 API'ye kilitlendi ([Bölüm 3.2](#32-firebase-api_key-googleservice-infoplist-ve-gcp-proje-kısıtlama-riski--s-03)) |
 | **S-04** | 🔴 **YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Firestore / PII | `users/{userId}` belgelerinde `email` alanının tüm giriş yapmış kullanıcılara açık okunması | `users/{uid}` yazımlarından `email` ve `photoURL` silindi (`FieldValue.delete()`); e-posta `AuthService`'ten okunuyor ([`FirestoreService.swift#L89-L93`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift#L89-L93)) |
 | **S-05** | 🟠 **YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Backend / SSRF | `/letterboxd/films` doğrulanmamış `username` path traversal & XML riski | `^[a-zA-Z0-9_-]{1,40}$` regex, `https://letterboxd.com/` redirect kontrolü, 2 MB limit ve `<!DOCTYPE`/`<!ENTITY` reddi ([`letterboxd_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/letterboxd_service.py)) |
 | **S-06** | 🟠 **ORTA-YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Firestore Rules | `following` / `followers` "Forced Follow" ve `shared_posts` sayaç/rapor manipülasyonu | `following`/`followers`/`reactions` `create, update` sahibe kısıtlandı; `commentCount` ±1 ve `reportedBy` ekleme kuralları eklendi ([`firestore.rules#L409-L537`](file:///Users/kuzey/projects/omakase/firestore.rules#L409-L537)) |
@@ -69,7 +69,7 @@
 | **S-26** | 🟠 **ORTA** | ✅ **ÇÖZÜLDÜ & CANLIDA** | Backend / Dayanıklılık | Kalıcı Firestore başlatma hatası kilidi ve fail-open kota atlatma | 30 sn cooldown yeniden denemesi (`_init_failed_until`); Firestore erişilemezken `_check_quota_sync` ve `_reserve_quota_sync` `503 service_unavailable` ile fail-closed döner ([`firestore_admin.py`](file:///Users/kuzey/projects/omakase/backend/app/services/firestore_admin.py), [`access_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/access_service.py)) |
 | **S-27** | 🟡 **DÜŞÜK** | ✅ **ÇÖZÜLDÜ & CANLIDA** | Admin / AI | `/admin/export?format=markdown` çıktısında dolaylı prompt / Markdown enjeksiyonu | `_sanitize_md_field` kontrol karakteri/Markdown kaçışı ve `<untrusted_user_submissions>` izolasyonu ([`admin_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/admin_service.py)) |
 | **S-28** | 🟠 **ORTA** | ✅ **ÇÖZÜLDÜ & CANLIDA** | Backend / Kimlik | İptal edilmiş/devre dışı Firebase ID token'larının 300 sn önbellek penceresinde kabulü | `_VERIFIED_TOKEN_CACHE` ve `_VERIFIED_ADMIN_CACHE` kaldırıldı; `verify_firebase_user` & `verify_admin_user` `firebase_admin.auth.verify_id_token(token, check_revoked=True)` kullanır ([`security.py`](file:///Users/kuzey/projects/omakase/backend/app/security.py)) |
-| **S-03** | 🔴 **YÜKSEK (koşullu)** | ⚠️ **GCP KONSOL** | Secrets / GCP | Firebase iOS API anahtarının GCP kısıtlamaları depodan doğrulanamıyor; canlı konsol kontrolü gerekli | [`GoogleService-Info.plist#L10`](file:///Users/kuzey/projects/omakase/omakase/omakase/GoogleService-Info.plist#L10) |
+| **S-03** | 🔴 **YÜKSEK (koşullu)** | ✅ **ÇÖZÜLDÜ & CANLIDA** | Secrets / GCP | Firebase iOS API anahtarının GCP kısıtlamaları | iOS key `kuzeysinay.omakase` + 7 minimal Firebase API'ye, Browser key `gen-lang-client-0120875563.{web.app,firebaseapp.com}/*` + 5 API'ye kilitlendi; `generativelanguage.googleapis.com` kapalı doğrulandı ([`GoogleService-Info.plist#L10`](file:///Users/kuzey/projects/omakase/omakase/omakase/GoogleService-Info.plist#L10)) |
 
 ---
 
@@ -95,12 +95,11 @@ flowchart LR
 * `.env` dosyaları kök [`.gitignore`](file:///Users/kuzey/projects/omakase/.gitignore) ve `backend/.dockerignore` ile dışlanmıştır.
 * `REVENUECAT_WEBHOOK_SECRET` ve `NOTIFICATION_CRON_SECRET` doğrulamaları sabit zamanlı `hmac.compare_digest` ile yapılır.
 
-### 3.2. Firebase `API_KEY` (`GoogleService-Info.plist`) ve GCP Proje Kısıtlama Riski (⚠️ S-03 — Bulut Konsolu İşlemi)
+### 3.2. Firebase `API_KEY` (`GoogleService-Info.plist`) ve GCP Proje Kısıtlama Riski (✅ ÇÖZÜLDÜ — S-03)
 * **İlgili Dosya:** [`omakase/omakase/GoogleService-Info.plist`](file:///Users/kuzey/projects/omakase/omakase/omakase/GoogleService-Info.plist)
-* **Teknik Değerlendirme:** Firebase iOS `API_KEY` (`AIzaSyBr65...`) herkese açık istemci yapılandırmasıdır; ancak aynı GCP projesinde (`gen-lang-client-0120875563`) Generative Language API etkin olduğu için GCP Console üzerinden kısıtlama eklenmelidir:
-  1. **Google Cloud Console → APIs & Services → Credentials** altından `AIzaSyBr65...` anahtarını açın.
-  2. **Application restrictions:** `iOS apps` → yalnızca `kuzeysinay.omakase`.
-  3. **API restrictions:** `Restrict key` seçip yalnızca `Identity Toolkit API`, `Token Service API`, `Firebase Installations API` ve `Cloud Firestore API` izinlerini bırakın; **`Generative Language API` kesinlikle kapalı** olmalıdır.
+* **Uygulanan Çözüm (`gcloud services api-keys update` — 26 Kasım 2026):**
+  1. **`iOS key` (`0d3d4fa9-b442-477b-9bb7-49948e734e56`):** `iosKeyRestrictions.allowedBundleIds` yalnızca `["kuzeysinay.omakase"]` olarak kilitlendi; `apiTargets` 27 servisten yalnızca gereken 7 Firebase/GCP servisine düşürüldü (`identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, `firestore.googleapis.com`, `firebaseinstallations.googleapis.com`, `fcmregistrations.googleapis.com`, `firebase.googleapis.com`, `firebaseappcheck.googleapis.com`). `generativelanguage.googleapis.com`, `firebasevertexai.googleapis.com`, `sqladmin.googleapis.com` vb. kapalıdır.
+  2. **`Browser key` (`378c70eb-32bb-458a-913d-ac0dda9b2986` — Mission Control):** `browserKeyRestrictions.allowedReferrers` yalnızca `https://gen-lang-client-0120875563.web.app/*` ve `https://gen-lang-client-0120875563.firebaseapp.com/*` kökenlerine; `apiTargets` yalnızca 5 servise (`identitytoolkit`, `securetoken`, `firebaseinstallations`, `firebasehosting`, `firebase`) kısıtlandı.
 
 ### 3.3. İstemci Tarafı Kimlik & Cihaz Özeti Saklama (✅ S-10 & S-13)
 * [`AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift) içinde Sign in with Apple kullanıcı kimliği (`com.omakase.auth.appleIDUser`) iOS **Keychain**'de (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) saklanır; kriptografik nonce `SecRandomCopyBytes` + `CryptoKit.SHA256` ile üretilir.
@@ -179,7 +178,7 @@ flowchart LR
 - [x] **S-26 (Orta):** Kalıcı Firestore başlatma hatası kilidi 30 sn cooldown ile yenilenebilir hale getirildi; Firestore erişilemezken kota kontrolleri `503 service_unavailable` ile fail-closed döner ([`firestore_admin.py`](file:///Users/kuzey/projects/omakase/backend/app/services/firestore_admin.py), [`access_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/access_service.py)).
 - [x] **S-27 (Düşük):** `/admin/export?format=markdown` çıktısı `_sanitize_md_field` kaçışı ve `<untrusted_user_submissions>` izolasyonuyla dolaylı prompt/Markdown enjeksiyonuna karşı sertleştirildi ([`admin_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/admin_service.py)).
 - [x] **S-28 (Orta):** 300 sn token önbellekleri kaldırıldı; `verify_firebase_user` ve `verify_admin_user` `check_revoked=True` ile anlık iptal/devre dışı hesap kontrolüne geçirildi ([`security.py`](file:///Users/kuzey/projects/omakase/backend/app/security.py)).
-- [ ] **S-03 (Konsol):** GCP Credentials altında iOS API anahtarını bundle ID + gerekli API'lerle sınırla; Generative Language API erişimini kaldır.
+- [x] **S-03 (Konsol/CLI):** `gcloud services api-keys update` ile iOS key `kuzeysinay.omakase` + 7 minimal API'ye, Browser key Firebase Hosting origin + 5 API'ye kilitlendi (`Generative Language API` kapalı doğrulandı).
 
 ### Canlı Ortam (Cloud Console & CLI) Dağıtım Adımları
 - [x] **1. Güncel Backend Cloud Run'a Dağıtıldı** (`omakase-backend-00023-68f` — `S-16`..`S-28` dahil, **38/38 birim testi PASS**, `%100` trafikte):
@@ -190,8 +189,9 @@ flowchart LR
   ```bash
   npx --yes firebase-tools deploy --only firestore:rules,hosting --project gen-lang-client-0120875563
   ```
-- [ ] **3. Tanıtım Sitesini (`web/`) Cloudflare'e Dağıtın** ve Cloudflare Transform Rules üzerinden `nosniff` / HSTS başlıklarını doğrulayın.
-- [ ] **4. Google Cloud Console'da `AIzaSyBr65...` Anahtarını Kısıtlayın (`S-03`)** ve Firebase Console'da **App Check (App Attest)** + **Email Enumeration Protection**'ı etkinleştirin.
+- [x] **3. GCP API Anahtar Kısıtlamaları (`S-03`) Uygulandı & Doğrulandı:** `iOS key` (`kuzeysinay.omakase`, 7 API) ve `Browser key` (Firebase Hosting originleri, 5 API).
+- [ ] **4. Tanıtım Sitesini (`web/`) Cloudflare'e Dağıtın** ve Cloudflare Transform Rules üzerinden `nosniff` / HSTS başlıklarını doğrulayın.
+- [ ] **5. (İsteğe Bağlı İleri Sertleştirme):** Firebase Console'da **App Check (App Attest)** + **Email Enumeration Protection**'ı etkinleştirin.
 
 ---
 
@@ -309,11 +309,11 @@ Bu tur, [Cloudflare `security-audit-skill`](https://github.com/cloudflare/securi
 
 - **Uygulanan Çözüm (26 Kasım 2026 — ✅ ÇÖZÜLDÜ & CANLIDA, `0965ee9`):** [`security.py`](file:///Users/kuzey/projects/omakase/backend/app/security.py) içindeki 300 sn `_VERIFIED_TOKEN_CACHE` ve `_VERIFIED_ADMIN_CACHE` önbellekleri kaldırıldı; hem `verify_firebase_user` hem `verify_admin_user` artık her istekte `firebase_admin.auth.verify_id_token(token, check_revoked=True)` çağrısı yapar.
 
-### 9.3. Doğrulama Gerektiren Bulgu (S-03)
+### 9.3. Doğrulanan & Kapatılan GCP Anahtar Kısıtlaması (S-03 — ✅ ÇÖZÜLDÜ)
 
-- **Durum:** Depodan doğrulanamıyor; GCP Console erişimi gerekiyor.
-- **Kanıt:** [`GoogleService-Info.plist#L10`](file:///Users/kuzey/projects/omakase/omakase/omakase/GoogleService-Info.plist#L10) herkese açık Firebase istemci anahtarı. Sunucu Gemini anahtarı ayrı ortam değişkeninden okunuyor ([`config.py#L21`](file:///Users/kuzey/projects/omakase/backend/app/config.py#L21)).
-- **Doğrulama planı:** GCP Console → APIs & Services → Credentials altında anahtarın Application restrictions = iOS (`kuzeysinay.omakase`) ve API restrictions = Identity Toolkit, Token Service, Firebase Installations, Cloud Firestore olduğunu; **Generative Language API'nin kapalı** olduğunu doğrula.
+- **Durum:** ✅ **ÇÖZÜLDÜ & CANLIDA** (`gcloud services api-keys update` + `list` ile doğrulandı, 26 Kasım 2026).
+- **Kanıt:** [`GoogleService-Info.plist#L10`](file:///Users/kuzey/projects/omakase/omakase/omakase/GoogleService-Info.plist#L10) herkese açık Firebase istemci anahtarıdır; sunucu Gemini anahtarı ayrı ortam değişkeninden okunur ([`config.py#L21`](file:///Users/kuzey/projects/omakase/backend/app/config.py#L21)).
+- **Uygulanan Çözüm:** `iOS key` (`0d3d4fa9-b442-477b-9bb7-49948e734e56`) `allowedBundleIds: ["kuzeysinay.omakase"]` ve yalnızca 7 gerekli Firebase API'sine; `Browser key` (`378c70eb-32bb-458a-913d-ac0dda9b2986`) Firebase Hosting kökenlerine ve 5 gerekli API'ye kilitlendi. **`generativelanguage.googleapis.com` her iki anahtarda da kapalıdır.**
 
 ### 9.4. Reddedilen Adaylar
 
@@ -333,6 +333,6 @@ Bu tur, [Cloudflare `security-audit-skill`](https://github.com/cloudflare/securi
 ### 9.6. Öncelik Sırası (Güncel Durum)
 
 1. ✅ **S-16, S-17, S-25, S-26, S-28** — Kodda kapatıldı, `38/38` test geçti ve Cloud Run (`omakase-backend-00023-68f`) canlıya alındı (`0965ee9`).
-2. ✅ **S-18, S-19, S-23 + 7 Dil Kuralları** — `firestore.rules` sertleştirildi ve `firebase deploy --only firestore:rules` ile yayınlandı.
-3. ✅ **S-20, S-21, S-22, S-24, S-27** — Backend yapılandırması, admin export kaçışı ve Firebase Hosting CSP (`S-22`) sertleştirilip yayınlandı.
-4. ⚠️ **S-03 (Kalan Tek Manuel Adım)** — GCP Console → Credentials altından Firebase iOS API anahtarına bundle ID + API kısıtlaması (`Generative Language API` kapalı) ve isteğe bağlı ileri aşama olarak App Check / Cloud Armor.
+2. ✅ **S-03** — `iOS key` (`kuzeysinay.omakase` + 7 minimal API) ve `Browser key` (Firebase Hosting origin + 5 minimal API) `gcloud services api-keys update` ile kilitlendi ve doğrulandı (`Generative Language API` kapalı).
+3. ✅ **S-18, S-19, S-23 + 7 Dil Kuralları** — `firestore.rules` sertleştirildi ve `firebase deploy --only firestore:rules` ile yayınlandı.
+4. ✅ **S-20, S-21, S-22, S-24, S-27** — Backend yapılandırması, admin export kaçışı ve Firebase Hosting CSP (`S-22`) sertleştirilip yayınlandı. *(İleri aşama opsiyonel: App Check / Email Enumeration Protection / Cloud Armor.)*
