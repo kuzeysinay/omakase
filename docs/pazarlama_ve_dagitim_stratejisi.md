@@ -89,12 +89,12 @@ TikTok dağıtımı dil seçimine değil **SIM kart ve ağ ülkesine göre** yap
 ### 4.1. Kısa Cevap: İlk 6 Hafta Soğuk Kitleye Reklam Yok
 ABD/İngiltere'de Eğitim/Kültür kategorisinde CPI ortalama **\$2.50 – \$5.00** arasındadır. Önce organik içerikle hangi kancanın ve kategorinin 50.000+ izlendiği kanıtlanmalıdır.
 
-### 4.2. Lansman (v1.0) İle Aktif Paywall Matematiği
-Uygulama ilk günden tam abonelik ve cihaz-bazlı anti-abuse korumasıyla çıkar:
-1. **Tek Ekranlı ASCII Suşi Paywall & 5 Tetikleyici:**
-   - `firstPlateSoft` (ilk okuma sonrası tek seferlik yumuşak teklif), `plateLimit` (**günde 3 post** sınırı), `letterboxdLimit` (**günde 1 Letterboxd** sınırı), `deepDiveLimit` (**günde 1 Derin İnceleme** + paylaşımda `+1` ödül) ve `profile`.
-   - Hesap değiştirme/silme ile 3 post sınırının aşılmasını önleyen Keychain + SHA-256 `device_usage` koruması sayesinde her ücretsiz kullanıcı gerçekçi dönüşüm hunisine girer.
-2. **Fiyat Çapası (Pricing Anchor):**
+### 4.2. Lansman (v1.0) İle Aktif Paywall & Dönüşüm Mimarisi
+Uygulama ilk günden tam abonelik, cihaz-bazlı anti-abuse koruması ve kayıtsız deneme akışıyla App Review'a gönderildi (`APP_ID: 6838044134`, `Waiting for Review`):
+1. **Misafir Tadımı, Dinamik Fiyatlı Paywall & Pro Karşılaması:**
+   - [`GuestTasteView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Onboarding/GuestTasteView.swift) ile kullanıcı hesap açmadan önce kaynakçalı kart deneyimini tadar; [`OmakasePaywallView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/OmakasePaywallView.swift) dinamik StoreKit fiyatlarıyla 5 bağlamsal tetikleyiciden (`firstPlateSoft`, `plateLimit`, `letterboxdLimit`, `deepDiveLimit`, `profile`) açılır ve satın alma sonrası [`ProWelcomeView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Monetization/ProWelcomeView.swift) gösterilir.
+   - Hesap değiştirme/silme ile **günde 3 post** (`1 Letterboxd` dahil) sınırının aşılmasını önleyen Keychain + SHA-256 `device_usage` koruması sayesinde her ücretsiz kullanıcı gerçekçi dönüşüm hunisine girer; 3 tamamlanmış okuma sonrasında [`RatingPromptManager.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/RatingPromptManager.swift) ile App Store değerlendirme istemi tetiklenir.
+2. **Fiyat Çapası (Pricing Anchor — `omakase pro`):**
    - Aylık: **\$3.99 / ay**
    - Yıllık: **\$29.99 / yıl** (*"7 Gün Ücretsiz Dene — Ayda sadece ~\$2.49, %37 avantaj"* — 100 müşteri simülasyonunda `IPP: $2.53` ile tam örtüşen nokta).
 
@@ -124,9 +124,9 @@ Uygulama ilk günden tam abonelik ve cihaz-bazlı anti-abuse korumasıyla çıka
 
 ---
 
-## 6. App Store Küresel Vitrin (ASO) & 8 Slaytlı × 7 Dilli Kurgusu
+## 6. App Store Küresel Vitrin (ASO) & 9 Yerel Ayarlı Görsel Kurgusu
 
-[`skill.app-store-product-page.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/app-store-product-page/SKILL.md) kurallarına göre üretilen güncel **8 slayt × 7 dil** (`en, tr, ja, de, fr, es, ko`) vitrini ([`app-store-screenshots.json`](file:///Users/kuzey/projects/omakase/app-store-screenshots/app-store-screenshots.json)):
+[`skill.app-store-product-page.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/app-store-product-page/SKILL.md) kurallarına göre üretilen güncel **8 slayt × 7 dil** (`en, tr, ja, de, fr, es, ko`) vitrini ([`app-store-screenshots.json`](file:///Users/kuzey/projects/omakase/app-store-screenshots/app-store-screenshots.json)) repoda 4 iPhone çözünürlüğünde (`224` PNG) arşivlenmiş ve **9 App Store yerel ayarına `72 × 1320×2868`** piksel olarak yüklenmiştir (`APP_ID: 6838044134`, **174 ülke aktif**, CAC/AIGC uyumu gereği `CHN` kapalı):
 
 * **İlk 3 Slayt (Arama Sonuçları Vitrini — Letterboxd Bağımsız):**
   1. `01`: *feed your mind, not the algorithm.* (Hero + Monokrom Akış)
@@ -143,7 +143,7 @@ Uygulama ilk günden tam abonelik ve cihaz-bazlı anti-abuse korumasıyla çıka
 * **Başlık (`en-US`, 30/30 krk):** `Omakase: Daily Culture & Facts`
 * **Alt Başlık (`en-US`, 30/30 krk):** `Sourced Micro-Learning & Reads`
 * **Anahtar Kelimeler (`en-US`, 95/100 krk):** `microlearning,trivia,history,science,philosophy,art,cinema,essay,curiosity,brainrot,smart,focus`
-* **Tam 9 Yerel Ayar Paketi (`en-US`, `es-MX` US çapraz indeks, `en-GB`, `tr`, `ja`, `de-DE`, `fr-FR`, `es-ES`, `ko`):** [`docs/aso_ve_seo_raporu.md`](file:///Users/kuzey/projects/omakase/docs/aso_ve_seo_raporu.md) içinde karakter ve Guideline 2.3.7 doğrulaması yapılmış kopyala-yapıştır formatında yer almaktadır.
+* **Tam 9 Yerel Ayar Paketi (`en-US`, `es-MX` US çapraz indeks, `en-GB`, `tr`, `ja`, `de-DE`, `fr-FR`, `es-ES`, `ko`):** [`docs/aso_ve_seo_raporu.md`](file:///Users/kuzey/projects/omakase/docs/aso_ve_seo_raporu.md) içinde karakter ve Guideline 2.3.7 doğrulaması yapılmış kopyala-yapıştır formatında yer almaktadır ve App Store Connect'e girilmiştir.
 
 ---
 
@@ -151,13 +151,13 @@ Uygulama ilk günden tam abonelik ve cihaz-bazlı anti-abuse korumasıyla çıka
 
 ```mermaid
 flowchart LR
-    P1["📅 Gün 1–30: Lansman, Mission Control & Organik Motor<br/>• RevenueCat Paywall ($3.99/ay • $29.99/yıl, 7 gün deneme)<br/>• 3 Post (1 Letterboxd) + 1 Deep Dive (+1 Paylaşım Ödülü)<br/>• US TikTok/IG + Export Studio + Show HN & r/nosurf"] --> P2["📅 Gün 31–60: Optimizasyon & 7 Dil Büyümesi<br/>• Mission Control (admin-web) + Agent'a Aktar (growth/conversion)<br/>• Paywall Kopyası / Deneme Süresi A/B Testi<br/>• Product Hunt Lansmanı • İlk 2.500 Global Kullanıcı"]
+    P1["📅 Gün 1–30: App Review, Mission Control & Organik Motor<br/>• v1.0 Waiting for Review (APP_ID 6838044134 • 174 Ülke)<br/>• GuestTasteView + omakaseWidget + RatingPromptManager<br/>• US TikTok/IG + Export Studio + Show HN & r/nosurf"] --> P2["📅 Gün 31–60: Optimizasyon & 7 Dil Büyümesi<br/>• Mission Control (admin-web) + Agent'a Aktar (growth/conversion)<br/>• Paywall Kopyası / Deneme Süresi A/B Testi<br/>• Product Hunt Lansmanı • İlk 2.500 Global Kullanıcı"]
     P2 --> P3["📅 Gün 61–90: Ölçekleme & Paid UA<br/>• Apple Search Ads ($100 Kredi Testi)<br/>• Kazanan Organik Postlara TikTok Spark Ads<br/>• Mikro-Küratör Sponsorlukları • Hedef: 10.000 İndirme"]
 ```
 
 | Dönem | Temel Aksiyonlar | Başarı Metriği (KPI) | Bütçe |
 |-------|------------------|----------------------|-------|
-| **Ay 1 (Lansman & Organik Motor)** | v1.0 App Store lansmanı (7 dil, 8 slayt); **3 post/gün (1 Letterboxd)** + `+1` Deep Dive paylaşım ödülü; `device_usage` koruması; Mission Control + `ADMIN_ALERT_WEBHOOK_URL` ile günlük geri bildirim & dönüşüm takibi; US TikTok/IG, `r/nosurf`, `Show HN`. | 50.000+ organik gösterim, `getomakase.app` üzerinde 2.000+ Canlı Tadım, ilk 500–1.000 iOS kullanıcısı, `source_tap_rate` ≥ %10, Trial Başlatma ≥ %6. | **\$0** (Sadece ~\$10 US eSIM) |
+| **Ay 1 (Lansman & Organik Motor)** | `v1.0` (`APP_ID: 6838044134`, `Waiting for Review`) App Store lansmanı (9 yerel ayar, `72 × 1320×2868`, 174 ülke); `GuestTasteView` + `omakaseWidget` + `RatingPromptManager`; **3 post/gün (1 Letterboxd)** + `+1` Deep Dive paylaşım ödülü; `device_usage` koruması; Mission Control ile günlük geri bildirim & dönüşüm takibi; US TikTok/IG, `r/nosurf`, `Show HN`. | 50.000+ organik gösterim, `getomakase.app` üzerinde 2.000+ Canlı Tadım, ilk 500–1.000 iOS kullanıcısı, `source_tap_rate` ≥ %10, Trial Başlatma ≥ %6. | **\$0** (Sadece ~\$10 US eSIM) |
 | **Ay 2 (Dönüşüm & Viral Döngü)** | Mission Control `Agent'a Aktar (conversion & growth)` brifingleriyle 7 dilde en yüksek dönüşen kanallara odaklanma; Export Studio kartlarına `@username` imzası (v1.1); Product Hunt lansmanı. | D7 Retention ≥ %25, Trial → Ücretli Dönüşüm ≥ %35, 2.500–4.000 toplam kullanıcı. | **\$0** |
 | **Ay 3 (Kaldıraçlı Reklam & Ölçek)** | Apple Search Ads US/UK testi; 50k+ izlenen organik TikTok postlarına \$15/gün Spark Ads; 3 mikro-küratör sponsorluğu. | CAC < \$18, Yıllık Net LTV ≈ \$25.50, 10.000+ kullanıcı ve pozitif nakit akışı. | **\$300 – \$600** |
 

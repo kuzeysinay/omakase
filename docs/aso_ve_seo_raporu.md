@@ -25,11 +25,11 @@
 
 ## 1. Yönetici Özeti & Metodoloji
 
-Omakase App Store onayına gönderilmeden önce hem **App Store Connect organik keşif altyapısı (ASO)** hem de **`getomakase.app` web varlığı (SEO / GEO / Agentic Browsing)** kapsamlı bir denetimden geçirildi ve tüm teknik/içerik eksikleri doğrudan kod tabanında kapatıldı:
+Omakase `v1.0 (1)` (`APP_ID: 6838044134`) **App Store Review (`Waiting for Review`)** incelemesine sunulurken hem **App Store Connect organik keşif altyapısı (ASO)** hem de **`getomakase.app` web varlığı (SEO / GEO / Agentic Browsing)** kapsamlı bir denetimden geçirildi ve tüm teknik/içerik eksikleri doğrudan kod tabanında ve App Store Connect'te kapatıldı:
 
-* **ASO Tarafında:** Önceki pazarlama taslağındaki `146` karakterlik anahtar kelime taşması, rakip marka isimlerinden (`readwise`, `deepstash`) kaynaklanan **App Review Kural 2.3.7 red riski**, yinelenen kelimeler ve tek dil sınırı giderildi. Yerine ABD çapraz indeksleme (`es-MX` bonus!) dahil **9 App Store yerel ayarı** için sıfır çakışmalı, karakter limitlerine tam uyumlu kopyala-yapıştır metadata paketi üretildi.
+* **ASO Tarafında:** Önceki pazarlama taslağındaki `146` karakterlik anahtar kelime taşması, rakip marka isimlerinden (`readwise`, `deepstash`) kaynaklanan **App Review Kural 2.3.7 red riski**, yinelenen kelimeler ve tek dil sınırı giderildi. Yerine ABD çapraz indeksleme (`es-MX` bonus!) dahil **9 App Store yerel ayarı** (`Education` / `Reference`, EULA/Privacy bağlantılı açıklamalar ve **72 × `1320×2868`** ekran görüntüsü) canlı olarak App Store Connect'e yüklendi ve uygulama içi yerel değerlendirme yöneticisi ([`RatingPromptManager.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/RatingPromptManager.swift)) v1.0 paketine dahil edildi.
 * **Web SEO / GEO Tarafında:** [`web/index.html`](file:///Users/kuzey/projects/omakase/web/index.html) teknik/on-page açıdan baştan yapılandırıldı; Googlebot ve yapay zeka arama motorlarının İngilizce sürümü ham HTML olarak indeksleyebilmesi için statik [`web/en/index.html`](file:///Users/kuzey/projects/omakase/web/en/index.html) oluşturuldu; çift yönlü `hreflang` (`tr`, `en`, `x-default`), `1200×630` Open Graph kartları, Schema.org `@graph` JSON-LD, WebP görseller (8 ekran görüntüsü bug'ı dahil edilerek), [`robots.txt`](file:///Users/kuzey/projects/omakase/web/robots.txt), [`sitemap.xml`](file:///Users/kuzey/projects/omakase/web/sitemap.xml), [`llms.txt`](file:///Users/kuzey/projects/omakase/web/llms.txt) ve Cloudflare [`_headers`](file:///Users/kuzey/projects/omakase/web/_headers) eklendi.
-* **Yasal & Ekran Görüntüsü Uyumu:** [`web/privacy.html`](file:///Users/kuzey/projects/omakase/web/privacy.html) ve [`web/terms.html`](file:///Users/kuzey/projects/omakase/web/terms.html) son prodüksiyon değişiklikleriyle (26 Kasım 2026) senkronize edildi; [`app-store-screenshots.json`](file:///Users/kuzey/projects/omakase/app-store-screenshots/app-store-screenshots.json) içindeki `ja/de/fr/es/ko` 3. slayt marka kapanış eksikleri tamamlandı.
+* **Yasal & Ekran Görüntüsü Uyumu:** [`web/privacy.html`](file:///Users/kuzey/projects/omakase/web/privacy.html) ve [`web/terms.html`](file:///Users/kuzey/projects/omakase/web/terms.html) son prodüksiyon değişiklikleriyle (26 Kasım 2026) senkronize edildi; [`app-store-screenshots.json`](file:///Users/kuzey/projects/omakase/app-store-screenshots/app-store-screenshots.json) içindeki `ja/de/fr/es/ko` 3. slayt marka kapanış eksikleri tamamlandı ve yeniden dışa aktarılarak yüklendi.
 
 ---
 
@@ -39,12 +39,12 @@ Omakase App Store onayına gönderilmeden önce hem **App Store Connect organik 
 
 | # | Önceki Taslak Bulgu | Risk / Etki | Uygulanan Çözüm |
 |---|---------------------|-------------|-----------------|
-| **1** | Keywords alanı **146 karakter** idi (`microlearning,daily facts,...,essays`) | App Store Connect `100` karakter sınırını aşıyor, yapıştırılamaz. | Her yerel ayar `≤ 100` karaktere düşürüldü (boşluksuz virgül). |
+| **1** | Keywords alanı **146 karakter** idi (`microlearning,daily facts,...,essays`) | App Store Connect `100` karakter sınırını aşıyor, yapıştırılamaz. | Her yerel ayar `≤ 100` karaktere düşürüldü (boşluksuz virgül) ve App Store Connect'e girildi. |
 | **2** | Keywords içinde `readwise,deepstash` geçiyordu | **App Review Guideline 2.3.7** (üçüncü taraf ticari marka kullanımı) doğrudan red sebebi. | Tüm üçüncü taraf uygulama/ticari markalar gizli `Keywords` alanından temizlendi. |
 | **3** | `daily`, `facts`, `essays` gibi kelimeler Title/Subtitle ile çakışıyor ve çoğuldu | Boşa giden indeksleme karakterleri (`Facts` tekil `fact` ile zaten indekslenir). | Title + Subtitle + Keywords arasında **%0 kelime tekrarı** ve gizli alanda saf tekil kökler sağlandı. |
-| **4** | `en-US` dışında 6 yerel ayar (`tr, ja, de, fr, es, ko`) + çapraz indeksleme (`es-MX`, `en-GB`) yoktu | Uygulama 7 dilde olmasına rağmen global arama hacminin ~%65'i kaçırılıyordu. | 9 yerel ayar için yerel arama niyetine göre (birebir çeviri değil!) tam metadata üretildi. |
+| **4** | `en-US` dışında 6 yerel ayar (`tr, ja, de, fr, es, ko`) + çapraz indeksleme (`es-MX`, `en-GB`) yoktu | Uygulama 7 dilde olmasına rağmen global arama hacminin ~%65'i kaçırılıyordu. | 9 yerel ayar için yerel arama niyetine göre (birebir çeviri değil!) tam metadata üretilip yüklendi. |
 | **5** | Web vitrininde [`web/app.js`](file:///Users/kuzey/projects/omakase/web/app.js#L1139) yalnızca ilk 6 ekran görüntüsünü gösteriyordu | 7. (Letterboxd) ve 8. (Export Studio) slaytlar web ziyaretçilerine görünmüyordu. | `shotLabels` 8 slayta çıkarıldı ve ham HTML içine `<picture>` WebP/PNG olarak gömüldü. |
-| **6** | Uygulama içinde `SKStoreReviewController` / `requestReview` yok | Organik puan birikimi yavaş kalır (Arama sıralaması ve dönüşüm sinyali zayıflar). | v1.0.1 için `FeedbackSheetView` ön-filtreli `RatingPromptManager` mimarisi tasarlandı (Bölüm 7). |
+| **6** | Uygulama içinde `SKStoreReviewController` / `requestReview` yok | Organik puan birikimi yavaş kalır (Arama sıralaması ve dönüşüm sinyali zayıflar). | **v1.0 ile canlıda:** [`RatingPromptManager.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/RatingPromptManager.swift) Kural 5.6.1/5.6.3 uyumlu doğrudan `StoreKit.AppStore.requestReview(in:)` çağrısıyla eklendi (Bölüm 7). |
 
 ---
 
@@ -449,55 +449,25 @@ Omakase App Store onayına gönderilmeden önce hem **App Store Connect organik 
 ## 6. Ekran Görüntüsü & Görsel Varlık Denetimi (`screenshot-optimization`)
 
 * **8 Slayt × 7 Dil Dizilimi:** İlk 3 slayt (arama sonuçlarında doğrudan görünen alan) yalnızca ana değer önerisini (*"feed your mind, not the algorithm"*, *"fun-facts in one tap + source"*, *"chatbots wait, omakase does not"*) taşır; 4–8. slaytlar Deep Dive, Reading Ritual, Community, Letterboxd ve Export Studio özelliklerini gösterir.
-* **Yapılan Düzeltme:** [`app-store-screenshots/app-store-screenshots.json`](file:///Users/kuzey/projects/omakase/app-store-screenshots/app-store-screenshots.json) içinde 1. slayttaki `"tr": "-"` yer tutucusu `"OMAKASE"` olarak düzeltildi ve 3. slayttaki `ja`, `de`, `fr`, `es`, `ko` başlıklarına eksik *"omakase beklemez / omakase does not"* kapanış satırı eklendi. *(Not: App Store Connect'e yüklemeden önce `app-store-screenshots` çıktılarının bu 5 dilde 3. slayt için yeniden dışa aktarılması önerilir.)*
+* **Yapılan Düzeltme & Canlı Yükleme (✅ Tamamlandı):** [`app-store-screenshots/app-store-screenshots.json`](file:///Users/kuzey/projects/omakase/app-store-screenshots/app-store-screenshots.json) içinde 1. slayttaki `"tr": "-"` yer tutucusu `"OMAKASE"` olarak düzeltildi ve 3. slayttaki `ja`, `de`, `fr`, `es`, `ko` başlıklarına eksik *"omakase beklemez / omakase does not"* kapanış satırı eklendi. Yeniden dışa aktarılan **4 iPhone çözünürlüğü (224 PNG)** repoya (`app-store-screenshots/exports/ios/`) arşivlendi; **9 App Store yerel ayarı** için toplam **72 × `1320×2868`** ekran görüntüsü App Store Connect'e yüklendi ve Media/Asset Library (`72/72`) temizlendi.
 * **App Preview Videosu Kararı (`screenshot-optimization`):** Değer önerisi metin ve okuma deneyimi odaklı olduğu için **v1.0 lansmanında App Preview videosu eklememek** doğrudur; statik 8 yüksek kontrastlı slayt daha hızlı taranır. v1.1 sonrası Custom Product Pages (CPP) veya Product Page Optimization (PPO) ile 15 saniyelik sessiz daktilo videosu test edilebilir.
 
 ---
 
 ## 7. Uygulama İçi Değerlendirme İstemi Stratejisi (`rating-prompt-strategy`)
 
-Kod tabanında `SKStoreReviewController` / `requestReview` araması yapıldığında henüz uygulama içi değerlendirme istemi eklenmediği görüldü. `rating-prompt-strategy` playbook'una göre **v1.0 ikili dosyasını değiştirmeden**, **v1.0.1** güncellemesi için önerilen akıllı ön-filtre (`pre-prompt`) mimarisi aşağıdadır:
+**v1.0 ile Uygulandı:** [`RatingPromptManager.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/RatingPromptManager.swift) v1.0 sürümüne entegre edilmiştir. Apple **App Review Kural 5.6.1 & 5.6.3** uyumu gereği özel bir *"beğendin mi / pek değil"* ön-filtresi (`pre-prompt gating`) kullanılmadan, doğrudan yerel **`StoreKit.AppStore.requestReview(in: scene)`** penceresini çağırır:
 
 * **Tetikleme Koşulları (Success Moment):**
-  1. `sessions >= 3` VE kurulumdan bu yana `>= 3 gün` geçmiş olmalı.
-  2. `cooldown_completed >= 5` (en az 5 hikaye sindirilerek okunmuş) VEYA kullanıcı ilk kez Export Studio ile kart paylaşmış olmalı.
-  3. Mevcut oturumda hata/çökme yaşanmamış olmalı.
-* **Ön-Filtre Kalkanı (+0.3–0.8 Yıldız Etkisi):**
-  - Doğrudan Apple penceresini çağırmak yerine tek satırlık sakin bir kart sorulur: *"Omakase'den keyif alıyor musun?"* (`[Evet, çok!]` / `[Pek değil]`).
-  - **"Evet, çok!"** → `AppStore.requestReview(in: windowScene)` çağrılır (yılda en fazla 3 kez gösterilir).
-  - **"Pek değil"** → Mevcut [`FeedbackSheetView`](file:///Users/kuzey/projects/omakase/omakase/omakase/Profile/FeedbackSheetView.swift) açılır; memnuniyetsizlik 1–2 yıldızlı App Store yorumuna değil doğrudan Mission Control'e düşer.
+  1. Kullanıcı en az **`3` tamamlanmış okuma** (`minReads = 3`, `UserDefaults` kalıcı sayaç) gerçekleştirdiğinde tetiklenir.
+  2. **60 gün bekleme süresi** (`cooldownInterval = 60 gün`) ve **sürüm başına en fazla 1 istek** (`lastPromptedVersion`) sınırı uygulanır; iOS sistem kotası ayrıca yılda en fazla 3 gösterimle sınırlar.
+  3. Memnuniyetsizlik ve hata bildirimleri kullanıcı tarafından her an Ayarlar → **Geri Bildirim Gönder ([`FeedbackSheetView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Profile/FeedbackSheetView.swift))** üzerinden ayrı olarak iletilir.
 
 <details>
-<summary>v1.0.1 İçin Hazır Swift RatingPromptManager Taslağı</summary>
+<summary>v1.0 İçindeki Güncel RatingPromptManager.swift Yapısı</summary>
 
-```swift
-import StoreKit
-import UIKit
-
-@MainActor
-enum RatingPromptManager {
-    private static let completedReadsKey = "omakase_completed_reads_count"
-    private static let lastPromptVersionKey = "omakase_last_rated_version"
-
-    static func recordCompletedRead() {
-        let count = UserDefaults.standard.integer(forKey: completedReadsKey) + 1
-        UserDefaults.standard.set(count, forKey: completedReadsKey)
-    }
-
-    static func shouldShowPrePrompt(currentVersion: String) -> Bool {
-        let count = UserDefaults.standard.integer(forKey: completedReadsKey)
-        let lastVersion = UserDefaults.standard.string(forKey: lastPromptVersionKey)
-        return count >= 5 && lastVersion != currentVersion
-    }
-
-    static func requestNativeReview(currentVersion: String) {
-        UserDefaults.standard.set(currentVersion, forKey: lastPromptVersionKey)
-        guard let scene = UIApplication.shared.connectedScenes
-            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene else { return }
-        AppStore.requestReview(in: scene)
-    }
-}
-```
+* Dosya: [`omakase/omakase/Services/RatingPromptManager.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/RatingPromptManager.swift)
+* Anahtar sabitler: `minReads = 3`, `cooldownInterval = 60 gün`, `Bundle.main.infoDictionary?["CFBundleShortVersionString"]` bazlı sürüm başına tek tetikleme ve doğrudan `StoreKit.AppStore.requestReview(in: scene)`.
 
 </details>
 
@@ -525,14 +495,14 @@ enum RatingPromptManager {
 
 ## 9. Gönderim, Lansman & İlk 30 Gün İcra Takvimi
 
-### A. App Store Gönderimi Öncesi & Yayın Günü
-- [ ] **1. Web Sitesini Cloudflare'e Yayınlayın (`wrangler`):**
+### A. App Store Gönderimi & Yayın Günü
+- [x] **1. App Store Connect Bilgileri Girildi (`APP_ID: 6838044134`):** Bölüm 5'teki **9 yerel ayarın** Title, Subtitle, Keywords, Promotional Text, Description (EULA + Gizlilik bağlantıları dahil) ve What's New alanları girildi; Primary: **Education**, Secondary: **Reference** seçildi.
+- [x] **2. Ekran Görüntüleri Yüklendi & İncelemeye Gönderildi:** 3. slayt (`ja/de/fr/es/ko`) güncellemeleri dışa aktarıldı; 9 yerel ayara **72 × `1320×2868`** ekran görüntüsü yüklenip Asset Library temizlendi ve `v1.0 (1)` (`Waiting for Review`) kuyruğuna gönderildi.
+- [ ] **3. Web Sitesini Cloudflare'e Yayınlayın (`wrangler`):**
   ```bash
   npx wrangler deploy
   ```
-- [ ] **2. App Store Connect Bilgilerini Girin:** Bölüm 5'teki **9 yerel ayarın** Title, Subtitle, Keywords, Promotional Text, Description ve What's New alanlarını birebir yapıştırın; Primary: **Education**, Secondary: **Reference** seçin.
-- [ ] **3. Ekran Görüntüleri:** 3. slayt (`ja/de/fr/es/ko`) güncellemelerini `app-store-screenshots` üzerinden dışa aktarıp 8×7 görselleri yükleyin.
-- [ ] **4. Onay Sonrası Smart App Banner (`web-to-app-funnel`):** App Store Connect'ten uygulamanın sayısal `Apple ID`'si çıktığında [`web/index.html`](file:///Users/kuzey/projects/omakase/web/index.html#L11) ve [`web/en/index.html`](file:///Users/kuzey/projects/omakase/web/en/index.html#L11) içindeki `<meta name="apple-itunes-app" content="app-id=...">` yorum satırını açın, hero ve CTA butonlarına gerçek `https://apps.apple.com/app/id...` bağlantısını verip `wrangler deploy` tekrarlayın.
+- [ ] **4. Onay Sonrası Smart App Banner (`web-to-app-funnel`):** App Store onayı çıktığında [`web/index.html`](file:///Users/kuzey/projects/omakase/web/index.html#L11) ve [`web/en/index.html`](file:///Users/kuzey/projects/omakase/web/en/index.html#L11) içindeki `<meta name="apple-itunes-app" content="app-id=6838044134">` yorum satırını açın, hero ve CTA butonlarına gerçek `https://apps.apple.com/app/id6838044134` bağlantısını verip `wrangler deploy` tekrarlayın.
 
 ### B. Yayın Sonrası İlk 7–30 Gün (SEO + ASO Büyüme)
 - [ ] **5. Google Search Console & Bing Webmaster Tools:** `https://getomakase.app/sitemap.xml` dosyasını gönderin; Rich Results Test ile JSON-LD `MobileApplication` şemasını doğrulayın.

@@ -37,11 +37,11 @@ Omakase bu boşluğu **"Sürtünmesiz, Kaynaklı Entelektüel Kürasyon"** ile d
 ## 2. Product-Market Fit (PMF) Mimarisi, "Aha! Anı" ve Ölçüm Çerçevesi
 
 ### 2.1. Kullanıcının "Aha! Anı" (Time-to-Value < 45 Saniye)
-24–25 Kasım güncellemeleriyle ilk oturumdaki sürtünme en aza indirilmiştir (ilgi alanı formu kaldırıldı, 3 slaytlı ASCII suşi tanıtımı ve kayıt sonrası `ProfileSetupView` eklendi):
+24–26 Kasım güncellemeleriyle ilk oturumdaki sürtünme en aza indirilmiştir: hesap açmadan denemeye imkan tanıyan **Misafir Tadımı ([`GuestTasteView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Onboarding/GuestTasteView.swift))**, 3 slaytlı ASCII suşi tanıtımı ve kayıt sonrası `ProfileSetupView` eklendi:
 
 ```mermaid
 flowchart LR
-    A["1. Sürtünmesiz Başlangıç<br/>(Apple/Google/E-posta +<br/>ProfileSetupView @username +<br/>3 Slaytlı Onboarding)"] --> B["2. Tam Ekran Bento / Şefin Seçimi<br/>(12 Disiplin, Ön-Isıtmalı Alt Konu<br/>veya Letterboxd)"]
+    A["1. Sürtünmesiz Başlangıç<br/>(GuestTasteView Tadım veya<br/>Apple/Google/E-posta + ProfileSetupView +<br/>3 Slaytlı Onboarding)"] --> B["2. Tam Ekran Bento / Şefin Seçimi<br/>(12 Disiplin, Ön-Isıtmalı Alt Konu,<br/>WidgetKit veya Letterboxd)"]
     B --> C["3. Canlı SSE Daktilo Akışı<br/>(Harf Harf Demlenen<br/>Kaynaklı Fun-Fact)"]
     C --> D["4. Aha! Anı 💡<br/>(15-25 sn Okuma + PostSourceView +<br/>Derin İnceleme veya Export Studio)"]
 ```
@@ -72,14 +72,14 @@ Omakase yüksek merak duygusuna sahip üç spesifik niş segmenti (7 dil desteğ
 
 ```mermaid
 flowchart TD
-    A["🌐 Acquisition (Edinim)<br/>TikTok/Reels Kartları + Letterboxd +<br/>getomakase.app (8 Slayt + Canlı Tadım)"] --> B["⚡ Activation (Aktivasyon)<br/>ProfileSetupView @username +<br/>3 Slaytlı Giriş + İlk Bento Okuması"]
-    B --> C["🔄 Retention (Elde Tutma)<br/>15-25 sn Cooldown + Günlük 3 Post Ritüeli +<br/>Yerel Hatırlatıcı + Çevrimdışı Yer İmleri"]
+    A["🌐 Acquisition (Edinim)<br/>TikTok/Reels Kartları + Letterboxd +<br/>getomakase.app (8 Slayt + Canlı Tadım)"] --> B["⚡ Activation (Aktivasyon)<br/>GuestTasteView + ProfileSetupView @username +<br/>3 Slaytlı Giriş + İlk Bento Okuması"]
+    B --> C["🔄 Retention (Elde Tutma)<br/>15-25 sn Cooldown + Günlük 3 Post +<br/>omakaseWidget + RatingPromptManager"]
     C --> D["📣 Referral (Tavsiye)<br/>Export Studio (Story/Post/Kare + getomakase.app)<br/>+ Paylaşımda +1 Derin İnceleme Ödülü"]
-    D --> E["💎 Revenue (Gelir)<br/>Omakase Pro ($29.99/yıl · 7 gün deneme)<br/>+ Cihaz-Bazlı Anti-Abuse Kota Koruması"]
+    D --> E["💎 Revenue (Gelir)<br/>Omakase Pro + ProWelcomeView<br/>($29.99/yıl · 7 gün deneme) + Cihaz Kotası"]
 ```
 
 ### 4.1. Web "Canlı Tadım" & Yenilenen Vitrin (`web/`)
-[`web/index.html`](file:///Users/kuzey/projects/omakase/web/index.html) 25 Kasım'da ASCII suşi arka planı, **8 slaytlı App Store vitrini (`#screenshots`)**, **4 ekranlı canlı iPhone maketi** (`Akışım`, `Bento Keşif`, `Topluluk`, `Profil`) ve **Canlı Tadım** demosu ile güncellenmiştir; ziyaretçi indirmeden önce kaynaklı fun-fact akışını ve Derin İnceleme'yi dener.
+[`web/index.html`](file:///Users/kuzey/projects/omakase/web/index.html) 25 Kasım'da ASCII suşi arka planı, **8 slaytlı App Store vitrini (`#screenshots`)**, **4 ekranlı canlı iPhone maketi** (`Akışım`, `Bento Keşif`, `Topluluk`, `Profil`) ve **Canlı Tadım** demosu ile güncellenmiştir; 26 Kasım'da SEO/GEO (`web/en/index.html`, Schema.org) ve yasal sayfalar senkronize edilmiştir.
 
 ### 4.2. Ürün İçi Viral Motor: Export Studio (`ExportPostSheet.swift`)
 [`ExportPostSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Feed/ExportPostSheet.swift) ve [`ShareCardView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Feed/ShareCardView.swift), her okuyucuyu organik dağıtım kanalına dönüştürür:
@@ -110,7 +110,7 @@ flowchart TD
 | **Günlük AI Post (12 Disiplin & Alt Konu)** | **Günde 3 Post** (`Kalan: X/3` sayaç) | **Sınırsız UI** (sunucuda `100/gün`) |
 | **Letterboxd Son 50 Film Sentezi** | **Günde 1 Post** (3 post kotası içinden) | **Sınırsız UI** (sunucuda `100/gün`) |
 | **Derin İnceleme (Deep Dive)** | **Günde 1** (+ paylaşımda `+1` ödül) | **Sınırsız UI** (sunucuda `40/gün`) |
-| **Topluluk, Export Studio & Yer İmleri** | ✅ Açık | ✅ Sınırsız + Profil Rozeti |
+| **Topluluk (`FollowListSheet`), Export Studio & Yer İmleri** | ✅ Açık | ✅ Sınırsız + Profil Rozeti |
 
 * **Cihaz-Bazlı Suistimal Önlemi:** `device_usage` katmanı hesap değiştirme/silme ile 3 post / 1 Letterboxd sınırının sıfırlanmasını engeller; ücretsiz kullanıcının paywall'a geçiş baskısını gerçekçi tutar ([`founder_100_musteri_raporu.md`](file:///Users/kuzey/projects/omakase/docs/founder_100_musteri_raporu.md) 2. Turda `%1` → `%72` dönüşüm artışı).
 
@@ -118,7 +118,7 @@ flowchart TD
 
 ## 6. App Store Ürün Sayfası (ASO) & 8 Slaytlı Görsel Hikaye Stratejisi
 
-[`skill.app-store-product-page.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/app-store-product-page/SKILL.md) ve [`app-store-screenshots.json`](file:///Users/kuzey/projects/omakase/app-store-screenshots/app-store-screenshots.json) doğrultusunda **8 slayt × 7 dil** (`en, tr, ja, de, fr, es, ko`) vitrini üretilmiştir:
+[`skill.app-store-product-page.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/app-store-product-page/SKILL.md) ve [`app-store-screenshots.json`](file:///Users/kuzey/projects/omakase/app-store-screenshots/app-store-screenshots.json) doğrultusunda **8 slayt × 7 dil** (`en, tr, ja, de, fr, es, ko`) vitrini üretilmiştir; **9 App Store yerel ayarına (`72 × 1320×2868`)** yüklenerek `v1.0 (1)` (`APP_ID: 6838044134`) **App Review'a gönderilmiştir (`Waiting for Review`)**:
 
 ### 6.1. Ekran Görüntüsü Sıralaması ve Hikaye Akışı (`asset-sequencing-and-story`)
 Arama sonuçlarında görünen **ilk 3 kare** uygulamanın temel değer önerisine ayrılmıştır; Letterboxd ve Export Studio 7–8. slaytlarda yer alır:
@@ -135,16 +135,16 @@ Arama sonuçlarında görünen **ilk 3 kare** uygulamanın temel değer önerisi
 | **8** | Export Studio (`Export`) | *beğendiğin postu kart olarak dışa aktar. instagram, whatsapp ve x'e hazır.* | *export any post as a monochrome card. ready for instagram, whatsapp & x.* | Paylaşılabilir estetik kart stüdyosu |
 
 ### 6.2. Teknik Spesifikasyonlar (`screenshot-specifications` & `image-asset-design`)
-* **Dışa Aktarılan iPhone Boyutları:** `1206×2622`, `1320×2868`, `1284×2778` ve `1125×2436` piksel (alfa kanalsız PNG, 7 dilde yerelleştirilmiş).
+* **App Store Connect Yüklemesi (`APP_ID: 6838044134`):** 9 yerel ayara **72 × `1320×2868`** piksel ekran görüntüsü yüklendi (`Asset Library` 72/72 temizlendi); repo içinde `app-store-screenshots/exports/ios/` altında 4 iPhone boyutunda (`1125×2436`, `1206×2622`, `1284×2778`, `1320×2868`) arşivlendi.
 * **Arama & Etkinlik Varlıkları:** Ürün sayfası başlığı (`3840×1646`, 21:9), arama sonucu görseli (`1920×1280`, 3:2) ve In-App Events (`1920×1080` & `1080×1920`) tek görsel sistemle hazırlanır.
 
 ---
 
 ## 7. Go-To-Market (GTM) Lansman Planı: 0'dan 10.000 Kullanıcıya
 
-1. **Faz 1 — TestFlight & Kurucu Topluluk (Kullanıcı 1–250):** `getomakase.app` üzerinden erken kullanıcı alımı; `ProfileSetupView` ile kısa `@username` alma önceliği; `FeedbackSheetView` + Mission Control üzerinden günlük bug/kalite döngüsü.
-2. **Faz 2 — Letterboxd, Anti-Doomscrolling & Export Döngüsü (Kullanıcı 250–2.500):** Export Studio ile Instagram Stories, X ve `r/nosurf`, `r/digitalminimalism`, `r/Letterboxd`, `Show HN` üzerinde organik yayılım; tüm trafik `getomakase.app/#interactive-demo` Canlı Tadım'a yönlendirilir.
-3. **Faz 3 — App Store ASO, In-App Events & Kaldıraçlı UA (Kullanıcı 2.500–10.000+):** 7 dilde App Store lansmanı, aylık tematik In-App Events, Apple Search Ads (\$100 kredi) ve organik kazanan içeriklere TikTok Spark Ads.
+1. **Faz 1 — App Review & Kurucu Topluluk (Kullanıcı 1–250):** `v1.0 (1)` (`APP_ID: 6838044134`) **App Review'da (`Waiting for Review`, 174 ülke — `CHN` kapalı)**. `GuestTasteView` ile kayıtsız tadım, `getomakase.app` üzerinden erken kullanıcı alımı, `ProfileSetupView` ile `@username` önceliği ve `FeedbackSheetView` + Mission Control kalite döngüsü aktif.
+2. **Faz 2 — Letterboxd, Anti-Doomscrolling & Export Döngüsü (Kullanıcı 250–2.500):** Export Studio + `omakaseWidget` + `RatingPromptManager` üçlüsüyle Instagram Stories, X ve `r/nosurf`, `r/digitalminimalism`, `r/Letterboxd`, `Show HN` üzerinde organik yayılım; tüm trafik `getomakase.app/#interactive-demo` Canlı Tadım'a yönlendirilir.
+3. **Faz 3 — App Store ASO, In-App Events & Kaldıraçlı UA (Kullanıcı 2.500–10.000+):** 9 App Store yerel ayarında (`Education` / `Reference`) lansman, aylık tematik In-App Events, Apple Search Ads (\$100 kredi) ve organik kazanan içeriklere TikTok Spark Ads.
 
 ---
 
