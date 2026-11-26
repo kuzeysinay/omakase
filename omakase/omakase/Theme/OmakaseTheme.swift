@@ -86,6 +86,7 @@ struct DeepDiveReaderSheet: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
                         .padding(.bottom, parsedContent.source == nil ? 48 : 16)
+                        .accessibilityIdentifier("deepdive.sheet.body")
 
                     if let source = parsedContent.source {
                         PostSourceView(source: source)
@@ -107,6 +108,7 @@ struct DeepDiveReaderSheet: View {
                             .foregroundStyle(.secondary)
                     }
                     .accessibilityLabel(l10n.closeLabel)
+                    .accessibilityIdentifier("deepdive.sheet.closeButton")
                 }
             }
         }

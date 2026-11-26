@@ -65,6 +65,7 @@ struct OnboardingView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("onboarding.skipButton")
                 }
                 .padding(.horizontal, 22)
                 .padding(.top, 14)
@@ -114,6 +115,7 @@ struct OnboardingView: View {
                         .foregroundStyle(OmakaseTheme.chipActiveText)
                     }
                     .buttonStyle(OmakaseChipButtonStyle())
+                    .accessibilityIdentifier("onboarding.primaryButton")
                 }
                 .padding(.horizontal, 22)
                 .padding(.bottom, 22)
@@ -171,7 +173,8 @@ struct OnboardingView: View {
             slideCopy(
                 eyebrow: l10n.introSlide1Eyebrow,
                 title: l10n.introSlide1Title,
-                body: l10n.introSlide1Body
+                body: l10n.introSlide1Body,
+                titleIdentifier: "onboarding.slide.0.title"
             )
 
             Spacer()
@@ -231,7 +234,8 @@ struct OnboardingView: View {
             slideCopy(
                 eyebrow: l10n.introSlide2Eyebrow,
                 title: l10n.introSlide2Title,
-                body: l10n.introSlide2Body
+                body: l10n.introSlide2Body,
+                titleIdentifier: "onboarding.slide.1.title"
             )
 
             Spacer()
@@ -281,7 +285,8 @@ struct OnboardingView: View {
             slideCopy(
                 eyebrow: l10n.introSlide3Eyebrow,
                 title: l10n.introSlide3Title,
-                body: l10n.introSlide3Body
+                body: l10n.introSlide3Body,
+                titleIdentifier: "onboarding.slide.2.title"
             )
 
             Spacer()
@@ -304,7 +309,7 @@ struct OnboardingView: View {
         .background(OmakaseTheme.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    private func slideCopy(eyebrow: String, title: String, body: String) -> some View {
+    private func slideCopy(eyebrow: String, title: String, body: String, titleIdentifier: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(eyebrow)
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
@@ -316,6 +321,7 @@ struct OnboardingView: View {
                 .tracking(-0.5)
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier(titleIdentifier ?? "")
 
             Text(body)
                 .font(.system(size: 15.5))
@@ -534,6 +540,7 @@ struct ProfileSetupView: View {
                     }
                     .buttonStyle(OmakaseChipButtonStyle())
                     .disabled(!canSubmit)
+                    .accessibilityIdentifier("profileSetup.continueButton")
                 }
                 .padding(.horizontal, 22)
                 .padding(.bottom, 32)

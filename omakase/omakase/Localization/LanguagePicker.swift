@@ -26,6 +26,7 @@ struct LanguagePicker: View {
                         }
                     }
                 }
+                .accessibilityIdentifier("language.option.\(lang.rawValue)")
             }
         } label: {
             if isSubmenu {
@@ -41,5 +42,6 @@ struct LanguagePicker: View {
         }
         .menuActionDismissBehavior(.automatic)
         .accessibilityLabel(L10n(lang: resolved).languageMenuAccessibility)
+        .accessibilityIdentifier("common.languagePicker")
     }
 }

@@ -190,26 +190,28 @@ struct FeedView: View {
             viewModel.setContentLanguage(appLanguage)
             viewModel.updateInterests(parsed)
             SubTopicDiscoveryStore.shared.prewarmAllCategories(language: appLanguage, userInterests: parsed)
-            if viewModel.posts.isEmpty {
+            if notificationManager.pendingTopicRequest != nil {
+                handlePendingNotificationTopicIfNeeded()
+            } else if viewModel.posts.isEmpty {
                 isHydratingCache = true
                 await viewModel.loadCachedPosts()
-                if viewModel.isOffline, let lastID = viewModel.posts.last?.id {
-                    feedScrollPosition = lastID
-                } else {
-                    feedScrollPosition = "category-page"
+                if !viewModel.isGenerating {
+                    if viewModel.isOffline, let lastID = viewModel.posts.last?.id {
+                        feedScrollPosition = lastID
+                    } else {
+                        feedScrollPosition = "category-page"
+                    }
                 }
                 // Allow SwiftUI's onChange for posts.last?.id to observe the hydrated state
                 // before re-enabling auto-scroll for newly generated posts.
                 try? await Task.sleep(for: .milliseconds(50))
                 isHydratingCache = false
             }
-            await handlePendingNotificationTopicIfNeeded()
+            handlePendingNotificationTopicIfNeeded()
         }
         .onChange(of: notificationManager.pendingTopicRequest) { _, request in
             guard request != nil else { return }
-            Task {
-                await handlePendingNotificationTopicIfNeeded()
-            }
+            handlePendingNotificationTopicIfNeeded()
         }
         .onChange(of: accessManager.isPro) { _, isPro in
             guard isPro, let pending = pendingNotificationTopicAfterPaywall else { return }
@@ -313,6 +315,7 @@ struct FeedView: View {
                     Text(l10n.appTitle)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(Color.primary)
+                        .accessibilityIdentifier("feed.header.title")
                 }
                 .padding(.leading, 18)
 
@@ -350,11 +353,13 @@ struct FeedView: View {
         } label: {
             HStack(spacing: 6) {
                 if limit <= 5 {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 3.5) {
                         ForEach(0..<limit, id: \.self) { index in
-                            Circle()
-                                .fill(index < remaining ? accentColor : Color.primary.opacity(0.16))
-                                .frame(width: 5, height: 5)
+                            NigiriSushiIcon(
+                                isFilled: index < remaining,
+                                fillColor: accentColor
+                            )
+                            .frame(width: 13, height: 9.5)
                         }
                     }
                 } else {
@@ -393,6 +398,7 @@ struct FeedView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(l10n.feedQuotaAccessibilityLabel(remaining: remaining, limit: limit))
+        .accessibilityIdentifier("feed.header.quotaPill")
     }
 
     private var cooldownBarView: some View {
@@ -420,6 +426,9 @@ struct FeedView: View {
     private func reelsFeed(bookmarkStore: BookmarkStore) -> some View {
         ScrollViewReader { proxy in
             GeometryReader { geo in
+                let isShowingBentoPage = !viewModel.isGenerating
+                    && !accessManager.isPlateLimitReached
+                    && (viewModel.posts.isEmpty || feedScrollPosition == AnyHashable("category-page"))
                 ZStack(alignment: .top) {
                     ScrollView(.vertical, showsIndicators: false) {
                         LazyVStack(spacing: 100) {
@@ -444,14 +453,14 @@ struct FeedView: View {
                                 )
                                 .environment(\.appLanguage, appLanguage)
                                 .id(post.id)
-                                .frame(width: geo.size.width, height: geo.size.height)
+                                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
                                 .clipped()
                             }
 
                             // Full-screen Categories or Daily Limit Page:
-                            // Covers the entire page when there are no posts, disappears while a post
-                            // is generating, and opens again when scrolling down after a post.
-                            if !viewModel.isGenerating {
+                            // Kept permanently mounted so ScrollView contentSize and scroll targets
+                            // never shift when generation finishes.
+                            Group {
                                 if accessManager.isPlateLimitReached {
                                     DailyLimitCardView(
                                         resetsAt: accessManager.nextResetDate,
@@ -485,9 +494,6 @@ struct FeedView: View {
                                         }
                                     )
                                     .environment(\.appLanguage, appLanguage)
-                                    .frame(width: geo.size.width, height: geo.size.height)
-                                    .clipped()
-                                    .id("category-page")
                                     .onAppear {
                                         TelemetryService.shared.track("daily_limit_reached")
                                     }
@@ -551,11 +557,11 @@ struct FeedView: View {
                                         }
                                     )
                                     .environment(\.appLanguage, appLanguage)
-                                    .frame(width: geo.size.width, height: geo.size.height)
-                                    .clipped()
-                                    .id("category-page")
                                 }
                             }
+                            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+                            .clipped()
+                            .id("category-page")
                         }
                         .scrollTargetLayout()
                     }
@@ -563,6 +569,7 @@ struct FeedView: View {
                     .scrollPosition(id: $feedScrollPosition, anchor: .top)
                     .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                     .scrollDismissesKeyboard(.interactively)
+                    .scrollDisabled(isShowingBentoPage || viewModel.isGenerating)
                     .frame(width: geo.size.width, height: geo.size.height)
                     .clipped()
                     .onBottomOverscrollChange { overscroll in
@@ -590,11 +597,18 @@ struct FeedView: View {
                             feedScrollPosition = "category-page"
                             return
                         }
-                        feedScrollPosition = newID
-                        proxy.scrollTo(newID, anchor: .top)
+                        var tx = Transaction()
+                        tx.disablesAnimations = true
+                        withTransaction(tx) {
+                            feedScrollPosition = newID
+                            proxy.scrollTo(newID, anchor: .top)
+                        }
                     }
                     .onChange(of: viewModel.isGenerating) { _, isGenerating in
                         guard !isGenerating else { return }
+                        if viewModel.posts.last?.isComplete == true {
+                            pendingNotificationTopicAfterPaywall = nil
+                        }
                         if let lastID = viewModel.posts.last?.id {
                             if feedScrollPosition != AnyHashable(lastID) {
                                 var tx = Transaction()
@@ -682,15 +696,22 @@ struct FeedView: View {
     // MARK: - Helpers
 
     @MainActor
-    private func handlePendingNotificationTopicIfNeeded() async {
+    private func handlePendingNotificationTopicIfNeeded() {
         guard let req = notificationManager.consumePendingTopicRequest() else { return }
 
         guard let rawTopic = req.topic?.trimmingCharacters(in: .whitespacesAndNewlines),
               !rawTopic.isEmpty else {
-            await accessManager.refreshAccessStatus()
             if accessManager.isPlateLimitReached {
                 pendingNotificationTopicAfterPaywall = nil
                 paywallSource = .plateLimit
+            } else {
+                Task { @MainActor in
+                    await accessManager.refreshAccessStatus()
+                    if accessManager.isPlateLimitReached {
+                        pendingNotificationTopicAfterPaywall = nil
+                        paywallSource = .plateLimit
+                    }
+                }
             }
             return
         }
@@ -701,16 +722,22 @@ struct FeedView: View {
             : cleanCategoryId
 
         SubTopicDiscoveryStore.shared.recordSeen([rawTopic], for: resolvedCategoryId, language: appLanguage)
-        await accessManager.refreshAccessStatus()
+        pendingNotificationTopicAfterPaywall = (topic: rawTopic, categoryId: resolvedCategoryId)
 
         if accessManager.isPlateLimitReached {
-            pendingNotificationTopicAfterPaywall = (topic: rawTopic, categoryId: resolvedCategoryId)
             paywallSource = .plateLimit
         } else {
             viewModel.requestDedicatedPostFromNotification(
                 topic: rawTopic,
                 categoryId: resolvedCategoryId
             )
+            if let newID = viewModel.posts.last?.id {
+                var tx = Transaction()
+                tx.disablesAnimations = true
+                withTransaction(tx) {
+                    feedScrollPosition = newID
+                }
+            }
         }
     }
 
@@ -758,23 +785,24 @@ struct ReelsPostCard: View {
         // paging ScrollView already provides vertical scrolling. Nesting two
         // vertical ScrollViews caused severe gesture contention and redundant
         // layout passes, which was the primary source of scroll stutter.
-        ZStack(alignment: .trailing) {
-            if post.isComplete {
-                ZStack(alignment: .trailing) {
-                    Color.red
-                    Image(systemName: "trash.fill")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.trailing, 40)
-                        .scaleEffect(swipeOffset < -100 ? 1.2 : 1.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: swipeOffset)
-                }
+        ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .trailing) {
+                Color.red
+                Image(systemName: "trash.fill")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.trailing, 40)
+                    .scaleEffect(swipeOffset < -100 ? 1.2 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: swipeOffset)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+            .opacity(post.isComplete && swipeOffset < 0 ? 1 : 0)
+            .allowsHitTesting(false)
             
             VStack(alignment: .leading, spacing: 12) {
             // Header: title, timestamp, LIVE badge
             postHeader
-                .padding(.top, 8)
+                .padding(.top, 20)
 
             // Main post body text
             if parsedPost.body.isEmpty && !post.isComplete {
@@ -785,9 +813,11 @@ struct ReelsPostCard: View {
                     .font(.system(size: 16.5, weight: .regular))
                     .lineSpacing(5)
                     .foregroundStyle(Color.primary.opacity(0.92))
-                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
                     .contentTransition(.opacity)
                     .transition(.opacity)
+                    .accessibilityIdentifier("feed.post.body")
             }
 
             if let source = parsedPost.source {
@@ -810,22 +840,24 @@ struct ReelsPostCard: View {
             }
 
             // Tags and Action Bar grouped under post content with balanced breathing room
-            if post.isComplete {
-                VStack(alignment: .leading, spacing: 10) {
-                    if !post.tags.isEmpty {
-                        tagChips
-                    }
-                    if !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        actionBar
-                            .padding(.top, 2)
-                    }
+            // Kept in layout with opacity so revealing them never compresses or shifts postBody above.
+            VStack(alignment: .leading, spacing: 10) {
+                if !post.tags.isEmpty {
+                    tagChips
                 }
-                .transition(.opacity)
+                if !post.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    actionBar
+                        .padding(.top, 2)
+                }
             }
+            .opacity(post.isComplete ? 1 : 0)
+            .allowsHitTesting(post.isComplete)
+            .accessibilityHidden(!post.isComplete)
+            .animation(.easeOut(duration: 0.3), value: post.isComplete)
 
             Spacer(minLength: 16)
 
-            if post.isComplete && isLastPost {
+            if isLastPost {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     onScrollToCategories()
@@ -844,11 +876,13 @@ struct ReelsPostCard: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.bottom, 8)
-                .transition(.opacity)
+                .opacity(post.isComplete ? 1 : 0)
+                .allowsHitTesting(post.isComplete)
+                .accessibilityHidden(!post.isComplete)
+                .animation(.easeOut(duration: 0.3), value: post.isComplete)
             }
         }
         .padding(.horizontal, 20)
-        .animation(.easeOut(duration: 0.6), value: post.isComplete)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color(.systemBackground))
         .offset(x: swipeOffset)
@@ -932,6 +966,7 @@ struct ReelsPostCard: View {
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.primary)
+                    .accessibilityIdentifier("feed.post.title")
 
                 HStack(spacing: 6) {
                     Image(systemName: "calendar")
@@ -945,74 +980,82 @@ struct ReelsPostCard: View {
 
             Spacer(minLength: 8)
 
-            HStack(spacing: 6) {
-                if !post.isComplete {
-                    HStack(spacing: 5) {
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 6, height: 6)
-                            .opacity(showCursor ? 1.0 : 0.35)
-                            .animation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true), value: showCursor)
-                        Text(l10n.liveBadge)
-                            .font(.caption2.weight(.bold).monospaced())
-                    }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(Color.red.opacity(0.12), in: Capsule())
-                    .foregroundStyle(.red)
+            // Reserve constant width for trailing controls so cardTitle never reflows when LIVE swaps to Menu.
+            ZStack(alignment: .trailing) {
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 6, height: 6)
+                        .opacity(showCursor ? 1.0 : 0.35)
+                        .animation(
+                            post.isComplete ? nil : .easeInOut(duration: 0.55).repeatForever(autoreverses: true),
+                            value: showCursor
+                        )
+                    Text(l10n.liveBadge)
+                        .font(.caption2.weight(.bold).monospaced())
                 }
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(Color.red.opacity(0.12), in: Capsule())
+                .foregroundStyle(.red)
+                .opacity(post.isComplete ? 0 : 1)
+                .allowsHitTesting(!post.isComplete)
+                .accessibilityHidden(post.isComplete)
 
                 // More menu: Report AI content (Guideline 1.2) & Remove
-                if post.isComplete {
-                    Menu {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showReportDialog = true
-                        } label: {
-                            Label(
-                                isReported ? l10n.actionReported : l10n.reportAIPostTitle,
-                                systemImage: isReported ? "flag.fill" : "flag"
-                            )
-                        }
-                        .disabled(isReportPending)
-
-                        Button(role: .destructive) {
-                            onDelete()
-                        } label: {
-                            Label(l10n.remove, systemImage: "trash")
-                        }
+                Menu {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showReportDialog = true
                     } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 32, height: 32)
-                            .background(Color.primary.opacity(0.04), in: Circle())
+                        Label(
+                            isReported ? l10n.actionReported : l10n.reportAIPostTitle,
+                            systemImage: isReported ? "flag.fill" : "flag"
+                        )
                     }
-                    .confirmationDialog(
-                        l10n.reportAIPostTitle,
-                        isPresented: $showReportDialog,
-                        titleVisibility: .visible
-                    ) {
-                        Button(l10n.reportReasonInaccurate) {
-                            Task { await submitAIReport(reason: l10n.reportReasonInaccurate) }
-                        }
-                        Button(l10n.reportReasonInappropriate, role: .destructive) {
-                            Task { await submitAIReport(reason: l10n.reportReasonInappropriate) }
-                        }
-                        Button(l10n.reportReasonOther) {
-                            Task { await submitAIReport(reason: l10n.reportReasonOther) }
-                        }
-                        Button(l10n.cancel, role: .cancel) {}
-                    } message: {
-                        Text(l10n.reportAIPostMessage)
+                    .disabled(isReportPending)
+
+                    Button(role: .destructive) {
+                        onDelete()
+                    } label: {
+                        Label(l10n.remove, systemImage: "trash")
                     }
-                    .alert(l10n.reportAIPostTitle, isPresented: $showReportConfirmation) {
-                        Button(l10n.ok, role: .cancel) {}
-                    } message: {
-                        Text(l10n.reportSubmittedToast)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, height: 32)
+                        .background(Color.primary.opacity(0.04), in: Circle())
+                }
+                .opacity(post.isComplete ? 1 : 0)
+                .allowsHitTesting(post.isComplete)
+                .accessibilityHidden(!post.isComplete)
+                .confirmationDialog(
+                    l10n.reportAIPostTitle,
+                    isPresented: $showReportDialog,
+                    titleVisibility: .visible
+                ) {
+                    Button(l10n.reportReasonInaccurate) {
+                        Task { await submitAIReport(reason: l10n.reportReasonInaccurate) }
                     }
+                    Button(l10n.reportReasonInappropriate, role: .destructive) {
+                        Task { await submitAIReport(reason: l10n.reportReasonInappropriate) }
+                    }
+                    Button(l10n.reportReasonOther) {
+                        Task { await submitAIReport(reason: l10n.reportReasonOther) }
+                    }
+                    Button(l10n.cancel, role: .cancel) {}
+                } message: {
+                    Text(l10n.reportAIPostMessage)
+                }
+                .alert(l10n.reportAIPostTitle, isPresented: $showReportConfirmation) {
+                    Button(l10n.ok, role: .cancel) {}
+                } message: {
+                    Text(l10n.reportSubmittedToast)
                 }
             }
+            .frame(width: 68, height: 32, alignment: .trailing)
+            .animation(.easeOut(duration: 0.25), value: post.isComplete)
         }
     }
 
@@ -1044,6 +1087,7 @@ struct ReelsPostCard: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(l10n.deepDiveA11y)
+            .accessibilityIdentifier("feed.action.deepDive")
 
             // Share to timeline button
             Button {
@@ -1068,6 +1112,7 @@ struct ReelsPostCard: View {
             .buttonStyle(.plain)
             .accessibilityLabel(isShared ? l10n.unsharePost : l10n.sharePost)
             .disabled(isSharePending)
+            .accessibilityIdentifier("feed.action.share")
 
             // Export Studio button
             Button {
@@ -1087,6 +1132,7 @@ struct ReelsPostCard: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(l10n.shareSheetA11y)
+            .accessibilityIdentifier("feed.action.export")
 
             Spacer()
 
@@ -1114,6 +1160,7 @@ struct ReelsPostCard: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isBookmarked ? l10n.removeBookmarkA11y : l10n.bookmarkPostA11y)
+            .accessibilityIdentifier("feed.action.bookmark")
         }
         .padding(.top, 4)
         .padding(.bottom, 6)
@@ -1142,6 +1189,7 @@ struct ReelsPostCard: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 20)
                                 .padding(.top, 8)
+                                .accessibilityIdentifier("deepdive.sheet.body")
 
                             if let source = parsed.source {
                                 PostSourceView(source: source)
@@ -1182,6 +1230,7 @@ struct ReelsPostCard: View {
                             .foregroundStyle(.secondary)
                     }
                     .accessibilityLabel(l10n.closeLabel)
+                    .accessibilityIdentifier("deepdive.sheet.closeButton")
                 }
             }
         }
@@ -1229,7 +1278,7 @@ struct ReelsPostCard: View {
                     newIntent.remove(.emphasized)
                     newIntent.remove(.stronglyEmphasized)
                     attrStr[run.range].inlinePresentationIntent = newIntent.isEmpty ? nil : newIntent
-                    attrStr[run.range].font = .body.weight(.semibold)
+                    attrStr[run.range].font = .system(size: 16.5, weight: .semibold)
                 }
             }
         }
@@ -1318,6 +1367,79 @@ struct ReelsPostCard: View {
             ErrorReporter.record(error, mapped: mapped, area: "feed_report_ai_post")
             toastMessage.wrappedValue = mapped.message(l10n: l10n)
         }
+    }
+}
+
+/// Compact nigiri sushi icon (arched topping with diagonal score cuts over a rice pillow),
+/// visually distinct from the maki roll used in `AppLogo`.
+private struct NigiriSushiIcon: View {
+    let isFilled: Bool
+    let fillColor: Color
+
+    private var activeColor: Color {
+        isFilled ? fillColor : Color.primary.opacity(0.16)
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+
+            ZStack(alignment: .top) {
+                // Arched nigiri fish slice with two diagonal score cuts punched out
+                ZStack {
+                    NigiriToppingShape()
+                        .fill(activeColor)
+
+                    Path { path in
+                        path.move(to: CGPoint(x: w * 0.37, y: h * 0.13))
+                        path.addLine(to: CGPoint(x: w * 0.44, y: h * 0.40))
+                        path.move(to: CGPoint(x: w * 0.57, y: h * 0.13))
+                        path.addLine(to: CGPoint(x: w * 0.64, y: h * 0.40))
+                    }
+                    .stroke(Color.black, style: StrokeStyle(lineWidth: max(0.9, w * 0.075), lineCap: .round))
+                    .blendMode(.destinationOut)
+                }
+                .compositingGroup()
+
+                // Compact rice pillow underneath
+                RoundedRectangle(cornerRadius: h * 0.16, style: .continuous)
+                    .fill(activeColor)
+                    .frame(width: w * 0.68, height: h * 0.31)
+                    .offset(y: h * 0.67)
+            }
+            .frame(width: w, height: h)
+        }
+        .scaleEffect(isFilled ? 1.0 : 0.94)
+        .opacity(isFilled ? 1.0 : 0.85)
+    }
+}
+
+private struct NigiriToppingShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width
+        let h = rect.height
+        var path = Path()
+        path.move(to: CGPoint(x: w * 0.04, y: h * 0.54))
+        path.addCurve(
+            to: CGPoint(x: w * 0.96, y: h * 0.54),
+            control1: CGPoint(x: w * 0.14, y: h * 0.02),
+            control2: CGPoint(x: w * 0.86, y: h * 0.02)
+        )
+        path.addQuadCurve(
+            to: CGPoint(x: w * 0.88, y: h * 0.61),
+            control: CGPoint(x: w * 0.99, y: h * 0.61)
+        )
+        path.addQuadCurve(
+            to: CGPoint(x: w * 0.12, y: h * 0.61),
+            control: CGPoint(x: w * 0.50, y: h * 0.45)
+        )
+        path.addQuadCurve(
+            to: CGPoint(x: w * 0.04, y: h * 0.54),
+            control: CGPoint(x: w * 0.01, y: h * 0.61)
+        )
+        path.closeSubpath()
+        return path
     }
 }
 
@@ -1439,6 +1561,7 @@ struct ToastModifier: ViewModifier {
                             .foregroundStyle(.primary)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("common.toast")
 
                         Spacer(minLength: 4)
 

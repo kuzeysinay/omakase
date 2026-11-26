@@ -55,6 +55,7 @@ struct DailyLimitCardView: View {
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("dailyLimit.title")
 
                 Text(l10n.limitCardSubtitle)
                     .font(.subheadline)
@@ -95,6 +96,7 @@ struct DailyLimitCardView: View {
                         .foregroundStyle(OmakaseTheme.chipActiveText)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("dailyLimit.upgradeButton")
 
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -115,6 +117,7 @@ struct DailyLimitCardView: View {
                         .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("dailyLimit.remindButton")
             }
             .padding(.top, 8)
 

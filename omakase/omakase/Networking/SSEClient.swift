@@ -82,6 +82,15 @@ actor APITokenProvider {
         return authed
     }
 
+    /// Clears any cached Firebase ID token (for example, on sign-out or account switch).
+    func invalidateCache() {
+        refreshTask?.cancel()
+        refreshTask = nil
+        cachedToken = nil
+        cachedUID = nil
+        cachedTokenExpiry = .distantPast
+    }
+
     /// Single-flight token fetch/refresh with in-memory caching (`authenticated-requests` Rule 2).
     func fetchToken(forceRefresh: Bool = false) async -> String? {
         let currentUID = await MainActor.run { Auth.auth().currentUser?.uid }

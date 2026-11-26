@@ -418,6 +418,7 @@ final class AuthService: NSObject {
             needsProfileSetup = false
             ErrorReporter.setUserID(nil)
             Task {
+                await APITokenProvider.shared.invalidateCache()
                 await Self.deleteKeychainAppleUserID()
                 await NotificationManager.shared.cancelDailyMenuReminder()
                 await PostCacheService.shared.clearAllPosts()

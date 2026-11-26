@@ -222,6 +222,7 @@ struct OmakasePaywallView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(l10n.closeLabel)
+            .accessibilityIdentifier("paywall.closeButton")
         }
     }
 
@@ -424,6 +425,7 @@ struct OmakasePaywallView: View {
             }
             .buttonStyle(OmakaseChipButtonStyle())
             .disabled(accessManager.isPurchasing || accessManager.isRestoring)
+            .accessibilityIdentifier("paywall.purchaseButton")
 
             Text(disclosureText)
                 .font(.system(size: 10))
@@ -523,6 +525,7 @@ struct OmakasePaywallView: View {
         }
         .buttonStyle(.plain)
         .padding(.top, 8)
+        .accessibilityIdentifier("paywall.plan.yearly")
     }
 
     private var monthlyPlanCard: some View {
@@ -579,6 +582,7 @@ struct OmakasePaywallView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("paywall.plan.monthly")
     }
 
     private func selectionIndicator(isSelected: Bool) -> some View {
@@ -608,6 +612,7 @@ struct OmakasePaywallView: View {
                 }
             }
             .disabled(accessManager.isPurchasing || accessManager.isRestoring)
+            .accessibilityIdentifier("paywall.restoreButton")
 
             Text("·")
                 .foregroundStyle(.tertiary)

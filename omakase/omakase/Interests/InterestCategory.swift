@@ -235,8 +235,8 @@ final class SubTopicDiscoveryStore {
     private var seenByKey: [String: [String]] = [:]
     /// Keyed by "\(categoryId)_\(lang.rawValue)" -> ready-to-serve AI-generated batch of 12 sub-topics.
     private var prefetchedByKey: [String: [String]] = [:]
-    /// Session-stable 2-item preview per category so RootBentoTile subtitles vary every launch without flickering mid-scroll.
-    private var sessionPreviewByKey: [String: String] = [:]
+    /// Session-stable 2-item preview topics per category so RootBentoTile subtitles stay in sync with the sub-topic grid.
+    private var sessionPreviewTopicsByKey: [String: [String]] = [:]
     /// Tracks active in-flight AI expansion requests per "\(categoryId)_\(lang.rawValue)" so launch pre-warm and user taps coalesce without duplicate calls.
     @ObservationIgnored private var inFlightTasksByKey: [String: Task<[String]?, Never>] = [:]
     @ObservationIgnored private var activePrewarmLanguage: AppLanguage?
@@ -249,28 +249,41 @@ final class SubTopicDiscoveryStore {
         "\(categoryId)_\(language.rawValue)"
     }
 
-    /// Returns a 2-item preview string for the root category tile, preferring pre-warmed live AI topics.
-    func rootPreview(for category: InterestCategory, language: AppLanguage) -> String {
+    /// Returns the exact 2 preview sub-topics displayed under the root category tile.
+    func rootPreviewTopics(for category: InterestCategory, language: AppLanguage) -> [String] {
         let key = storageKey(categoryId: category.id, language: language)
-        if let existing = sessionPreviewByKey[key] {
+        if let existing = sessionPreviewTopicsByKey[key], !existing.isEmpty {
             return existing
         }
-        // Prefer pre-warmed live AI sub-topics if already available on disk or memory
         if let aiBatch = prefetchedByKey[key], aiBatch.count >= 2 {
-            let preview = Array(aiBatch.prefix(2)).joined(separator: " · ")
-            sessionPreviewByKey[key] = preview
-            return preview
+            let topics = Array(aiBatch.prefix(2))
+            sessionPreviewTopicsByKey[key] = topics
+            return topics
         }
-        // Offline / initial cold-start fallback until background pre-warm completes
         let pool = category.fallbackInterests(for: language)
         let seen = Set(seenByKey[key] ?? [])
         var unseen = pool.filter { !seen.contains($0) }.shuffled()
         if unseen.count < 2 {
             unseen = pool.shuffled()
         }
-        let preview = Array(unseen.prefix(2)).joined(separator: " · ")
-        sessionPreviewByKey[key] = preview
-        return preview
+        let topics = Array(unseen.prefix(2))
+        sessionPreviewTopicsByKey[key] = topics
+        return topics
+    }
+
+    /// Returns a 2-item preview string for the root category tile, preferring pre-warmed live AI topics.
+    func rootPreview(for category: InterestCategory, language: AppLanguage) -> String {
+        rootPreviewTopics(for: category, language: language).joined(separator: " · ")
+    }
+
+    /// Updates the cached preview sub-topics for a category (e.g., after an explicit refresh).
+    func updateSessionPreview(for categoryId: String, language: AppLanguage, topics: [String]) {
+        let clean = topics
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !clean.isEmpty else { return }
+        let key = storageKey(categoryId: categoryId, language: language)
+        sessionPreviewTopicsByKey[key] = Array(clean.prefix(2))
     }
 
     /// Returns all recently seen sub-topics for a category (used as exclusion list for both local sampling and AI expansion).
@@ -304,8 +317,8 @@ final class SubTopicDiscoveryStore {
         guard !batch.isEmpty else { return }
         let key = storageKey(categoryId: categoryId, language: language)
         prefetchedByKey[key] = batch
-        if batch.count >= 2 {
-            sessionPreviewByKey[key] = Array(batch.shuffled().prefix(2)).joined(separator: " · ")
+        if sessionPreviewTopicsByKey[key] == nil, batch.count >= 2 {
+            sessionPreviewTopicsByKey[key] = Array(batch.prefix(2))
         }
         savePrefetchedToDisk()
     }

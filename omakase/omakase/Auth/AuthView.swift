@@ -184,6 +184,7 @@ struct AuthView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(l10n.backA11y)
+                    .accessibilityIdentifier("auth.topBar.backButton")
                 } else {
                     Spacer().frame(width: 40, height: 40)
                 }
@@ -297,6 +298,7 @@ struct AuthView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(OmakaseTheme.chipActiveFill)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .accessibilityIdentifier("auth.welcome.createAccountButton")
             }
 
             // Switch to Sign-In
@@ -315,6 +317,7 @@ struct AuthView: View {
                     .padding(.vertical, 8)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("auth.welcome.signInButton")
 
             // Support & Legal links accessible before sign-in (Guideline 1.5 & 5.1.1(i))
             HStack(spacing: 12) {
@@ -343,6 +346,7 @@ struct AuthView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(l10n.authStep1Title)
                     .font(.title.bold())
+                    .accessibilityIdentifier("auth.signup.step1.title")
                 Text(l10n.authStep1Subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -363,6 +367,7 @@ struct AuthView: View {
                         .submitLabel(.next)
                         .focused($focusedField, equals: .email)
                         .onSubmit { focusedField = .password }
+                        .accessibilityIdentifier("auth.signup.emailField")
 
                     if isEmailValid {
                         Image(systemName: "checkmark.circle.fill")
@@ -386,8 +391,10 @@ struct AuthView: View {
                                 TextField(l10n.authPasswordLabel, text: $password)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
+                                    .accessibilityIdentifier("auth.signup.passwordVisibleField")
                             } else {
                                 SecureField(l10n.authPasswordLabel, text: $password)
+                                    .accessibilityIdentifier("auth.signup.passwordField")
                             }
                         }
                         .textContentType(.newPassword)
@@ -405,6 +412,7 @@ struct AuthView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(l10n.passwordVisibilityA11y)
+                        .accessibilityIdentifier("auth.signup.passwordVisibilityButton")
                     }
                     .padding(.horizontal, 16)
                     .frame(height: 52)
@@ -441,6 +449,7 @@ struct AuthView: View {
             .tint(OmakaseTheme.chipActiveFill)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.top, 4)
+            .accessibilityIdentifier("auth.signup.step1.continueButton")
         }
     }
 
@@ -451,6 +460,7 @@ struct AuthView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(l10n.authStep2Title)
                     .font(.title.bold())
+                    .accessibilityIdentifier("auth.signup.step2.title")
                 Text(l10n.authStep2Subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -473,6 +483,7 @@ struct AuthView: View {
                             }
                         }
                         .onSubmit { advanceFromStep2() }
+                        .accessibilityIdentifier("auth.signup.displayNameField")
 
                     if !trimmedDisplayName.isEmpty {
                         Button {
@@ -483,6 +494,7 @@ struct AuthView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(l10n.clearTextA11y)
+                        .accessibilityIdentifier("auth.signup.clearDisplayNameButton")
                     }
                 }
                 .padding(.horizontal, 16)
@@ -512,6 +524,7 @@ struct AuthView: View {
             .buttonStyle(.borderedProminent)
             .tint(OmakaseTheme.chipActiveFill)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityIdentifier("auth.signup.step2.continueButton")
         }
     }
 
@@ -522,6 +535,7 @@ struct AuthView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(l10n.authStep3Title)
                     .font(.title.bold())
+                    .accessibilityIdentifier("auth.signup.step3.title")
                 Text(l10n.authStep3Subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -567,6 +581,8 @@ struct AuthView: View {
                                 .strokeBorder(Color.primary.opacity(0.09), lineWidth: 1)
                         )
                 )
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("auth.signup.previewCard")
             }
 
             // @username Input Field
@@ -587,6 +603,7 @@ struct AuthView: View {
                             hasManuallyEditedUsername = true
                         }
                         .onSubmit { completeSignUp() }
+                        .accessibilityIdentifier("auth.signup.usernameField")
 
                     if isCheckingUsername {
                         ProgressView()
@@ -667,6 +684,7 @@ struct AuthView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .disabled(authService.isSigningIn || isCheckingUsername || isUsernameAvailable == false)
             .padding(.top, 4)
+            .accessibilityIdentifier("auth.signup.completeButton")
         }
     }
 
@@ -677,6 +695,7 @@ struct AuthView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(l10n.authWelcomeBackTitle)
                     .font(.title.bold())
+                    .accessibilityIdentifier("auth.signin.title")
                 Text(l10n.authWelcomeBackSubtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -696,6 +715,7 @@ struct AuthView: View {
                         .submitLabel(.next)
                         .focused($focusedField, equals: .email)
                         .onSubmit { focusedField = .password }
+                        .accessibilityIdentifier("auth.signin.emailField")
                 }
                 .padding(.horizontal, 16)
                 .frame(height: 52)
@@ -711,8 +731,10 @@ struct AuthView: View {
                             TextField(l10n.authPasswordLabel, text: $password)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
+                                .accessibilityIdentifier("auth.signin.passwordVisibleField")
                         } else {
                             SecureField(l10n.authPasswordLabel, text: $password)
+                                .accessibilityIdentifier("auth.signin.passwordField")
                         }
                     }
                     .textContentType(.password)
@@ -747,6 +769,7 @@ struct AuthView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("auth.signin.forgotPasswordButton")
                 }
             }
 
@@ -772,6 +795,7 @@ struct AuthView: View {
                 .tint(OmakaseTheme.chipActiveFill)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .disabled(authService.isSigningIn)
+                .accessibilityIdentifier("auth.signin.submitButton")
 
                 HStack(spacing: 12) {
                     Rectangle()
@@ -816,6 +840,7 @@ struct AuthView: View {
         }
         .buttonStyle(.plain)
         .disabled(authService.isSigningIn)
+        .accessibilityIdentifier("auth.welcome.appleButton")
     }
 
     private var googleButton: some View {
@@ -849,6 +874,7 @@ struct AuthView: View {
         }
         .buttonStyle(.plain)
         .disabled(authService.isSigningIn)
+        .accessibilityIdentifier("auth.welcome.googleButton")
     }
 
     @ViewBuilder
@@ -865,6 +891,7 @@ struct AuthView: View {
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("auth.messageBanner.error")
                 Spacer(minLength: 4)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -891,6 +918,7 @@ struct AuthView: View {
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("auth.messageBanner.info")
                 Spacer(minLength: 4)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

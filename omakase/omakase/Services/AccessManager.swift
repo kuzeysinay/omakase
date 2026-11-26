@@ -319,30 +319,37 @@ final class AccessManager {
     }
 
     func syncAuthUser(uid: String?) async {
+        let previousUID = currentUID
         currentUID = uid
-        guard let uid, !uid.isEmpty else {
-            if isConfigured, !Purchases.shared.isAnonymous {
-                _ = try? await Purchases.shared.logOut()
-            }
+        if uid != previousUID {
             rcEntitlementActive = false
             rcExpirationDate = nil
             rcWillRenew = false
             rcIsTrial = false
             snapshot = .defaultFree
+        }
+
+        guard let uid, !uid.isEmpty else {
+            if isConfigured, !Purchases.shared.isAnonymous {
+                _ = try? await Purchases.shared.logOut()
+            }
             return
         }
 
         if isConfigured {
             do {
                 let (info, _) = try await Purchases.shared.logIn(uid)
+                guard currentUID == uid else { return }
                 _ = applyCustomerInfo(info)
             } catch {
                 let mapped = mapRevenueCatError(error)
                 ErrorReporter.record(error, mapped: mapped, area: "revenuecat_login")
             }
+            guard currentUID == uid else { return }
             await loadOfferings()
         }
 
+        guard currentUID == uid else { return }
         await refreshAccessStatus()
     }
 
@@ -445,7 +452,7 @@ final class AccessManager {
     // MARK: - Backend Quota & Sync
 
     func refreshAccessStatus() async {
-        guard currentUID != nil else { return }
+        guard let requestUID = currentUID else { return }
         var components = URLComponents(
             url: APITokenProvider.baseURL.appendingPathComponent("billing/status"),
             resolvingAgainstBaseURL: false
@@ -461,6 +468,7 @@ final class AccessManager {
 
         do {
             let (data, response) = try await performAuthedRequest(request)
+            guard currentUID == requestUID else { return }
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 return
             }
@@ -477,7 +485,7 @@ final class AccessManager {
 
     @discardableResult
     func syncWithBackend(retryOnFailure: Bool = false) async -> Bool {
-        guard currentUID != nil else { return false }
+        guard let requestUID = currentUID else { return false }
         let url = APITokenProvider.baseURL.appendingPathComponent("billing/sync")
         let body = ["timezone": TimeZone.current.identifier]
         guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return false }
@@ -492,6 +500,7 @@ final class AccessManager {
         for attempt in 1...maxAttempts {
             do {
                 let (data, response) = try await performAuthedRequest(request)
+                guard currentUID == requestUID else { return false }
                 guard let http = response as? HTTPURLResponse else { continue }
                 if (200..<300).contains(http.statusCode),
                    let decoded = try? JSONDecoder().decode(AccessSnapshot.self, from: data) {
@@ -513,7 +522,7 @@ final class AccessManager {
     }
 
     func claimShareBonus() async -> Bool {
-        guard currentUID != nil, canClaimShareBonus else { return false }
+        guard let requestUID = currentUID, canClaimShareBonus else { return false }
         let url = APITokenProvider.baseURL.appendingPathComponent("feed/reward-share")
         let body = ["timezone": TimeZone.current.identifier]
         guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return false }
@@ -526,6 +535,7 @@ final class AccessManager {
 
         do {
             let (data, response) = try await performAuthedRequest(request)
+            guard currentUID == requestUID else { return false }
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 return false
             }

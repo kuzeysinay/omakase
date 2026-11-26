@@ -89,6 +89,7 @@ struct PostSourceView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("\(l10n.postSourceLabel): \(plainAccessibilitySource)")
         .accessibilityHint(l10n.searchSourceInBrowser)
+        .accessibilityIdentifier("post.source.button")
         .popover(isPresented: $showSourcePopover, arrowEdge: .top) {
             sourcePopoverContent
         }
@@ -113,6 +114,7 @@ struct PostSourceView: View {
                 .lineSpacing(3)
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("post.source.popover.citation")
 
             if let url = browserSearchURL {
                 Button {
@@ -137,6 +139,7 @@ struct PostSourceView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("post.source.popover.searchButton")
             }
         }
         .padding(16)

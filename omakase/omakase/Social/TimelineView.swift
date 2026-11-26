@@ -92,6 +92,7 @@ struct TimelineView: View {
                             .foregroundStyle(Color.primary.opacity(0.85))
                     }
                     .accessibilityLabel(l10n.findPeople)
+                    .accessibilityIdentifier("community.findPeopleButton")
                 }
             }
             .refreshable {
@@ -178,6 +179,7 @@ struct TimelineView: View {
                         Task { await performUserSearch(query: clean) }
                     }
                 }
+                .accessibilityIdentifier("community.searchField")
 
             if isSearchingUsers {
                 ProgressView()
@@ -215,6 +217,7 @@ struct TimelineView: View {
             Text(l10n.timelineModeFollowing).tag(TimelineFeedMode.following)
         }
         .pickerStyle(.segmented)
+        .accessibilityIdentifier("community.feedModePicker")
     }
 
     // MARK: - Search Results View (Users + Filtered Posts)

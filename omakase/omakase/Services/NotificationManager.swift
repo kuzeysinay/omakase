@@ -531,27 +531,6 @@ final class NotificationManager: NSObject {
                     "categoryId": candidate.category.id,
                     "openPaywallIfOut": true
                 ]
-            } else if bucket == .classicDailyMenu {
-                let topics = Self.rotatedTopics(
-                    from: cleanInterests,
-                    seed: nil,
-                    shift: index + dayOfYear,
-                    l10n: l10n
-                )
-                let topicPair: [String]
-                if cleanInterests.isEmpty {
-                    topicPair = [topics.first, topics.second]
-                } else if cleanInterests.count == 1 {
-                    topicPair = [cleanInterests[0]]
-                } else {
-                    topicPair = [topics.first, topics.second]
-                }
-                content.title = l10n.dailyMenuNotificationTitle
-                content.body = l10n.dailyMenuNotificationBody(interests: topicPair)
-                content.userInfo = [
-                    "route": "feed",
-                    "openPaywallIfOut": true
-                ]
             } else {
                 let livePlatesCount = Self.effectivePlatesCount(for: slot.targetDate, calendar: cal)
                 let selection = Self.composeDailySlot(
@@ -1244,20 +1223,12 @@ final class NotificationManager: NSObject {
     }
 
     private enum NotificationBucket {
-        case unseenHeadline   // 50% chance
-        case richArchetype    // 40% chance
-        case classicDailyMenu // 10% chance
+        case unseenHeadline   // 70% chance
+        case richArchetype    // 30% chance
     }
 
     private static func rollNotificationBucket() -> NotificationBucket {
-        let roll = Double.random(in: 0..<1)
-        if roll < 0.50 {
-            return .unseenHeadline
-        } else if roll < 0.90 {
-            return .richArchetype
-        } else {
-            return .classicDailyMenu
-        }
+        Double.random(in: 0..<1) < 0.70 ? .unseenHeadline : .richArchetype
     }
 
     private func applyTappedNotificationUserInfo(

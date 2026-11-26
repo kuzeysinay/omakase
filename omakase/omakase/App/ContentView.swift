@@ -25,7 +25,9 @@ struct ContentView: View {
 
     var body: some View {
 #if DEBUG
-        if let screenshotConfig = ScreenshotLaunchConfig.current {
+        if let uiTestConfig = UITestLaunchConfig.current {
+            UITestHarness(config: uiTestConfig)
+        } else if let screenshotConfig = ScreenshotLaunchConfig.current {
             ScreenshotPreviewHarness(config: screenshotConfig)
         } else {
             mainRootBody
@@ -75,10 +77,25 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                withAnimation(.easeOut(duration: 0.4)) {
-                    showSplash = false
+#if DEBUG
+            if UITestLaunchConfig.shouldSkipSplash {
+                showSplash = false
+                return
+            }
+#endif
+            if NotificationManager.shared.pendingTopicRequest != nil {
+                showSplash = false
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    withAnimation(.easeOut(duration: 0.4)) {
+                        showSplash = false
+                    }
                 }
+            }
+        }
+        .onChange(of: NotificationManager.shared.pendingTopicRequest) { _, request in
+            if request != nil && showSplash {
+                showSplash = false
             }
         }
         .onChange(of: scenePhase) { _, newPhase in

@@ -67,7 +67,8 @@ struct BentoTasteBox: View {
     @State private var isChefPickArmed: Bool = false
     @State private var hasTriggeredChefPick: Bool = false
     @State private var scrollResetTask: Task<Void, Never>?
-    private let chefPickThreshold: CGFloat = 130
+    private let chefPickDeadZone: CGFloat = 38
+    private let chefPickThreshold: CGFloat = 155
 
     private var isDraggingScroll: Bool {
         isInnerScrollDragging || isOuterScrollDragging
@@ -191,6 +192,7 @@ struct BentoTasteBox: View {
                         Text(l10n.bentoCategoriesTitle)
                             .font(.system(size: 26, weight: .bold))
                             .foregroundStyle(.primary)
+                            .accessibilityIdentifier("bento.root.title")
 
                         Text(l10n.bentoCategoriesSubtitle)
                         .font(.subheadline)
@@ -238,6 +240,7 @@ struct BentoTasteBox: View {
                         .foregroundStyle(.primary)
                     }
                     .buttonStyle(BentoRefreshButtonStyle())
+                    .accessibilityIdentifier("bento.subtopics.backButton")
 
                     Spacer(minLength: 4)
 
@@ -286,6 +289,7 @@ struct BentoTasteBox: View {
                     }
                     .buttonStyle(BentoRefreshButtonStyle())
                     .disabled(isSynthesizing || isGenerating)
+                    .accessibilityIdentifier("bento.subtopics.refreshButton")
                 }
 
                 Text(
@@ -386,6 +390,7 @@ struct BentoTasteBox: View {
                 }
                 .padding(.horizontal, 18)
                 .padding(.vertical, 4)
+                .background(ImmediateTouchScrollConfigurator().allowsHitTesting(false))
                 .background(
                     GeometryReader { proxy in
                         let frame = proxy.frame(in: .named("bentoGridScroll-\(id)"))
@@ -462,6 +467,7 @@ struct BentoTasteBox: View {
                 let tileIndex = isFilmCategory ? (index + 1) : index
                 SubInterestBentoTile(
                     title: topic,
+                    identifier: "bento.subtopic.\(index)",
                     isRevealed: tileIndex < revealedTilesCount,
                     isDisabled: isGenerationDisabled,
                     isRefreshing: isRefreshingSubInterests,
@@ -526,7 +532,7 @@ struct BentoTasteBox: View {
         if !isChefPickArmed && overscroll >= chefPickThreshold {
             isChefPickArmed = true
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        } else if isChefPickArmed && overscroll < chefPickThreshold * 0.75 {
+        } else if isChefPickArmed && overscroll < chefPickThreshold * 0.78 {
             isChefPickArmed = false
         }
     }
@@ -595,8 +601,9 @@ struct BentoTasteBox: View {
 
     private var chefPickOverscrollFooter: some View {
         let visibleOverscroll = (isDraggingScroll || isChefPickArmed) ? effectiveBottomOverscroll : 0
-        let progress = min(1, max(0, visibleOverscroll / chefPickThreshold))
         let isReady = isChefPickArmed
+        let rawProgress = min(1, max(0, (visibleOverscroll - chefPickDeadZone) / max(1, chefPickThreshold - chefPickDeadZone)))
+        let progress: CGFloat = isReady ? 1.0 : pow(rawProgress, 1.65)
 
         return Button {
             guard !isGenerationDisabled else { return }
@@ -722,6 +729,7 @@ struct BentoTasteBox: View {
         }
         .buttonStyle(OmakaseChipButtonStyle())
         .disabled(isGenerationDisabled)
+        .accessibilityIdentifier("bento.chefPickBar")
     }
 
     // MARK: - Active Interests Ribbon (Large Tappable Pills)
@@ -811,6 +819,9 @@ struct BentoTasteBox: View {
     private func loadCategory(_ category: InterestCategory, refresh: Bool = false) {
         let taskId = UUID()
         synthesisTaskId = taskId
+        let pinnedPreviewTopics = refresh
+            ? []
+            : SubTopicDiscoveryStore.shared.rootPreviewTopics(for: category, language: appLanguage)
 
         if refresh {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -818,50 +829,70 @@ struct BentoTasteBox: View {
 
         // 1. Instant 0ms Fast Path: serve pre-warmed or prefetched live AI batch from memory or disk
         if let readyMemoryBatch = prefetchedSubInterestsByCategory.removeValue(forKey: category.id), !readyMemoryBatch.isEmpty {
-            SubTopicDiscoveryStore.shared.recordSeen(readyMemoryBatch, for: category.id, language: appLanguage)
-            cachedSubInterestsByCategory[category.id] = readyMemoryBatch
+            let resolvedBatch = refresh
+                ? readyMemoryBatch
+                : mergePreviewTopics(pinnedPreviewTopics, into: readyMemoryBatch)
+            if refresh {
+                SubTopicDiscoveryStore.shared.updateSessionPreview(
+                    for: category.id,
+                    language: appLanguage,
+                    topics: resolvedBatch
+                )
+            }
+            SubTopicDiscoveryStore.shared.recordSeen(resolvedBatch, for: category.id, language: appLanguage)
+            cachedSubInterestsByCategory[category.id] = resolvedBatch
             if refresh {
                 withAnimation(.easeInOut(duration: 0.14)) {
-                    currentSubInterests = readyMemoryBatch
+                    currentSubInterests = resolvedBatch
                     revealedTilesCount = 0
                     isRefreshingSubInterests = false
                 }
-                animateStaggeredTiles(total: readyMemoryBatch.count)
+                animateStaggeredTiles(total: resolvedBatch.count)
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } else {
-                currentSubInterests = readyMemoryBatch
-                revealedTilesCount = readyMemoryBatch.count
+                currentSubInterests = resolvedBatch
+                revealedTilesCount = resolvedBatch.count
                 isRefreshingSubInterests = false
             }
             isSynthesizing = false
             SubTopicDiscoveryStore.shared.replenishInBackground(
                 for: category,
                 language: appLanguage,
-                additionalExcludes: allInterests + readyMemoryBatch
+                additionalExcludes: allInterests + resolvedBatch
             )
             return
         }
 
         if let readyDiskBatch = SubTopicDiscoveryStore.shared.consumePrefetchedBatch(for: category.id, language: appLanguage), !readyDiskBatch.isEmpty {
-            cachedSubInterestsByCategory[category.id] = readyDiskBatch
+            let resolvedBatch = refresh
+                ? readyDiskBatch
+                : mergePreviewTopics(pinnedPreviewTopics, into: readyDiskBatch)
+            if refresh {
+                SubTopicDiscoveryStore.shared.updateSessionPreview(
+                    for: category.id,
+                    language: appLanguage,
+                    topics: resolvedBatch
+                )
+            }
+            cachedSubInterestsByCategory[category.id] = resolvedBatch
             if refresh {
                 withAnimation(.easeInOut(duration: 0.14)) {
-                    currentSubInterests = readyDiskBatch
+                    currentSubInterests = resolvedBatch
                     revealedTilesCount = 0
                     isRefreshingSubInterests = false
                 }
-                animateStaggeredTiles(total: readyDiskBatch.count)
+                animateStaggeredTiles(total: resolvedBatch.count)
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } else {
-                currentSubInterests = readyDiskBatch
-                revealedTilesCount = readyDiskBatch.count
+                currentSubInterests = resolvedBatch
+                revealedTilesCount = resolvedBatch.count
                 isRefreshingSubInterests = false
             }
             isSynthesizing = false
             SubTopicDiscoveryStore.shared.replenishInBackground(
                 for: category,
                 language: appLanguage,
-                additionalExcludes: allInterests + readyDiskBatch
+                additionalExcludes: allInterests + resolvedBatch
             )
             return
         }
@@ -883,20 +914,30 @@ struct BentoTasteBox: View {
             )
             guard synthesisTaskId == taskId else { return }
 
-            let resolvedTopics: [String]
+            let rawTopics: [String]
             if let liveBatch, !liveBatch.isEmpty {
-                resolvedTopics = liveBatch
+                rawTopics = liveBatch
             } else {
                 // Offline-only backup: use local 432 curated pool only when network/API is unreachable
-                resolvedTopics = SubTopicDiscoveryStore.shared.drawUnseenCuratedBatch(
+                rawTopics = SubTopicDiscoveryStore.shared.drawUnseenCuratedBatch(
                     for: category,
                     language: appLanguage,
                     additionalExcludes: excludeList,
                     count: 12
                 )
             }
+            let resolvedTopics = refresh
+                ? rawTopics
+                : mergePreviewTopics(pinnedPreviewTopics, into: rawTopics)
 
             await MainActor.run {
+                if refresh {
+                    SubTopicDiscoveryStore.shared.updateSessionPreview(
+                        for: category.id,
+                        language: appLanguage,
+                        topics: resolvedTopics
+                    )
+                }
                 cachedSubInterestsByCategory[category.id] = resolvedTopics
                 withAnimation(.easeInOut(duration: 0.15)) {
                     currentSubInterests = resolvedTopics
@@ -908,6 +949,22 @@ struct BentoTasteBox: View {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
         }
+    }
+
+    private func mergePreviewTopics(_ previewTopics: [String], into batch: [String], limit: Int = 12) -> [String] {
+        guard !previewTopics.isEmpty else { return Array(batch.prefix(limit)) }
+        var merged: [String] = []
+        var seenLower = Set<String>()
+        for topic in previewTopics + batch {
+            let clean = topic.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !clean.isEmpty else { continue }
+            let lower = clean.lowercased()
+            if seenLower.insert(lower).inserted {
+                merged.append(clean)
+                if merged.count >= limit { break }
+            }
+        }
+        return merged
     }
 
     private func buildSubInterestBatch(
@@ -1046,29 +1103,29 @@ private struct RootBentoTile: View {
                 HStack(alignment: .center) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .fill(OmakaseTheme.wash)
+                            .fill(isPressed ? OmakaseTheme.ink.opacity(0.14) : OmakaseTheme.wash)
                             .frame(width: 36, height: 36)
 
                         Image(systemName: category.iconName)
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(isDisabled ? Color.secondary.opacity(0.5) : OmakaseTheme.ink)
                     }
-                    .scaleEffect(isPressed ? 1.08 : 1.0)
-                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+                    .scaleEffect(isPressed ? 1.06 : 1.0)
+                    .animation(isPressed ? .easeOut(duration: 0.16) : .easeOut(duration: 0.28), value: isPressed)
 
                     Spacer()
 
                     ZStack {
                         Circle()
-                            .fill(Color.primary.opacity(0.05))
+                            .fill(isPressed ? OmakaseTheme.ink.opacity(0.13) : Color.primary.opacity(0.05))
                             .frame(width: 26, height: 26)
 
                         Image(systemName: "chevron.right")
                             .font(.system(size: 10.5, weight: .bold))
                             .foregroundStyle(isPressed ? Color.primary : Color.secondary)
                     }
-                    .offset(x: isPressed ? 2.5 : 0)
-                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+                    .offset(x: isPressed ? 2.0 : 0)
+                    .animation(isPressed ? .easeOut(duration: 0.16) : .easeOut(duration: 0.28), value: isPressed)
                 }
 
                 Spacer(minLength: 4)
@@ -1092,28 +1149,29 @@ private struct RootBentoTile: View {
             .frame(maxWidth: .infinity, minHeight: 100, maxHeight: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
+                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.11) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
                     .shadow(
-                        color: .black.opacity(isPressed ? 0.01 : (isDisabled ? 0.01 : 0.04)),
-                        radius: isPressed ? 1 : 4,
-                        y: isPressed ? 0.5 : 2
+                        color: .black.opacity(isPressed ? 0.03 : (isDisabled ? 0.01 : 0.04)),
+                        radius: isPressed ? 4 : 4,
+                        y: isPressed ? 1 : 2
                     )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .strokeBorder(
-                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(isDisabled ? 0.06 : 0.13),
-                        lineWidth: isPressed ? 1.6 : 1
+                        isPressed ? OmakaseTheme.ink.opacity(0.42) : Color.primary.opacity(isDisabled ? 0.06 : 0.13),
+                        lineWidth: isPressed ? 1.4 : 1
                     )
             )
-            .offset(y: isPressed ? 1.5 : 0)
-            .scaleEffect(isPressed ? 0.96 : 1.0)
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .scaleEffect(isPressed ? 0.968 : 1.0)
             .opacity(isDisabled ? 0.45 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.68), value: isPressed)
+            .animation(isPressed ? .easeOut(duration: 0.16) : .easeOut(duration: 0.28), value: isPressed)
             .animation(.easeInOut(duration: 0.2), value: isDisabled)
         }
         .buttonStyle(BentoPressButtonStyle(isPressed: $isPressed))
         .disabled(isDisabled)
+        .accessibilityIdentifier("bento.category.\(category.id)")
     }
 }
 
@@ -1121,6 +1179,7 @@ private struct RootBentoTile: View {
 
 private struct SubInterestBentoTile: View {
     let title: String
+    let identifier: String
     let isRevealed: Bool
     let isDisabled: Bool
     let isRefreshing: Bool
@@ -1139,22 +1198,22 @@ private struct SubInterestBentoTile: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 11.5, weight: .semibold))
                         .foregroundStyle(isDisabled ? Color.secondary.opacity(0.5) : OmakaseTheme.ink.opacity(0.85))
-                        .scaleEffect(isPressed ? 1.12 : 1.0)
-                        .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+                        .scaleEffect(isPressed ? 1.08 : 1.0)
+                        .animation(isPressed ? .easeOut(duration: 0.16) : .easeOut(duration: 0.28), value: isPressed)
 
                     Spacer()
 
                     ZStack {
                         Circle()
-                            .fill(Color.primary.opacity(0.05))
+                            .fill(isPressed ? OmakaseTheme.ink.opacity(0.13) : Color.primary.opacity(0.05))
                             .frame(width: 22, height: 22)
 
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(isDisabled ? Color.secondary.opacity(0.3) : Color.secondary)
+                            .foregroundStyle(isDisabled ? Color.secondary.opacity(0.3) : (isPressed ? Color.primary : Color.secondary))
                     }
                     .offset(x: isPressed ? 1.5 : 0, y: isPressed ? -1.5 : 0)
-                    .animation(.spring(response: 0.18, dampingFraction: 0.65), value: isPressed)
+                    .animation(isPressed ? .easeOut(duration: 0.16) : .easeOut(duration: 0.28), value: isPressed)
                 }
 
                 Spacer(minLength: 0)
@@ -1173,45 +1232,100 @@ private struct SubInterestBentoTile: View {
             .frame(maxWidth: .infinity, minHeight: 98, maxHeight: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.08) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
+                    .fill(isPressed ? OmakaseTheme.ink.opacity(0.11) : Color(uiColor: .secondarySystemBackground).opacity(0.65))
                     .shadow(
-                        color: .black.opacity(isPressed ? 0.01 : 0.03),
-                        radius: isPressed ? 1 : 3,
-                        y: isPressed ? 0.5 : 1.5
+                        color: .black.opacity(isPressed ? 0.03 : 0.03),
+                        radius: isPressed ? 4 : 3,
+                        y: isPressed ? 1 : 1.5
                     )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(
-                        isPressed ? OmakaseTheme.ink.opacity(0.55) : Color.primary.opacity(isDisabled ? 0.06 : 0.13),
-                        lineWidth: isPressed ? 1.5 : 1
+                        isPressed ? OmakaseTheme.ink.opacity(0.42) : Color.primary.opacity(isDisabled ? 0.06 : 0.13),
+                        lineWidth: isPressed ? 1.4 : 1
                     )
             )
-            .offset(y: isPressed ? 1.5 : 0)
-            .scaleEffect(isRefreshing ? 0.96 : (isRevealed ? (isPressed ? 0.96 : 1.0) : 0.78))
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .scaleEffect(isRefreshing ? 0.96 : (isRevealed ? (isPressed ? 0.968 : 1.0) : 0.78))
             .opacity(isRefreshing ? 0.45 : (isRevealed ? (isDisabled ? 0.45 : 1.0) : 0.0))
             .animation(.spring(response: 0.32, dampingFraction: 0.75), value: isRevealed)
-            .animation(.spring(response: 0.2, dampingFraction: 0.68), value: isPressed)
+            .animation(isPressed ? .easeOut(duration: 0.16) : .easeOut(duration: 0.28), value: isPressed)
             .animation(.easeInOut(duration: 0.22), value: isRefreshing)
         }
         .buttonStyle(BentoPressButtonStyle(isPressed: $isPressed))
         .disabled(isDisabled || isRefreshing)
+        .accessibilityIdentifier(identifier)
     }
 }
 
-// MARK: - Bento Press Button Style
+// MARK: - Bento Press Button Style (Minimum Visible Dwell + Smooth Release)
 
 private struct BentoPressButtonStyle: ButtonStyle {
     @Binding var isPressed: Bool
+    @State private var pressStartedAt: Date = .distantPast
+    @State private var releaseTask: Task<Void, Never>?
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .onChange(of: configuration.isPressed) { _, pressed in
-                isPressed = pressed
                 if pressed {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    releaseTask?.cancel()
+                    releaseTask = nil
+                    pressStartedAt = Date()
+                    isPressed = true
+                } else {
+                    let elapsed = Date().timeIntervalSince(pressStartedAt)
+                    let minDwell: TimeInterval = 0.18
+                    let remaining = max(0, minDwell - elapsed)
+                    if remaining <= 0.01 {
+                        isPressed = false
+                    } else {
+                        releaseTask?.cancel()
+                        releaseTask = Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(Int(remaining * 1000)))
+                            guard !Task.isCancelled else { return }
+                            isPressed = false
+                            releaseTask = nil
+                        }
+                    }
                 }
             }
+    }
+}
+
+// MARK: - Immediate Touch All-Layers UIScrollView Configurator
+
+private struct ImmediateTouchScrollConfigurator: UIViewRepresentable {
+    func makeUIView(context: Context) -> ScrollConfigProbeView {
+        ScrollConfigProbeView()
+    }
+
+    func updateUIView(_ uiView: ScrollConfigProbeView, context: Context) {
+        uiView.configureAllEnclosingScrollViews()
+    }
+
+    final class ScrollConfigProbeView: UIView {
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            configureAllEnclosingScrollViews()
+            DispatchQueue.main.async { [weak self] in
+                self?.configureAllEnclosingScrollViews()
+            }
+        }
+
+        func configureAllEnclosingScrollViews() {
+            var ancestor: UIView? = superview
+            while let current = ancestor {
+                if let scrollView = current as? UIScrollView {
+                    if scrollView.delaysContentTouches {
+                        scrollView.delaysContentTouches = false
+                    }
+                    scrollView.canCancelContentTouches = true
+                }
+                ancestor = current.superview
+            }
+        }
     }
 }
 
@@ -1258,13 +1372,15 @@ private struct LetterboxdBentoTile: View {
                 HStack(alignment: .center, spacing: 6) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color(hex: 0x00E054).opacity(0.18))
+                            .fill(Color(hex: 0x00E054).opacity(isPressed ? 0.22 : 0.18))
                             .frame(width: 32, height: 32)
 
                         Image(systemName: isConnected ? "popcorn.fill" : "film.stack.fill")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color(hex: 0x00E054))
                     }
+                    .scaleEffect(isPressed ? 1.06 : 1.0)
+                    .animation(isPressed ? .easeOut(duration: 0.16) : .easeOut(duration: 0.28), value: isPressed)
 
                     HStack(spacing: 4) {
                         Text("LETTERBOXD")
@@ -1326,9 +1442,9 @@ private struct LetterboxdBentoTile: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color(hex: 0x14181C))
                     .shadow(
-                        color: Color(hex: 0x00E054).opacity(isPressed ? 0.25 : 0.12),
-                        radius: isPressed ? 1 : 4,
-                        y: isPressed ? 0.5 : 1.5
+                        color: Color(hex: 0x00E054).opacity(isPressed ? 0.22 : 0.12),
+                        radius: isPressed ? 5 : 4,
+                        y: isPressed ? 1 : 1.5
                     )
             )
             .overlay(
@@ -1336,22 +1452,23 @@ private struct LetterboxdBentoTile: View {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color(hex: 0x00E054).opacity(isPressed ? 0.95 : 0.65),
-                                Color(hex: 0x00A83E).opacity(isPressed ? 0.8 : 0.4)
+                                Color(hex: 0x00E054).opacity(isPressed ? 0.85 : 0.65),
+                                Color(hex: 0x00A83E).opacity(isPressed ? 0.70 : 0.4)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: isPressed ? 1.5 : 1.1
+                        lineWidth: isPressed ? 1.4 : 1.1
                     )
             )
-            .offset(y: isPressed ? 1.5 : 0)
-            .scaleEffect(isPressed ? 0.96 : 1.0)
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .scaleEffect(isPressed ? 0.968 : 1.0)
             .opacity(isDisabled ? 0.5 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.68), value: isPressed)
+            .animation(isPressed ? .easeOut(duration: 0.16) : .easeOut(duration: 0.28), value: isPressed)
         }
         .buttonStyle(BentoPressButtonStyle(isPressed: $isPressed))
         .disabled(isDisabled)
+        .accessibilityIdentifier("bento.letterboxdTile")
         .contextMenu {
             Button {
                 onEditUsername()

@@ -54,6 +54,7 @@ struct ExportPostSheet: View {
                         .shadow(color: Color.black.opacity(0.18), radius: 10, y: 4)
                         .padding(.top, 8)
                         .transition(.move(edge: .top).combined(with: .opacity))
+                        .accessibilityIdentifier("export.toast")
                 }
             }
             .animation(.spring(response: 0.32, dampingFraction: 0.85), value: feedbackToast)
@@ -81,6 +82,7 @@ struct ExportPostSheet: View {
                             .foregroundStyle(.secondary)
                     }
                     .accessibilityLabel(l10n.closeLabel)
+                    .accessibilityIdentifier("export.sheet.closeButton")
                 }
             }
         }
@@ -181,6 +183,7 @@ struct ExportPostSheet: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(OmakaseChipButtonStyle())
+                    .accessibilityIdentifier("export.ratio.\(ratio.rawValue)")
                 }
             }
             .padding(3)
@@ -197,6 +200,7 @@ struct ExportPostSheet: View {
                         toggleChip(
                             title: l10n.exportToggleSource,
                             systemImage: "book.closed",
+                            identifier: "export.toggle.source",
                             isOn: $config.showSource
                         )
                     }
@@ -205,6 +209,7 @@ struct ExportPostSheet: View {
                         toggleChip(
                             title: l10n.exportToggleTags,
                             systemImage: "tag",
+                            identifier: "export.toggle.tags",
                             isOn: $config.showTags
                         )
                     }
@@ -212,6 +217,7 @@ struct ExportPostSheet: View {
                     toggleChip(
                         title: l10n.exportToggleMotif,
                         systemImage: "sparkles",
+                        identifier: "export.toggle.motif",
                         isOn: $config.showMotif
                     )
                 }
@@ -258,13 +264,14 @@ struct ExportPostSheet: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(theme.localizedTitle(l10n: l10n))
+                        .accessibilityIdentifier("export.theme.\(theme.rawValue)")
                     }
                 }
             }
         }
     }
 
-    private func toggleChip(title: String, systemImage: String, isOn: Binding<Bool>) -> some View {
+    private func toggleChip(title: String, systemImage: String, identifier: String, isOn: Binding<Bool>) -> some View {
         Button {
             UISelectionFeedbackGenerator().selectionChanged()
             withAnimation(.easeOut(duration: 0.18)) {
@@ -293,6 +300,7 @@ struct ExportPostSheet: View {
             )
         }
         .buttonStyle(OmakaseChipButtonStyle())
+        .accessibilityIdentifier(identifier)
     }
 
     // MARK: - getomakase.app Link Bar
@@ -340,6 +348,7 @@ struct ExportPostSheet: View {
                 .background(OmakaseTheme.chipActiveFill, in: Capsule())
             }
             .buttonStyle(OmakaseChipButtonStyle())
+            .accessibilityIdentifier("export.linkBar.copyButton")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)

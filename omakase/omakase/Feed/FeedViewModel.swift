@@ -793,7 +793,9 @@ final class FeedViewModel {
     private func presentError(_ mapped: OmakaseError) {
         if case .quotaExceeded(let kind, let resetsAt) = mapped {
             AccessManager.shared.applyQuotaExceeded(kind: kind, resetsAt: resetsAt)
-            if kind == .deepDive {
+            if kind == .plate {
+                requestedPaywallSource = .plateLimit
+            } else if kind == .deepDive {
                 requestedPaywallSource = .deepDiveLimit
             } else if kind == .letterboxd {
                 requestedPaywallSource = .letterboxdLimit
@@ -811,9 +813,9 @@ final class FeedViewModel {
     private func setTitle(_ title: String, for postID: UUID) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let post = posts.first(where: { $0.id == postID }) else { return }
-        // Accept model title while generating an initial plate (including pre-filled notification topics),
-        // while keeping the existing title intact during Deep Dive expansions.
-        if post.deepDiveText == nil || post.title.isEmpty || post.title == "Diving deeper..." {
+        // Allow replacing an empty/placeholder title anytime, or a pre-filled notification topic
+        // only before body text has rendered on screen so header height never shifts mid-stream.
+        if post.title.isEmpty || post.title == "Diving deeper..." || (post.deepDiveText == nil && post.text.isEmpty) {
             post.title = trimmed
         }
     }

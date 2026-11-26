@@ -292,7 +292,7 @@ def build_access_snapshot(
     day_key, resolved_tz, resets_at = resolve_user_day(tz_name)
     entitlement = get_entitlement(uid)
     usage = get_usage(uid, day_key)
-    if not entitlement["is_pro"]:
+    if not entitlement["is_pro"] and uid not in USER_DAILY_PLATES_OVERRIDES:
         device_hash = _hash_device_id(device_id)
         if device_hash:
             usage = _merge_usage(usage, get_device_usage(device_hash, day_key))
@@ -385,7 +385,7 @@ def _record_usage_sync(
     device_hash = _hash_device_id(device_id)
     device_ref = (
         db.collection("device_usage").document(f"{device_hash}_{day_key}")
-        if (device_hash and not entitlement["is_pro"])
+        if (device_hash and not entitlement["is_pro"] and uid not in USER_DAILY_PLATES_OVERRIDES)
         else None
     )
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -484,7 +484,7 @@ def _claim_share_bonus_sync(
     device_hash = _hash_device_id(device_id)
     device_ref = (
         db.collection("device_usage").document(f"{device_hash}_{day_key}")
-        if device_hash
+        if (device_hash and uid not in USER_DAILY_PLATES_OVERRIDES)
         else None
     )
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")

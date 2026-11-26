@@ -497,6 +497,50 @@ class BillingAndQuotaTests(unittest.TestCase):
         calls = asyncio.run(_run())
         self.assertEqual(calls, 0)
 
+    def test_device_quota_prevents_free_account_switching_abuse(self) -> None:
+        shared_device = "shared-device-123456"
+        owner_device = "owner-device-789012"
+        with patch.object(access_service, "get_firestore_client", return_value=self.fake_db):
+            for _ in range(3):
+                access_service._record_usage_sync(
+                    "free-a",
+                    "plate",
+                    "Europe/Istanbul",
+                    device_id=shared_device,
+                )
+
+            snapshot_a = access_service.build_access_snapshot(
+                "free-a",
+                "Europe/Istanbul",
+                device_id=shared_device,
+            )
+            snapshot_b = access_service.build_access_snapshot(
+                "free-b",
+                "Europe/Istanbul",
+                device_id=shared_device,
+            )
+
+            for _ in range(3):
+                access_service._record_usage_sync(
+                    "Kp6J1wDQd5huj8FRrp3Vb3EuJ333",
+                    "plate",
+                    "Europe/Istanbul",
+                    device_id=owner_device,
+                )
+
+            snapshot_free_after_owner = access_service.build_access_snapshot(
+                "free-c",
+                "Europe/Istanbul",
+                device_id=owner_device,
+            )
+
+        self.assertEqual(snapshot_a["plates_used"], 3)
+        self.assertEqual(snapshot_a["plates_remaining"], 0)
+        self.assertEqual(snapshot_b["plates_used"], 3)
+        self.assertEqual(snapshot_b["plates_remaining"], 0)
+        self.assertEqual(snapshot_free_after_owner["plates_used"], 0)
+        self.assertEqual(snapshot_free_after_owner["plates_remaining"], 3)
+
 
 if __name__ == "__main__":
     unittest.main()

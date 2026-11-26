@@ -43,6 +43,7 @@ struct MainTabView: View {
                 .tag(AppTab.feed)
                 .tabItem {
                     Label(l10n.tabMyFeed, systemImage: "fork.knife")
+                        .accessibilityIdentifier("tab.feed")
                 }
 
             TimelineView(
@@ -52,12 +53,14 @@ struct MainTabView: View {
             .tag(AppTab.community)
             .tabItem {
                 Label(l10n.tabTimeline, systemImage: "person.2.fill")
+                    .accessibilityIdentifier("tab.community")
             }
 
             ProfileTabView(authService: authService)
                 .tag(AppTab.profile)
                 .tabItem {
                     Label(l10n.tabProfile, systemImage: "person.crop.circle")
+                        .accessibilityIdentifier("tab.profile")
                 }
         }
         .tint(OmakaseTheme.ink)
