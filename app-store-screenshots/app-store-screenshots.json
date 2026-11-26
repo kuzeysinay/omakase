@@ -118,17 +118,17 @@
           "tr": "tek dokunuşta fun-fact.\n\npostu ai anlık üretir.\n\nkaynağını da verir.",
           "en": "fun-facts in one tap.\n\nwritten live by ai.\n\nalways with its source.",
           "ja": "ひと触れでfun-fact。\nAIが即座に執筆。\n出典も明記。",
-          "de": "Fun-Facts mit einem Tipp.\nLive von KI verfasst.\nImmer mit Quelle.",
-          "fr": "Des fun-facts en un geste.\nRédigé en direct par l'IA.\nToujours avec sa source.",
-          "es": "Fun-facts en un toque.\nCreado al instante por IA.\nSiempre con su fuente.",
-          "ko": "한 번의 터치로 fun-fact.\nAI가 즉시 작성합니다.\n출처도 함께 제공합니다."
+          "de": "Fun-Facts mit einem Tipp.\n\nLive von KI verfasst.\n\nImmer mit Quelle.",
+          "fr": "Des fun-facts en un geste.\n\nRédigé en direct par l'IA.\n\nToujours avec sa source.",
+          "es": "Fun-facts en un toque.\n\nCreado al instante por IA.\n\nSiempre con su fuente.",
+          "ko": "한 번의 터치로 fun-fact.\n\nAI가 즉시 작성합니다.\n\n출처도 함께 제공합니다."
         },
         "screenshot": "/screenshots/apple/iphone/{locale}/02.png",
         "transforms": {
           "caption": {
-            "x": -22.489637235792316,
-            "y": 325.40643050721644,
-            "width": 1361,
+            "x": 45.51036284006341,
+            "y": 325.40641508896226,
+            "width": 1233,
             "height": 675,
             "rotation": 0,
             "zIndex": 4
@@ -144,7 +144,7 @@
         },
         "hideLabel": true,
         "typography": {
-          "headlineScale": 0.9
+          "headlineScale": 0.85
         }
       },
       {
@@ -163,18 +163,18 @@
           "tr": "evet chatbotlar öğretici.\n\nama senin yazmanı bekliyorlar.\n\nomakase beklemez.",
           "en": "yes, ai chatbots teach well,\n\nbut they wait for you to ask.\n\nomakase does not.",
           "ja": "AIチャットは賢い。\n\nでも、聞くまで答えない。\n\nomakaseは待たない。",
-          "de": "Klar, KI-Chats lehren viel —\n\naber sie warten, bis du fragst.\n\nomakase wartet nicht.",
-          "fr": "Oui, les chatbots IA instruisent —\n\nmais ils attendent ta question.\n\nomakase n'attend pas.",
-          "es": "Sí, los chatbots de IA enseñan —\n\npero esperan a que preguntes.\n\nomakase no espera.",
+          "de": "Klar, KI-Chats lehren viel \n\naber sie warten, bis du fragst.\n\nomakase wartet nicht.",
+          "fr": "Oui, les chatbots IA instruisent \n\nmais ils attendent ta question.\n\nomakase n'attend pas.",
+          "es": "Sí, los chatbots de IA enseñan \n\npero esperan a que preguntes.\n\nomakase no espera.",
           "ko": "맞아요, AI 챗봇은 똑똑하죠.\n\n하지만 당신이 묻길 기다려요.\n\nomakase는 기다리지 않아요."
         },
         "screenshot": "/screenshots/apple/iphone/{locale}/06.png",
         "transforms": {
           "caption": {
-            "x": 25.600058402540526,
-            "y": 258.1200042582972,
-            "width": 1277,
-            "height": 803,
+            "x": 49.600078302958536,
+            "y": 202.12001089184818,
+            "width": 1253,
+            "height": 859,
             "rotation": 0,
             "zIndex": 4
           }
@@ -216,10 +216,10 @@
             "zIndex": 3
           },
           "caption": {
-            "x": 105.59993105711465,
-            "y": 141.4400014623862,
-            "width": 1109,
-            "height": 891,
+            "x": 33.59993006725017,
+            "y": 245.4400001798999,
+            "width": 1253,
+            "height": 787,
             "rotation": 0,
             "zIndex": 4
           }
@@ -267,10 +267,10 @@
             "zIndex": 5
           },
           "caption": {
-            "x": 13.599889914217783,
-            "y": 97.44001032254832,
+            "x": 13.599819608799407,
+            "y": 169.44001515294366,
             "width": 1305,
-            "height": 935,
+            "height": 863,
             "rotation": 0,
             "zIndex": 4
           }
@@ -309,10 +309,10 @@
         "screenshot": "/screenshots/apple/iphone/{locale}/05.png",
         "transforms": {
           "caption": {
-            "x": 9.655892103275619,
-            "y": 165.27216955078052,
+            "x": 9.655870150602823,
+            "y": 149.27215850887285,
             "width": 1305,
-            "height": 807,
+            "height": 823,
             "rotation": 0,
             "zIndex": 4
           },
@@ -354,10 +354,10 @@
         "screenshot": "/screenshots/apple/iphone/{locale}/07.png",
         "transforms": {
           "caption": {
-            "x": 13.6,
-            "y": 165,
+            "x": 13.599980579414478,
+            "y": 144.9999957649944,
             "width": 1293,
-            "height": 800,
+            "height": 820,
             "rotation": 0,
             "zIndex": 4
           },
@@ -399,10 +399,10 @@
         "screenshot": "/screenshots/apple/iphone/{locale}/08.png",
         "transforms": {
           "caption": {
-            "x": 13.6,
-            "y": 165,
+            "x": 13.60004208276041,
+            "y": 128.9999923386833,
             "width": 1293,
-            "height": 800,
+            "height": 836,
             "rotation": 0,
             "zIndex": 4
           },

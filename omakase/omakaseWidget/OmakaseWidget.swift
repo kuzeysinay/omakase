@@ -107,7 +107,7 @@ struct OmakaseWidgetEntryView: View {
             case .systemLarge:
                 largeLayout
                     .widgetURL(URL(string: "omakase://feed")!)
-            @unknown default:
+            default:
                 mediumLayout
                     .widgetURL(URL(string: "omakase://feed")!)
             }

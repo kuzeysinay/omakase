@@ -43,7 +43,9 @@ final class TimelineViewModel {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.filterOutBlockedAuthors()
+            Task { @MainActor [weak self] in
+                self?.filterOutBlockedAuthors()
+            }
         }
     }
 
