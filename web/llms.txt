@@ -29,4 +29,4 @@
 - [Terms of Use](https://getomakase.app/terms.html): Full bilingual (TR/EN) terms, UGC moderation policy, and subscription terms.
 
 ## Contact
-- Support & Legal: destek@getomakase.app
+- Support & Legal: support@getomakase.app

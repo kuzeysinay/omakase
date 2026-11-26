@@ -517,7 +517,7 @@ struct TimelineView: View {
                     targetUid: user.id,
                     targetDisplayName: user.displayName,
                     currentUid: uid,
-                    currentDisplayName: authService.displayName ?? "Omakase User"
+                    currentDisplayName: authService.displayName ?? "omakase User"
                 )
                 followingSet.insert(user.id)
                 NotificationManager.shared.notifySocialEvent(
@@ -547,7 +547,7 @@ struct TimelineView: View {
                 targetUid: targetUid,
                 targetDisplayName: post.authorName,
                 currentUid: uid,
-                currentDisplayName: authService.displayName ?? "Omakase User"
+                currentDisplayName: authService.displayName ?? "omakase User"
             )
             followingSet.insert(targetUid)
             NotificationManager.shared.notifySocialEvent(

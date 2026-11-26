@@ -107,7 +107,7 @@ struct OmakasePaywallView: View {
         case .plateLimit: return l10n.proEyebrowPlateLimit
         case .deepDiveLimit: return l10n.proEyebrowDeepDiveLimit
         case .letterboxdLimit: return l10n.proEyebrowLetterboxdLimit
-        case .firstPlateSoft, .profile: return "OMAKASE PRO"
+        case .firstPlateSoft, .profile: return "omakase PRO"
         }
     }
 
@@ -291,7 +291,7 @@ struct OmakasePaywallView: View {
         VStack(spacing: 0) {
             // Column headers
             HStack(spacing: 6) {
-                Text("OMAKASE")
+                Text("omakase")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .tracking(1.1)
                     .foregroundStyle(.secondary)

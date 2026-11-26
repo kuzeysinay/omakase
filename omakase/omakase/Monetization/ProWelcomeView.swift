@@ -135,7 +135,7 @@ struct ProWelcomeView: View {
                     Circle()
                         .fill(OmakaseTheme.chipActiveText)
                         .frame(width: 5, height: 5)
-                    Text("OMAKASE PRO")
+                    Text("omakase PRO")
                         .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                         .tracking(1.0)
                 }

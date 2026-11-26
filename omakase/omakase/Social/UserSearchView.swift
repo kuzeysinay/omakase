@@ -209,7 +209,7 @@ struct UserSearchView: View {
             } else {
                 try await FirestoreService.shared.follow(
                     targetUid: user.id, targetDisplayName: user.displayName,
-                    currentUid: uid, currentDisplayName: authService.displayName ?? "Omakase User"
+                    currentUid: uid, currentDisplayName: authService.displayName ?? "omakase User"
                 )
                 followingSet.insert(user.id)
                 NotificationManager.shared.notifySocialEvent(

@@ -74,7 +74,7 @@ Omakase ekosistemi dört ana bileşenden oluşur: **SwiftUI iOS 17+ İstemcisi (
 2. **Kural 4.8 (Sign in with Apple):** SHA-256 Nonce, Keychain (`appleIDUser`), `getCredentialState`, `credentialRevokedNotification` ve `ProfileSetupView`.
 3. **Kural 5.1.1(v) (Hesap Silme):** Apple token iptali + Firestore + Auth + SwiftData + `BookmarkStore` temizliği.
 4. **Kural 1.2 (UGC & AI Moderasyon):** Ön filtre, gönderi/yorum/profil/AI post (`reportAIPost`) şikayeti, `blockUser` ve Mission Control Moderasyon sekmesi.
-5. **Kural 1.5 & 5.1.1(i):** `mailto:destek@getomakase.app`, `FeedbackSheetView`, `privacy.html` & `terms.html`.
+5. **Kural 1.5 & 5.1.1(i):** `mailto:support@getomakase.app`, `FeedbackSheetView`, `privacy.html` & `terms.html`.
 6. **Kural 1.6 & `Info.plist`:** ATS/debug log temizliği, Export Studio için yalnızca gereken `NSPhotoLibraryAddUsageDescription` ve `LSApplicationQueriesSchemes`.
 7. **ASO 8 Slayt × 7 Dil:** Arama sonuçlarında temel değer önerisini anlatan ilk 3 kare + Deep Dive, Okuma Molası, Topluluk, Letterboxd ve Export Studio (`1206×2622` dahil 4 iPhone boyutu).
 

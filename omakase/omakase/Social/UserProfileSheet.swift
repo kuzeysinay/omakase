@@ -27,6 +27,7 @@ struct UserProfileSheet: View {
     @State private var showReportConfirmation = false
     @State private var toastMessage: String?
     @State private var loadError: OmakaseError?
+    @State private var activeFollowListMode: FollowListMode? = nil
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -130,6 +131,17 @@ struct UserProfileSheet: View {
                 Text(l10n.reportSubmittedToast)
             }
             .toast(message: $toastMessage)
+            .sheet(item: $activeFollowListMode) { mode in
+                FollowListSheet(
+                    userId: userId,
+                    initialMode: mode,
+                    authService: authService,
+                    onFollowChanged: {
+                        Task { await loadProfile() }
+                    }
+                )
+                .environment(\.appLanguage, appLanguage)
+            }
         }
         .task { await loadProfile() }
     }
@@ -150,14 +162,29 @@ struct UserProfileSheet: View {
             }
 
             HStack(spacing: 32) {
-                VStack(spacing: 2) {
-                    Text("\(followerCount)").font(.headline)
-                    Text(l10n.followers).font(.caption).foregroundStyle(.secondary)
+                Button {
+                    HapticManager.light()
+                    activeFollowListMode = .followers
+                } label: {
+                    VStack(spacing: 2) {
+                        Text("\(followerCount)").font(.headline)
+                        Text(l10n.followers).font(.caption).foregroundStyle(.secondary)
+                    }
                 }
-                VStack(spacing: 2) {
-                    Text("\(followingCount)").font(.headline)
-                    Text(l10n.followingLabel).font(.caption).foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+                .disabled(isBlocked)
+
+                Button {
+                    HapticManager.light()
+                    activeFollowListMode = .following
+                } label: {
+                    VStack(spacing: 2) {
+                        Text("\(followingCount)").font(.headline)
+                        Text(l10n.followingLabel).font(.caption).foregroundStyle(.secondary)
+                    }
                 }
+                .buttonStyle(.plain)
+                .disabled(isBlocked)
             }
 
             if userId != authService.uid {
@@ -202,24 +229,6 @@ struct UserProfileSheet: View {
                         .controlSize(.large)
                     }
                 }
-            }
-
-            if !user.interests.isEmpty && !isBlocked {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(l10n.yourTastes)
-                        .font(.subheadline.bold())
-                    FlowLayoutShared(spacing: 6) {
-                        ForEach(user.interests, id: \.self) { tag in
-                            Text(tag)
-                                .font(.caption).fontWeight(.medium)
-                                .padding(.horizontal, 10).padding(.vertical, 4)
-                                .background(Color.primary.opacity(0.08), in: Capsule())
-                                .foregroundStyle(.primary)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
             }
 
             Divider().padding(.vertical)
@@ -365,6 +374,7 @@ struct MyProfileSheet: View {
     @State private var isShowingEditProfile = false
     @State private var isShowingFeedbackSheet = false
     @State private var profileToastMessage: String?
+    @State private var activeFollowListMode: FollowListMode? = nil
 
     private var l10n: L10n { L10n(lang: appLanguage) }
 
@@ -421,9 +431,24 @@ struct MyProfileSheet: View {
 
                         // Stats pill
                         HStack(spacing: 0) {
-                            statCell(value: followerCount, label: l10n.followers)
+                            Button {
+                                HapticManager.light()
+                                activeFollowListMode = .followers
+                            } label: {
+                                statCell(value: followerCount, label: l10n.followers)
+                            }
+                            .buttonStyle(.plain)
+
                             Divider().frame(height: 30)
-                            statCell(value: followingCount, label: l10n.followingLabel)
+
+                            Button {
+                                HapticManager.light()
+                                activeFollowListMode = .following
+                            } label: {
+                                statCell(value: followingCount, label: l10n.followingLabel)
+                            }
+                            .buttonStyle(.plain)
+
                             Divider().frame(height: 30)
                             statCell(value: monthlyReadCount, label: l10n.profileReadsThisMonth)
                         }
@@ -435,26 +460,6 @@ struct MyProfileSheet: View {
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .strokeBorder(OmakaseTheme.stroke, lineWidth: 1)
                         )
-
-                        if let interests = profile?.interests, !interests.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(l10n.yourTastes)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                FlowLayoutShared(spacing: 6) {
-                                    ForEach(interests, id: \.self) { tag in
-                                        Text(tag)
-                                            .font(.caption.weight(.medium))
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 5)
-                                            .background(OmakaseTheme.wash, in: Capsule())
-                                            .foregroundStyle(.primary)
-                                    }
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 2)
-                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.top, 8)
@@ -647,6 +652,22 @@ struct MyProfileSheet: View {
                 }
             )
             .environment(\.appLanguage, appLanguage)
+        }
+        .sheet(item: $activeFollowListMode) { mode in
+            if let uid = authService.uid {
+                FollowListSheet(
+                    userId: uid,
+                    initialMode: mode,
+                    authService: authService,
+                    onFollowChanged: {
+                        Task {
+                            followerCount = (try? await FirestoreService.shared.fetchFollowerCount(uid: uid)) ?? followerCount
+                            followingCount = (try? await FirestoreService.shared.fetchFollowingCount(uid: uid)) ?? followingCount
+                        }
+                    }
+                )
+                .environment(\.appLanguage, appLanguage)
+            }
         }
         .toast(message: $profileToastMessage)
         .onChange(of: scenePhase) { _, newPhase in
@@ -954,7 +975,7 @@ struct MyProfileSheet: View {
                     }
                 }
 
-                if let supportURL = URL(string: "mailto:destek@getomakase.app") {
+                if let supportURL = URL(string: "mailto:support@getomakase.app") {
                     Link(destination: supportURL) {
                         HStack {
                             Label {
@@ -965,7 +986,7 @@ struct MyProfileSheet: View {
                                     .foregroundStyle(.primary)
                             }
                             Spacer()
-                            Text("destek@getomakase.app")
+                            Text("support@getomakase.app")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Image(systemName: "arrow.up.right")
@@ -1124,7 +1145,7 @@ struct MyProfileSheet: View {
 
     private var avatarView: some View {
         MonogramAvatarView(
-            name: profile?.displayName ?? authService.displayName ?? "Omakase",
+            name: profile?.displayName ?? authService.displayName ?? "omakase",
             size: 80
         )
     }

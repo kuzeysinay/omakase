@@ -321,7 +321,7 @@ struct OmakaseDailyTastesWidget: Widget {
         StaticConfiguration(kind: kind, provider: OmakaseWidgetProvider()) { entry in
             OmakaseWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Omakase")
+        .configurationDisplayName("omakase")
         .description("Tap any subtopic to read a primary-sourced micro-story.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }

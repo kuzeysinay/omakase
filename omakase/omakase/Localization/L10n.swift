@@ -146,7 +146,7 @@ struct L10n {
 
     func couldNotConnect(apiBase: String) -> String {
         _ = apiBase
-        return tr("couldNotConnect", fallback: "Could not connect to Omakase servers. Please check your internet connection and try again.")
+        return tr("couldNotConnect", fallback: "Could not connect to omakase servers. Please check your internet connection and try again.")
     }
 
     var writingDeepDive: String { tr("writingDeepDive", fallback: "Writing deep dive…") }
@@ -168,7 +168,7 @@ struct L10n {
     // MARK: - Adjust tastes sheet
 
     var adjustTastesBlurb: String {
-        tr("adjustTastesBlurb", fallback: "Tune what Omakase cooks for you. Add, remove, or steal ideas below — your feed updates right away.")
+        tr("adjustTastesBlurb", fallback: "Tune what omakase cooks for you. Add, remove, or steal ideas below — your feed updates right away.")
     }
     var yourTastes: String { tr("yourTastes", fallback: "Your tastes") }
     var cancel: String { tr("cancel", fallback: "Cancel") }
@@ -503,7 +503,7 @@ struct L10n {
     }
     var errorServerUnreachableTitle: String { tr("errorServerUnreachableTitle", fallback: "Couldn't Connect") }
     var errorServerUnreachableMessage: String {
-        tr("errorServerUnreachableMessage", fallback: "Could not reach Omakase servers. Check your internet connection and try again.")
+        tr("errorServerUnreachableMessage", fallback: "Could not reach omakase servers. Check your internet connection and try again.")
     }
     var errorUnauthorizedTitle: String { tr("errorUnauthorizedTitle", fallback: "Session Expired") }
     var errorUnauthorizedMessage: String {
@@ -592,7 +592,7 @@ struct L10n {
 
     // MARK: - Monetization, Omakase Pro & Daily Limit
 
-    var proTitle: String { "Omakase Pro" }
+    var proTitle: String { "omakase Pro" }
     var proHeadline: String { tr("proHeadline", fallback: "Unlimited posts, zero noise.") }
     var proSubtitle: String {
         tr("proSubtitle", fallback: "3 free posts a day is just a taste. Unlock unlimited posts, primary-source Deep Dives, and full Letterboxd synthesis.")
@@ -695,15 +695,15 @@ struct L10n {
     var proPerYearSuffix: String { tr("proPerYearSuffix", fallback: "/ year") }
     var proPerMonthSuffix: String { tr("proPerMonthSuffix", fallback: "/ month") }
     var proStartTrialCTA: String { tr("proStartTrialCTA", fallback: "Start 7-Day Free Trial") }
-    var proSubscribeCTA: String { tr("proSubscribeCTA", fallback: "Continue with Omakase Pro") }
+    var proSubscribeCTA: String { tr("proSubscribeCTA", fallback: "Continue with omakase Pro") }
     var proRestorePurchases: String { tr("proRestorePurchases", fallback: "Restore Purchases") }
     var proRestoreSuccess: String {
-        tr("proRestoreSuccess", fallback: "Your Omakase Pro subscription is restored.")
+        tr("proRestoreSuccess", fallback: "Your omakase Pro subscription is restored.")
     }
     var proRestoreEmpty: String {
         tr("proRestoreEmpty", fallback: "No active subscription was found to restore.")
     }
-    var proPurchaseSuccess: String { tr("proPurchaseSuccess", fallback: "Welcome to Omakase Pro.") }
+    var proPurchaseSuccess: String { tr("proPurchaseSuccess", fallback: "Welcome to omakase Pro.") }
     var proPaymentPending: String {
         tr("proPaymentPending", fallback: "Your purchase is pending approval and will activate once confirmed.")
     }
@@ -733,14 +733,14 @@ struct L10n {
     }
     var limitCardTitle: String { tr("limitCardTitle", fallback: "Today's Menu Is Complete") }
     var limitCardSubtitle: String {
-        tr("limitCardSubtitle", fallback: "You've read all 3 free posts for today. Unlock Omakase Pro for unlimited reading or wait for tomorrow's menu.")
+        tr("limitCardSubtitle", fallback: "You've read all 3 free posts for today. Unlock omakase Pro for unlimited reading or wait for tomorrow's menu.")
     }
 
     func limitCardNextMenuIn(_ countdown: String) -> String {
         tr("limitCardNextMenuIn", fallback: "Next menu in {countdown}", ("countdown", countdown))
     }
 
-    var limitCardUpgradeCTA: String { tr("limitCardUpgradeCTA", fallback: "Continue with Omakase Pro") }
+    var limitCardUpgradeCTA: String { tr("limitCardUpgradeCTA", fallback: "Continue with omakase Pro") }
     var limitCardRemindCTA: String { tr("limitCardRemindCTA", fallback: "Remind Me Tomorrow") }
     var limitCardRemindPendingToast: String {
         tr("limitCardRemindPendingToast", fallback: "Daily menu reminders are coming in the next step.")
@@ -750,7 +750,7 @@ struct L10n {
         tr("toastShareBonusGranted", fallback: "+1 bonus Deep Dive unlocked for today!")
     }
     var profileMembershipSection: String { tr("profileMembershipSection", fallback: "Membership") }
-    var profileUpgradeToPro: String { tr("profileUpgradeToPro", fallback: "Upgrade to Omakase Pro") }
+    var profileUpgradeToPro: String { tr("profileUpgradeToPro", fallback: "Upgrade to omakase Pro") }
 
     func profileDailyQuotaSummary(
         platesRemaining: Int,
@@ -797,7 +797,7 @@ struct L10n {
         tr("notificationsDeniedAlertTitle", fallback: "Notifications Disabled")
     }
     var notificationsDeniedAlertMessage: String {
-        tr("notificationsDeniedAlertMessage", fallback: "Allow notifications in iOS Settings so Omakase can let you know when tomorrow's menu is ready.")
+        tr("notificationsDeniedAlertMessage", fallback: "Allow notifications in iOS Settings so omakase can let you know when tomorrow's menu is ready.")
     }
     var openSettingsCTA: String { tr("openSettingsCTA", fallback: "Open Settings") }
 
@@ -1054,7 +1054,7 @@ struct L10n {
     func feedQuotaAccessibilityLabel(remaining: Int, limit: Int) -> String {
         tr(
             "feedQuotaAccessibilityLabel",
-            fallback: "Daily free plates remaining: {remaining} of {limit}. Tap to upgrade to Omakase Pro.",
+            fallback: "Daily free plates remaining: {remaining} of {limit}. Tap to upgrade to omakase Pro.",
             ("remaining", "\(remaining)"),
             ("limit", "\(limit)")
         )
@@ -1190,7 +1190,7 @@ struct L10n {
         )
     }
     var proWelcomeSubtitlePaid: String {
-        tr("proWelcomeSubtitlePaid", fallback: "Your Omakase Pro membership is active. Every limit is lifted—read as deeply as curiosity takes you.")
+        tr("proWelcomeSubtitlePaid", fallback: "Your omakase Pro membership is active. Every limit is lifted—read as deeply as curiosity takes you.")
     }
     var proWelcomeUnlockedHeader: String { tr("proWelcomeUnlockedHeader", fallback: "NOW UNLOCKED") }
     var proWelcomeStartCTA: String { tr("proWelcomeStartCTA", fallback: "Start Unlimited Reading") }
@@ -1201,7 +1201,7 @@ struct L10n {
 
     // MARK: - Intro Welcome Slide
 
-    var introWelcomeTitle: String { tr("introWelcomeTitle", fallback: "Welcome to Omakase.") }
+    var introWelcomeTitle: String { tr("introWelcomeTitle", fallback: "Welcome to omakase.") }
     var introWelcomeSubtitle: String {
         tr("introWelcomeSubtitle", fallback: "A quiet, source-backed daily feed curated for your curiosity.")
     }
@@ -1238,5 +1238,11 @@ struct L10n {
     }
     var deleteAccountKeepButton: String {
         tr("deleteAccountKeepButton", fallback: "Keep My Account")
+    }
+    var noFollowersYet: String {
+        tr("noFollowersYet", fallback: "No followers yet.")
+    }
+    var notFollowingAnyoneYet: String {
+        tr("notFollowingAnyoneYet", fallback: "Not following anyone yet.")
     }
 }

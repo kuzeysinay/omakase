@@ -113,12 +113,6 @@ struct BentoTasteBox: View {
                 chefPickBottomBar
                     .padding(.horizontal, 18)
                     .padding(.top, mode == .rootCategories ? 6 : 0)
-                    .padding(.bottom, allInterests.isEmpty ? 16 : 10)
-            }
-
-            // Bottom controls: Active interests ribbon
-            if !allInterests.isEmpty {
-                activeInterestsRibbon
                     .padding(.bottom, 16)
             }
         }
@@ -730,78 +724,6 @@ struct BentoTasteBox: View {
         .buttonStyle(OmakaseChipButtonStyle())
         .disabled(isGenerationDisabled)
         .accessibilityIdentifier("bento.chefPickBar")
-    }
-
-    // MARK: - Active Interests Ribbon (Large Tappable Pills)
-
-    private var activeInterestsRibbon: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                // Active User Interests
-                ForEach(allInterests, id: \.self) { interest in
-                    let isActive = activeInterests.contains(interest)
-
-                    HStack(spacing: 4) {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                                if isActive {
-                                    activeInterests.remove(interest)
-                                } else {
-                                    activeInterests.insert(interest)
-                                }
-                            }
-                        } label: {
-                            Text(interest)
-                                .font(.subheadline.weight(.medium))
-                                .lineLimit(1)
-                                .padding(.leading, 14)
-                                .padding(.trailing, 6)
-                                .padding(.vertical, 9)
-                        }
-                        .buttonStyle(.plain)
-
-                        // Large tap target for Remove 'x' button
-                        Button {
-                            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                                onRemoveInterest(interest)
-                            }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(
-                                    isActive
-                                        ? OmakaseTheme.chipActiveText.opacity(0.75)
-                                        : Color.secondary.opacity(0.8)
-                                )
-                                .frame(width: 34, height: 34)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.trailing, 4)
-                    }
-                    .frame(minHeight: 40)
-                    .background(
-                        Capsule().fill(
-                            isActive
-                                ? OmakaseTheme.chipActiveFill
-                                : Color(uiColor: .secondarySystemBackground)
-                        )
-                    )
-                    .overlay(
-                        Capsule().strokeBorder(
-                            isActive ? Color.clear : Color.primary.opacity(0.14),
-                            lineWidth: 1
-                        )
-                    )
-                    .foregroundStyle(
-                        isActive ? OmakaseTheme.chipActiveText : Color.primary
-                    )
-                }
-            }
-            .padding(.horizontal, 18)
-        }
     }
 
     // MARK: - Game Mechanics & AI Synthesis

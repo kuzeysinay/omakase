@@ -352,7 +352,7 @@ struct AuthView: View {
                     Link(l10n.privacyPolicy, destination: privacyURL)
                 }
                 Text("•").foregroundStyle(.tertiary)
-                if let supportURL = URL(string: "mailto:destek@getomakase.app") {
+                if let supportURL = URL(string: "mailto:support@getomakase.app") {
                     Link(l10n.contactSupport, destination: supportURL)
                 }
             }

@@ -214,7 +214,7 @@ struct OnboardingView: View {
             .opacity(welcomeVisible || reduceMotion ? 1.0 : 0.0)
 
             VStack(spacing: 12) {
-                Text("OMAKASE")
+                Text("omakase")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .tracking(2.4)
                     .foregroundStyle(.secondary)

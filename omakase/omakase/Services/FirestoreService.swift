@@ -52,7 +52,7 @@ final class FirestoreService {
             if let email = user.email, let prefix = email.split(separator: "@").first, !prefix.isEmpty {
                 return String(prefix)
             }
-            return "Omakase User"
+            return "omakase User"
         }()
 
         let resolvedUsername: String? = {
@@ -430,12 +430,56 @@ final class FirestoreService {
         return snapshot.documents.count
     }
 
+    /// Fetch profiles of a user's followers, newest first (excluding blocked users).
+    func fetchFollowers(uid: String) async throws -> [UserProfile] {
+        try await fetchFollowList(uid: uid, subcollection: "followers")
+    }
+
+    /// Fetch profiles a user is following, newest first (excluding blocked users).
+    func fetchFollowing(uid: String) async throws -> [UserProfile] {
+        try await fetchFollowList(uid: uid, subcollection: "following")
+    }
+
+    private func fetchFollowList(uid: String, subcollection: String) async throws -> [UserProfile] {
+        let snapshot = try await db.collection("users").document(uid)
+            .collection(subcollection)
+            .getDocuments()
+
+        let sortedIDs: [String] = snapshot.documents
+            .sorted { lhs, rhs in
+                let lDate = (lhs.data()["followedAt"] as? Timestamp)?.dateValue() ?? .distantPast
+                let rDate = (rhs.data()["followedAt"] as? Timestamp)?.dateValue() ?? .distantPast
+                return lDate > rDate
+            }
+            .map(\.documentID)
+            .filter { !blockedUIDs.contains($0) }
+
+        guard !sortedIDs.isEmpty else { return [] }
+
+        var profilesByID: [String: UserProfile] = [:]
+        await withTaskGroup(of: (String, UserProfile?).self) { group in
+            for targetID in sortedIDs {
+                group.addTask {
+                    let profile = try? await self.fetchUserProfile(uid: targetID)
+                    return (targetID, profile)
+                }
+            }
+            for await (id, profile) in group {
+                if let profile {
+                    profilesByID[id] = profile
+                }
+            }
+        }
+
+        return sortedIDs.compactMap { profilesByID[$0] }
+    }
+
     // MARK: - Shared Posts
 
     /// Share a post to the communal timeline.
     func sharePost(_ post: Post, author: User) async throws {
         let userProfile = try? await fetchUserProfile(uid: author.uid)
-        let resolvedName = userProfile?.displayName ?? author.displayName ?? "Omakase User"
+        let resolvedName = userProfile?.displayName ?? author.displayName ?? "omakase User"
         let resolvedUsername = userProfile?.username
         let shared = SharedPost(
             authorId: author.uid,
