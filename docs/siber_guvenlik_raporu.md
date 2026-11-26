@@ -1,7 +1,7 @@
 # 🛡️ Omakase — Kapsamlı Siber Güvenlik Durumu ve Tehdit Analizi Raporu
 
-> **Denetim & Sertleştirme Tarihi:** 22 Kasım 2026  
-> **Kapsam:** Tüm Omakase ekosistemi — iOS İstemcisi (`omakase/`), FastAPI & Cloud Run Backend (`backend/`), Cloud Firestore Kuralları (`firestore.rules`), Web & Hosting Altyapısı (`web/`, `firebase.json`), API Anahtarları, RevenueCat / Bildirim Altyapısı ve Sır (Secret) Yönetimi.  
+> **Denetim & Sertleştirme Tarihi:** 26 Kasım 2026  
+> **Kapsam:** Tüm Omakase ekosistemi — iOS İstemcisi (`omakase/`), FastAPI & Cloud Run Backend (`backend/`), Mission Control Admin Paneli (`admin-web/`, Firebase Hosting), Tanıtım Web Sitesi (`web/`, Cloudflare `wrangler.json`), Cloud Firestore Kuralları (`firestore.rules`), API Anahtarları, RevenueCat / Bildirim Altyapısı ve Sır (Secret) Yönetimi.  
 > **Dayanak:** Kod tabanı statik güvenlik denetimi, git geçmişi taraması, [OWASP Mobile Top 10 / MASVS](https://mas.owasp.org/), [OWASP API Security Top 10](https://owasp.org/API-Security/), [`knowledge.networking.authenticated-requests`](file:///Users/kuzey/projects/omakase/.agents/knowledge/networking/authenticated-requests.md) ve Apple [`knowledge.app-store-review-guidelines.data-security`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/data-security.md).
 
 ---
@@ -13,184 +13,158 @@
 3. [Bölüm 1: API Anahtarları, Sırlar (Secrets) ve Kimlik Bilgisi Yönetimi](#3-bölüm-1-api-anahtarları-sırlar-secrets-ve-kimlik-bilgisi-yönetimi)
 4. [Bölüm 2: Backend & Google Cloud Run Güvenlik Analizi (`backend/`)](#4-bölüm-2-backend--google-cloud-run-güvenlik-analizi-backend)
 5. [Bölüm 3: Cloud Firestore & Sosyal Grafik Güvenlik Analizi (`firestore.rules`)](#5-bölüm-3-cloud-firestore--sosyal-grafik-güvenlik-analizi-firestorerules)
-6. [Bölüm 4: iOS İstemci & Web (`web/`) Güvenlik Analizi](#6-bölüm-4-ios-i̇stemci--web-web-güvenlik-analizi)
+6. [Bölüm 4: iOS İstemci, Mission Control (`admin-web/`) & Web (`web/`) Güvenlik Analizi](#6-bölüm-4-ios-i̇stemci-mission-control-admin-web--web-web-güvenlik-analizi)
 7. [Bölüm 5: Siber Güvenlik Eylem Planı & Kalan Bulut Konsolu Adımları](#7-bölüm-5-siber-güvenlik-eylem-planı--kalan-bulut-konsolu-adımları)
+8. [Bölüm 6: Güncel Denetim (26 Kasım 2026 — Faz 1–4, Admin & Cihaz Kota Koruması)](#8-bölüm-6-güncel-denetim-26-kasım-2026--faz-14-admin--cihaz-kota-koruması)
 
 ---
 
 ## 1. Yönetici Özeti & Güvenlik Karnesi
 
-Omakase kod tabanında tespit edilen **tüm kod seviyesi güvenlik zafiyetleri (`S-01`, `S-02`, `S-04`, `S-05`, `S-06`, `S-07`, `S-08`, `S-09`) uygulamanın çalışırlığı bozulmadan kapatılmıştır:**
+Omakase kod tabanında tespit edilen **tüm kritik ve yüksek öncelikli kod seviyesi zafiyetler (`S-01`, `S-02`, `S-04`–`S-15`) uygulamanın çalışırlığı bozulmadan kapatılmıştır:**
 
-- **Backend API & LLM Koruması (`S-01`, `S-02`):** Tüm `POST` uç noktalarına (`/feed/stream`, `/feed/deep-dive`, `/interests/suggest`, `/interests/expand-category`, `/letterboxd/films`) kriptografik **Firebase ID Token (`Authorization: Bearer <token>`) doğrulaması** (`google.oauth2.id_token.verify_firebase_token`) ve **kullanıcı/IP bazlı kayan pencereli (sliding-window) hız sınırlaması (Rate Limiting)** eklenmiştir. iOS tarafında [`APITokenProvider`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L22-L120) aktörü tüm ağ çağrılarına `Bearer` token eklemekte ve `401 Unauthorized` durumunda tek-uçuşlu (single-flight) token yenileme + tek tekrar (`authenticated-requests` kontratı) uygulamaktadır.
-- **PII & Sosyal Grafik Koruması (`S-04`, `S-06`):** `users/{uid}` genel profil belgelerinden `email` alanı kaldırılmış (`FieldValue.delete()`); `firestore.rules` içinde "Forced Follow", engellenen kullanıcının takip etmesi, başkasının adına reaksiyon yazma ve sayaç/rapor (`commentCount`, `totalReactions`, `reportedBy`) manipülasyonu açıkları kapatılmıştır.
-- **SSRF, XML, Prompt Injection ve Konteyner Sertleştirmesi (`S-05`, `S-07`, `S-08`, `S-09`):** Letterboxd kullanıcı adı sıkı whitelist regex'e (`^[a-zA-Z0-9_-]{1,40}$`) bağlanmış, yönlendirme (redirect) domain kontrolü + 2 MB yanıt sınırı + XML `<!DOCTYPE`/`<!ENTITY` koruması eklenmiş, kullanıcı girdileri `<user_context>` etiketleriyle izole edilmiş, hata mesajları ve `/health` çıktısı temizlenmiş, `Dockerfile` yetkisiz `appuser` (`UID 10001`) ile sınırlandırılmış ve `firebase.json` içine CSP/HSTS/X-Frame-Options güvenlik başlıkları eklenmiştir.
+- **Backend API, LLM & Admin Koruması (`S-01`, `S-02`, `S-12`, `S-14`):** Tüm kullanıcı uç noktalarına kriptografik **Firebase ID Token (`Authorization: Bearer <token>`) doğrulaması** ve **sliding-window hız sınırlaması** eklenmiştir. Tüm `/admin/*` uç noktaları ayrıca `verify_admin_user` (`ADMIN_UIDS` / doğrulanmış `ADMIN_EMAILS`, 401/403) ile korunur. iOS tarafında [`APITokenProvider`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L16-L133) aktörü single-flight `401` yenileme ve `X-Omakase-Device-Id` eklemesi yapar.
+- **Cihaz-Bazlı Kota Suistimali Koruması (`S-13`):** Ücretsiz günlük 3 post / 1 Letterboxd / 1 Derin İnceleme sınırının Apple, Google ve E-posta hesapları arasında geçiş yapılarak veya hesap silip yeniden açılarak aşılmasını önlemek için Keychain tabanlı anonim kurulum kimliği (`quotaDeviceID`) + sunucu tarafı SHA-256 `device_usage/{hash}_{yyyymmdd}` birleştirmesi devreye alınmıştır.
+- **PII, Atomik Kullanıcı Adı & Sosyal Grafik (`S-04`, `S-06`, `S-11`, `S-15`):** `users/{uid}` belgelerinden `email` ve üçüncü taraf `photoURL` alanları temizlenmiştir (`FieldValue.delete()`); `usernames/{handle}` koleksiyonu ile atomik benzersizlik ve `firestore.rules` içinde **14 günlük kullanıcı adı değiştirme beklemesi** (`isValidUsernameUpdate`) zorunlu kılınmıştır.
+- **Mission Control İzolasyonu, SSRF, XXE & Prompt Injection (`S-05`, `S-07`, `S-08`, `S-09`, `S-14`):** `admin-web/` paneli `web/`'den tamamen ayrılarak Firebase Hosting üzerinde `noindex, nofollow`, COOP, HSTS ve sıkı CSP ile izole edilmiştir; `web/` (`getomakase.app`) ise Cloudflare (`wrangler.json`) üzerinden sunulur.
 
 ### Risk Matrisi (Güncel Durum Tablosu)
 
 | # | Önem | Durum | Alan | Bulgu / Zafiyet Başlığı | Uygulanan Çözüm & İlgili Konum |
 |---|------|-------|------|-------------------------|--------------------------------|
-| **S-01** | 🚨 **KRİTİK (P0)** | ✅ **ÇÖZÜLDÜ** | Backend API / LLM | Kimlik doğrulamasız Gemini uç noktaları (**Denial of Wallet**) | `verify_firebase_user` + `APITokenProvider` Bearer token & 401 retry ([`backend/app/security.py`](file:///Users/kuzey/projects/omakase/backend/app/security.py), [`SSEClient.swift#L22-L120`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L22-L120)) |
-| **S-02** | 🔴 **YÜKSEK (P0)** | ✅ **ÇÖZÜLDÜ** | Backend API / DoS | Rate Limiting yokluğu ve sınırsız `DeepDiveRequest` / `letterboxd_films` girdileri | `_check_rate_limit` (sliding window) + Pydantic boyut/tip sınırları ([`backend/app/security.py`](file:///Users/kuzey/projects/omakase/backend/app/security.py), [`backend/app/schemas.py`](file:///Users/kuzey/projects/omakase/backend/app/schemas.py)) |
-| **S-03** | 🔴 **YÜKSEK (P1)** | ⚠️ **GCP KONSOL** | Secrets / GCP | `GoogleService-Info.plist` içindeki Firebase `API_KEY`'in (`AIzaSyBr65...`) GCP kısıtlama riski | GCP Console → Credentials üzerinden Bundle ID + API kısıtlaması yapılmalı ([Bölüm 3.2](#32-firebase-api_key-googleservice-infoplist-ve-gcp-proje-kısıtlama-riski--s-03)) |
-| **S-04** | 🔴 **YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Firestore / PII | `users/{userId}` belgelerinde `email` alanının tüm giriş yapmış kullanıcılara açık okunması | `users/{uid}` yazımlarından `email` kaldırıldı (`FieldValue.delete()`); kendi e-postası `AuthService` üzerinden okunuyor ([`FirestoreService.swift#L68-L100`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift#L68-L100)) |
-| **S-05** | 🟠 **YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Backend / SSRF | `/letterboxd/films` doğrulanmamış `username` path traversal & XML riski | `^[a-zA-Z0-9_-]{1,40}$` regex, `https://letterboxd.com/` redirect kontrolü, 2 MB limit ve `<!DOCTYPE`/`<!ENTITY` reddi ([`backend/app/services/letterboxd_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/letterboxd_service.py)) |
-| **S-06** | 🟠 **ORTA-YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Firestore Rules | `following` / `followers` "Forced Follow" ve `shared_posts` sayaç/rapor manipülasyonu | `following`/`followers`/`reactions` `create, update` yalnızca sahibe kısıtlandı; `commentCount` ±1 ve `reportedBy` ekleme kuralları eklendi ([`firestore.rules#L161-L254`](file:///Users/kuzey/projects/omakase/firestore.rules#L161-L254)) |
-| **S-07** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Backend / Hardening | `str(exc)` ham hata sızıntısı, `/health` model/key ifşası, `CORS *` ve `Dockerfile` root | Genel hata mesajları, sade `/health`, origin-kısıtlı CORS ve `USER appuser` ([`backend/app/config.py`](file:///Users/kuzey/projects/omakase/backend/app/config.py), [`backend/main.py`](file:///Users/kuzey/projects/omakase/backend/main.py), [`backend/Dockerfile`](file:///Users/kuzey/projects/omakase/backend/Dockerfile)) |
-| **S-08** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Backend / AI | Doğrudan metin birleştirmeye dayalı Prompt Injection yüzeyi | Kontrol karakteri temizliği + `<user_context>` XML izolasyonu ve sistem prompt savunma kuralları ([`backend/app/prompts.py`](file:///Users/kuzey/projects/omakase/backend/app/prompts.py)) |
-| **S-09** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Web & Auth | `firebase.json` eksik güvenlik başlıkları (CSP/HSTS) ve 6 karakter parola sınırı | `firebase.json` CSP/HSTS/X-Frame-Options eklendi; yeni kayıtlarda minimum parola 8 karaktere çıkarıldı ([`firebase.json`](file:///Users/kuzey/projects/omakase/firebase.json), [`AuthService.swift#L154`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift#L154)) |
-| **S-10** | ✅ **GÜVENLİ** | ✅ **KORUNDU** | iOS / Depolama | `GEMINI_API_KEY` gizliliği, Sign in with Apple SHA-256 Nonce + Keychain ve ATS uyumluluğu | İstemci tarafı sır sızıntısı yok; `Release` derlemelerinde `http://127.0.0.1` fallback'i `#if DEBUG` ile kapatıldı ([`SSEClient.swift#L26-L40`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L26-L40)) |
-| **S-11** | 🟠 **ORTA-YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Firestore Rules | `following`/`followers`/`shared_posts`/`comments`/`moderation_reports` belgelerinde eksik `hasOnly` anahtar kilidi, kendini takip etme, engelli kullanıcıların `following` yazması ve yazarın `reportedBy` listesini silebilme riski | [`firestore.rules`](file:///Users/kuzey/projects/omakase/firestore.rules) tüm validator'lara `hasOnly` + timestamp tip kilidi eklendi, kendini takip & engelli takip yazımı engellendi, yazarın `reportedBy` dizisini değiştirmesi kilitlendi |
-| **S-12** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Backend / Billing & Push | `/billing/status` ve `/billing/sync` uç noktalarında rate-limit eksikliği + `/notifications/events` `actor_name` spoofing yüzeyi | [`billing.py`](file:///Users/kuzey/projects/omakase/backend/app/routers/billing.py) için `_check_rate_limit` (`status`: 30/dk, `sync`: 10/dk) ve [`notification_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/notification_service.py) içinde `_resolve_actor_display_name` (Firestore otoritesi) eklendi |
+| **S-01** | 🚨 **KRİTİK (P0)** | ✅ **ÇÖZÜLDÜ** | Backend API / LLM | Kimlik doğrulamasız Gemini uç noktaları (**Denial of Wallet**) | `verify_firebase_user` + `APITokenProvider` Bearer token & 401 retry ([`backend/app/security.py`](file:///Users/kuzey/projects/omakase/backend/app/security.py#L89-L140), [`SSEClient.swift#L16-L133`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L16-L133)) |
+| **S-02** | 🔴 **YÜKSEK (P0)** | ✅ **ÇÖZÜLDÜ** | Backend API / DoS | Rate Limiting yokluğu ve sınırsız `DeepDiveRequest` / `letterboxd_films` girdileri | `_check_rate_limit` (sliding window) + Pydantic boyut/tip sınırları ([`backend/app/security.py#L64-L87`](file:///Users/kuzey/projects/omakase/backend/app/security.py#L64-L87), [`backend/app/schemas.py`](file:///Users/kuzey/projects/omakase/backend/app/schemas.py)) |
+| **S-03** | 🔴 **YÜKSEK (P1)** | ⚠️ **GCP KONSOL** | Secrets / GCP | `GoogleService-Info.plist` içindeki Firebase `API_KEY`'in (`AIzaSyBr65...`) GCP kısıtlama riski | GCP Console → Credentials üzerinden Bundle ID (`kuzeysinay.omakase`) + API kısıtlaması yapılmalı ([Bölüm 3.2](#32-firebase-api_key-googleservice-infoplist-ve-gcp-proje-kısıtlama-riski--s-03--bulut-konsolu-i̇şlemi)) |
+| **S-04** | 🔴 **YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Firestore / PII | `users/{userId}` belgelerinde `email` alanının tüm giriş yapmış kullanıcılara açık okunması | `users/{uid}` yazımlarından `email` ve `photoURL` silindi (`FieldValue.delete()`); e-posta `AuthService`'ten okunuyor ([`FirestoreService.swift#L89-L93`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift#L89-L93)) |
+| **S-05** | 🟠 **YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Backend / SSRF | `/letterboxd/films` doğrulanmamış `username` path traversal & XML riski | `^[a-zA-Z0-9_-]{1,40}$` regex, `https://letterboxd.com/` redirect kontrolü, 2 MB limit ve `<!DOCTYPE`/`<!ENTITY` reddi ([`letterboxd_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/letterboxd_service.py)) |
+| **S-06** | 🟠 **ORTA-YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Firestore Rules | `following` / `followers` "Forced Follow" ve `shared_posts` sayaç/rapor manipülasyonu | `following`/`followers`/`reactions` `create, update` sahibe kısıtlandı; `commentCount` ±1 ve `reportedBy` ekleme kuralları eklendi ([`firestore.rules#L409-L537`](file:///Users/kuzey/projects/omakase/firestore.rules#L409-L537)) |
+| **S-07** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Backend / Hardening | Ham hata sızıntısı, `/health` ifşası, `CORS *` ve `Dockerfile` root | Genel hata mesajları ([`errors.py`](file:///Users/kuzey/projects/omakase/backend/app/errors.py)), sade `/health` ([`main.py#L102-L105`](file:///Users/kuzey/projects/omakase/backend/main.py#L102-L105)), `ALLOWED_CORS_ORIGINS` ([`config.py#L89-L96`](file:///Users/kuzey/projects/omakase/backend/app/config.py#L89-L96)) ve `USER appuser` ([`Dockerfile#L12-L13`](file:///Users/kuzey/projects/omakase/backend/Dockerfile#L12-L13)) |
+| **S-08** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Backend / AI | Doğrudan metin birleştirmeye dayalı Prompt Injection yüzeyi | `_sanitize_single_line` + `<user_context>` XML izolasyonu ve sistem prompt savunma kuralları ([`backend/app/prompts.py`](file:///Users/kuzey/projects/omakase/backend/app/prompts.py)) |
+| **S-09** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Web & Auth | Hosting güvenlik başlıkları (CSP/HSTS) ve 6 karakter parola sınırı | `firebase.json` CSP/HSTS/COOP/X-Frame-Options eklendi; yeni kayıtlarda minimum parola 8 karaktere çıkarıldı ([`firebase.json`](file:///Users/kuzey/projects/omakase/firebase.json), [`AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift)) |
+| **S-10** | ✅ **GÜVENLİ** | ✅ **KORUNDU** | iOS / Depolama | `GEMINI_API_KEY` gizliliği, Apple SHA-256 Nonce + Keychain ve ATS uyumluluğu | İstemci tarafı API sır sızıntısı yok; `Release` derlemelerinde `http://127.0.0.1` fallback'i `#if DEBUG` ile izole ([`SSEClient.swift#L25-L37`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L25-L37)) |
+| **S-11** | 🟠 **ORTA-YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Firestore Rules | Eksik `hasOnly` anahtar kilidi, kendini takip, engelli takip ve `reportedBy` silme riski | [`firestore.rules`](file:///Users/kuzey/projects/omakase/firestore.rules) tüm validator'lara `hasOnly` + timestamp tip kilidi eklendi, kendini takip & engelli takip engellendi, yazarın `reportedBy` değiştirmesi kilitlendi |
+| **S-12** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Backend / Billing & Push | `/billing/status`, `/billing/sync` rate-limit eksikliği + `actor_name` spoofing | [`billing.py`](file:///Users/kuzey/projects/omakase/backend/app/routers/billing.py) rate limit (`30/dk`, `10/dk`) + [`notification_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/notification_service.py) `_resolve_actor_display_name` eklendi |
+| **S-13** | 🟠 **YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Kota / Anti-Abuse | Ücretsiz kullanıcıların hesap değiştirerek/silerek günlük 3 post sınırını atlaması | Keychain `quotaDeviceID` (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) + `X-Omakase-Device-Id` + sunucu SHA-256 `device_usage` ([`SSEClient.swift#L42-L79`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L42-L79), [`access_service.py#L182-L299`](file:///Users/kuzey/projects/omakase/backend/app/services/access_service.py#L182-L299)) |
+| **S-14** | 🔴 **YÜKSEK (P1)** | ✅ **ÇÖZÜLDÜ** | Admin & Hosting | Mission Control uç noktalarının korunması ve admin panelinin halka açık siteden ayrılması | `verify_admin_user` (`ADMIN_UIDS` / verified `ADMIN_EMAILS`) + `/admin/*` rate limits ([`security.py#L150-L235`](file:///Users/kuzey/projects/omakase/backend/app/security.py#L150-L235), [`admin.py`](file:///Users/kuzey/projects/omakase/backend/app/routers/admin.py)); `admin-web/` `firebase.json` üzerinde `noindex, nofollow` + CSP ile izole |
+| **S-15** | 🟡 **ORTA (P2)** | ✅ **ÇÖZÜLDÜ** | Firestore / Kimlik | `@username` yarış durumu (race condition) ve sınırsız kimlik değiştirme | Atomik `usernames/{handle}` koleksiyonu + `isValidUsernameUpdate()` ile 14 günlük sunucu zamanlı bekleme ([`firestore.rules#L187-L213`](file:///Users/kuzey/projects/omakase/firestore.rules#L187-L213), [`firestore.rules#L454-L463`](file:///Users/kuzey/projects/omakase/firestore.rules#L454-L463)) |
 
 ---
 
-## 2. Güven Sınırları (Trust Boundaries) & Mimari Harita (Sertleştirilmiş)
+## 2. Güven Sınırları (Trust Boundaries) & Mimari Harita
 
 ```mermaid
 flowchart LR
-    Attacker["🌐 Dış Saldırgan / Bot<br/>(Auth Token YOK)"] -->|🚫 HTTP 401 / 429 Red| CloudRun["☁️ Google Cloud Run<br/>FastAPI (backend/main.py)<br/>✅ Firebase JWT + Rate Limit"]
-    iOS["📱 Omakase iOS<br/>(APITokenProvider<br/>+ Firebase ID Token)"] -->|HTTPS POST<br/>Authorization: Bearer JWT| CloudRun
+    Attacker["🌐 Dış Saldırgan / Bot<br/>(Auth Token YOK)"] -->|🚫 HTTP 401 / 403 / 429 Red| CloudRun["☁️ Google Cloud Run<br/>FastAPI (backend/main.py + 7 Router)<br/>✅ Firebase JWT + Admin Allowlist + Rate Limit"]
+    iOS["📱 Omakase iOS<br/>(APITokenProvider + Keychain Device Hash)"] -->|HTTPS POST<br/>Bearer JWT + X-Omakase-Device-Id| CloudRun
+    Admin["🛡️ Mission Control (admin-web/)<br/>Firebase Hosting (noindex, CSP, HSTS)"] -->|Bearer JWT ADMIN_UIDS| CloudRun
     CloudRun -->|os.getenv GEMINI_API_KEY| Gemini["✨ Google Gemini API<br/>(Korumalı Kota)"]
-    iOS -->|Firebase SDK + JWT| Firestore["🔥 Cloud Firestore<br/>(firestore.rules ✅ Sıkı<br/>✅ users.email Kaldırıldı)"]
-    Browser["🖥️ Web (getomakase.app)"] -->|CSP + HSTS + X-Frame-Options| WebFiles["📄 web/index.html<br/>(firebase.json Headers)"]
+    CloudRun -->|Admin SDK| Firestore["🔥 Cloud Firestore<br/>(device_usage, metrics_daily,<br/>entitlements, usage — İstemciye Kapalı)"]
+    iOS -->|Firebase SDK + JWT| Firestore
+    Browser["🖥️ Tanıtım Sitesi (getomakase.app)"] -->|Cloudflare wrangler.json| WebFiles["📄 web/ Statik Dosyalar"]
 ```
 
 ---
 
 ## 3. Bölüm 1: API Anahtarları, Sırlar (Secrets) ve Kimlik Bilgisi Yönetimi
 
-### 3.1. `GEMINI_API_KEY` (Google GenAI API Anahtarı) — ✅ Tam Korumalı
-* **İnceleme & Sertleştirme Sonucu:**
-  * `GEMINI_API_KEY` iOS uygulama kodu (`omakase/`), `Info.plist` veya herhangi bir derleme çıktısı içine gömülmemiştir ([`knowledge.app-store-review-guidelines.data-security`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/data-security.md) **Rule 3** uyumlu).
-  * Sunucu tarafında [`backend/main.py#L46`](file:///Users/kuzey/projects/omakase/backend/main.py#L46) üzerinden `os.getenv("GEMINI_API_KEY")` ile ortam değişkeninden okunmaktadır.
-  * `.env` dosyaları hem kök [`.gitignore`](file:///Users/kuzey/projects/omakase/.gitignore#L17) hem de [`backend/.dockerignore`](file:///Users/kuzey/projects/omakase/backend/.dockerignore#L3) ile dışlanmıştır; Git geçmişinde (`git log --all --full-history -- "*/.env*" ".env*"`) hiçbir sızıntı yoktur.
-  * **Kapatılan Dolaylı Risk (`S-01`):** `GEMINI_API_KEY` tüketen tüm Cloud Run uç noktaları artık `Depends(verify_firebase_user)` ile Firebase Auth JWT doğrulaması ve `_check_rate_limit` ile hız sınırı arkasındadır.
+### 3.1. Sunucu Sırları (`GEMINI_API_KEY`, RevenueCat & Cron/Webhook) — ✅ Tam Korumalı
+* [`backend/app/config.py#L21-L41`](file:///Users/kuzey/projects/omakase/backend/app/config.py#L21-L41) üzerinden tüm hassas anahtarlar (`GEMINI_API_KEY`, `REVENUECAT_SECRET_API_KEY`, `REVENUECAT_V2_SECRET_API_KEY`, `REVENUECAT_WEBHOOK_SECRET`, `NOTIFICATION_CRON_SECRET`, `ADMIN_ALERT_WEBHOOK_URL`) yalnızca ortam değişkenlerinden okunur; iOS istemcisine (`omakase/`) hiçbir sunucu gizli anahtarı gömülmemiştir ([`knowledge.app-store-review-guidelines.data-security`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/data-security.md) **Rule 3** uyumlu).
+* `.env` dosyaları kök [`.gitignore`](file:///Users/kuzey/projects/omakase/.gitignore) ve `backend/.dockerignore` ile dışlanmıştır.
+* `REVENUECAT_WEBHOOK_SECRET` ve `NOTIFICATION_CRON_SECRET` doğrulamaları sabit zamanlı `hmac.compare_digest` ile yapılır.
 
 ### 3.2. Firebase `API_KEY` (`GoogleService-Info.plist`) ve GCP Proje Kısıtlama Riski (⚠️ S-03 — Bulut Konsolu İşlemi)
-* **İlgili Dosya:** [`omakase/omakase/GoogleService-Info.plist`](file:///Users/kuzey/projects/omakase/omakase/omakase/GoogleService-Info.plist#L5-L18)
-* **Teknik Değerlendirme:**
-  * Firebase iOS `API_KEY` (`AIzaSyBr65...`) uygulamanızı Firebase projenize (`gen-lang-client-0120875563`) bağlayan tanımlayıcıdır. Ancak aynı GCP projesinde Generative Language API etkin olduğundan, Google Cloud Console üzerinden bu anahtara kısıtlama konulması **zorunludur**:
-  1. **Google Cloud Console → APIs & Services → Credentials** ekranından `AIzaSyBr65...` (iOS API key) anahtarını açın.
-  2. **Application restrictions:** `iOS apps` seçip yalnızca `kuzeysinay.omakase` Bundle ID'sini ekleyin.
-  3. **API restrictions:** `Restrict key` seçerek **yalnızca** `Identity Toolkit API`, `Token Service API`, `Firebase Installations API` ve `Cloud Firestore API` izinlerini bırakın; **`Generative Language API`'nin kesinlikle seçili olmadığından** emin olun.
+* **İlgili Dosya:** [`omakase/omakase/GoogleService-Info.plist`](file:///Users/kuzey/projects/omakase/omakase/omakase/GoogleService-Info.plist)
+* **Teknik Değerlendirme:** Firebase iOS `API_KEY` (`AIzaSyBr65...`) herkese açık istemci yapılandırmasıdır; ancak aynı GCP projesinde (`gen-lang-client-0120875563`) Generative Language API etkin olduğu için GCP Console üzerinden kısıtlama eklenmelidir:
+  1. **Google Cloud Console → APIs & Services → Credentials** altından `AIzaSyBr65...` anahtarını açın.
+  2. **Application restrictions:** `iOS apps` → yalnızca `kuzeysinay.omakase`.
+  3. **API restrictions:** `Restrict key` seçip yalnızca `Identity Toolkit API`, `Token Service API`, `Firebase Installations API` ve `Cloud Firestore API` izinlerini bırakın; **`Generative Language API` kesinlikle kapalı** olmalıdır.
 
-### 3.3. İstemci Tarafı Kimlik & Oturum Saklama (✅ S-10)
-* [`AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift#L610-L638) içinde Sign in with Apple kullanıcı kimliği (`com.omakase.auth.appleIDUser`) iOS **Keychain**'de (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) saklanmaktadır.
-* Kriptografik nonce üretimi `SecRandomCopyBytes` ve `CryptoKit.SHA256` ile uygulanmıştır ([`AuthService.swift#L582-L606`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift#L582-L606)).
+### 3.3. İstemci Tarafı Kimlik & Cihaz Özeti Saklama (✅ S-10 & S-13)
+* [`AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift) içinde Sign in with Apple kullanıcı kimliği (`com.omakase.auth.appleIDUser`) iOS **Keychain**'de (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) saklanır; kriptografik nonce `SecRandomCopyBytes` + `CryptoKit.SHA256` ile üretilir.
+* [`SSEClient.swift#L42-L72`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L42-L72) içindeki `APITokenProvider.quotaDeviceID`, Keychain'de (`kuzeysinay.omakase.device` / `quota_device_id`, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) yalnızca anonim kota suistimali önlemi için saklanır; iCloud'a yedeklenmez/senkronlanmaz ve reklam amaçlı takip kimliği içermez.
 
 ---
 
 ## 4. Bölüm 2: Backend & Google Cloud Run Güvenlik Analizi (`backend/`)
 
-### 4.1. [✅ ÇÖZÜLDÜ — S-01] Firebase ID Token Doğrulaması & iOS `APITokenProvider`
-* **Backend ([`backend/main.py#L80-L108`](file:///Users/kuzey/projects/omakase/backend/main.py#L80-L108)):** `verify_firebase_user` FastAPI bağımlılığı gelen `Authorization: Bearer <token>` başlığını Google'ın resmi `google.oauth2.id_token.verify_firebase_token` fonksiyonu ile `gen-lang-client-0120875563` projesine karşı kriptografik olarak doğrular. Geçersiz veya eksik token'lar `HTTP 401 Unauthorized` ile reddedilir.
-* **iOS ([`SSEClient.swift#L22-L120`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L22-L120)):** `APITokenProvider` aktörü [`knowledge.networking.authenticated-requests`](file:///Users/kuzey/projects/omakase/.agents/knowledge/networking/authenticated-requests.md) kurallarına uygun olarak:
-  1. `Auth.auth().currentUser?.getIDToken(forcingRefresh:)` ile alınan token'ı loglamadan `request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")` ile ekler.
-  2. Eşzamanlı `401` yanıtlarında tek bir yenileme görevi (`refreshTask`) paylaşarak (single-flight refresh) isteği yalnızca 1 kez tekrar dener.
-  3. [`SSEClient.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift), [`CategoryExpansionService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/CategoryExpansionService.swift), [`InterestSuggestor.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/InterestSuggestor.swift) ve [`LetterboxdService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/LetterboxdService.swift) servislerinin tamamı bu merkezi yapıya geçirilmiştir.
+### 4.1. [✅ ÇÖZÜLDÜ — S-01 & S-14] Firebase ID Token & Admin Allowlist Doğrulaması
+* **Kullanıcı Uç Noktaları ([`backend/app/security.py#L89-L140`](file:///Users/kuzey/projects/omakase/backend/app/security.py#L89-L140)):** `verify_firebase_user` gelen `Bearer` token'ı `google.oauth2.id_token.verify_firebase_token` ile doğrular (token hash'i kısa ömürlü bellek içi önbellekte tutulur). İstemci tarafında [`APITokenProvider`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L16-L133) single-flight `401` token yenileme uygular.
+* **Admin Uç Noktaları ([`backend/app/security.py#L150-L235`](file:///Users/kuzey/projects/omakase/backend/app/security.py#L150-L235)):** `verify_admin_user` bağımlılığı `uid in ADMIN_UIDS` veya `email_verified and email in ADMIN_EMAILS` kontrolü yapar; yetkisiz oturumları `403 Forbidden`, eksik/geçersiz token'ları `401 Unauthorized` ile reddeder.
 
-### 4.2. [✅ ÇÖZÜLDÜ — S-02] Rate Limiting ve Sıkı Pydantic Girdi Sınırları
-* **Kayan Pencereli Hız Sınırı ([`backend/main.py#L64-L78`](file:///Users/kuzey/projects/omakase/backend/main.py#L64-L78)):** Kullanıcı UID başına 60 saniyelik pencerede `/feed/stream` (20 istek), `/feed/deep-dive` (20 istek), `/interests/suggest` (30 istek), `/interests/expand-category` (30 istek) ve `/letterboxd/films` (10 istek) kotaları uygulanmakta; aşım durumunda `HTTP 429 Too Many Requests` dönülmektedir.
-* **Pydantic Sınırları ([`backend/main.py#L155-L385`](file:///Users/kuzey/projects/omakase/backend/main.py#L155-L385)):**
-  * `DeepDiveRequest`: `original_title` (`1..300` karakter, tek satır), `original_text` (`1..5000` karakter), `interests` (`max 30` öğe, `_validate_interests` kontrolü).
-  * `FeedRequest.letterboxd_films`: `_validate_letterboxd_films` ile en fazla 50 film, her filmde `title <= 200` karakter, `year` (`1880..2100`), `rating` (`0.0..5.0`) ve `watched_date <= 20` karakter.
-  * `ExpandCategoryRequest.existing_interests` ve `SuggestRequest.exclude_suggestions` alanları da sanitize edilmektedir.
+### 4.2. [✅ ÇÖZÜLDÜ — S-02 & S-12] Rate Limiting ve Sıkı Pydantic Girdi Sınırları
+* **Sliding-Window Hız Sınırı ([`security.py#L64-L87`](file:///Users/kuzey/projects/omakase/backend/app/security.py#L64-L87)):** `/feed/stream` (`20/dk`), `/feed/deep-dive` (`20/dk`), `/feed/reward-share` (`10/dk`), `/interests/suggest` (`30/dk`), `/interests/expand-category` (`30/dk`), `/letterboxd/films` (`10/dk`), `/billing/status` (`30/dk`), `/billing/sync` (`10/dk`), `/telemetry/events` (`60/dk`), `/feedback` (`5/dk`), `/admin/overview` (`30/dk`), `/admin/export` (`20/dk`), `/admin/*` okuma/yazma (`60/dk`).
+* **Pydantic Sınırları ([`backend/app/schemas.py`](file:///Users/kuzey/projects/omakase/backend/app/schemas.py)):** `FeedRequest`, `DeepDiveRequest`, `SuggestRequest`, `ExpandCategoryRequest`, `LetterboxdFilmsRequest`, `TelemetryBatchRequest` ve `FeedbackSubmitRequest` üzerinde alan uzunluğu, maksimum öğe sayısı ve `_BLOCKLIST_RE` kontrolleri zorunludur.
 
 ### 4.3. [✅ ÇÖZÜLDÜ — S-05] `/letterboxd/films` SSRF & XML Sertleştirmesi
-* **Konum:** [`backend/main.py#L1288-L1377`](file:///Users/kuzey/projects/omakase/backend/main.py#L1288-L1377)
-* **Uygulanan Korumalar:**
-  1. `LetterboxdFilmsRequest.username` alanı baştaki `@` işaretini temizledikten sonra `^[a-zA-Z0-9_-]{1,40}$` whitelist regex'i ile doğrulanır; path traversal (`../`) veya query enjeksiyonu imkansızdır.
-  2. `_fetch()` içinde `resp.geturl()` kontrol edilerek yanıtın yalnızca `https://letterboxd.com/` altından geldiği doğrulanır ve `resp.read(_MAX_RSS_BYTES + 1)` ile 2 MB üst sınırı uygulanır.
-  3. `_parse_letterboxd_rss` içinde `<!DOCTYPE` ve `<!ENTITY` bildirimleri içeren XML verileri `ET.fromstring` öncesinde reddedilerek XML Entity Expansion (Billion Laughs / XXE) saldırıları engellenir.
+* [`backend/app/services/letterboxd_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/letterboxd_service.py): `^[a-zA-Z0-9_-]{1,40}$` whitelist regex, yalnızca `https://letterboxd.com/` redirect kabulü, 2 MB yanıt üst sınırı (`_MAX_RSS_BYTES`) ve `ET.fromstring` öncesi `<!DOCTYPE` / `<!ENTITY` reddi uygulanır.
 
 ### 4.4. [✅ ÇÖZÜLDÜ — S-08] Prompt Injection İzolasyonu
-* `_sanitize_single_line` ile kullanıcı girdilerindeki satır sonu (`\r`, `\n`) ve NUL (`\x00`) karakterleri temizlenmektedir.
-* `_build_user_prompt`, `_build_deep_dive_prompt`, `interests_suggest` ve `expand_category` içinde tüm kullanıcı kaynaklı veriler `<user_context>...</user_context>` etiketleri içine alınmış ve `SYSTEM_PROMPT`, `_DEEP_DIVE_SYSTEM`, `_SUGGEST_SYSTEM`, `_EXPAND_CATEGORY_SYSTEM` talimatlarına bu blokların yalnızca veri olarak işlenmesi kuralı eklenmiştir.
+* [`backend/app/prompts.py`](file:///Users/kuzey/projects/omakase/backend/app/prompts.py): Kullanıcı girdileri `_sanitize_single_line` ile temizlenip `<user_context>...</user_context>` etiketleri içinde izole edilir; tüm sistem promptlarında veri olarak işlenmesi zorunlu kılınır.
 
 ### 4.5. [✅ ÇÖZÜLDÜ — S-07] Hata Mesajı Temizliği, `/health`, CORS ve Non-Root `Dockerfile`
-* SSE ve HTTP hata yanıtlarında iç istisna detayları (`str(exc)`) istemciye sızdırılmamakta; yalnızca sunucu loglarına yazılmaktadır.
-* `/health` uç noktası yalnızca `{"status": "ok"}` döndürmektedir ([`backend/main.py#L1218-L1220`](file:///Users/kuzey/projects/omakase/backend/main.py#L1218-L1220)).
-* `CORSMiddleware` yalnızca resmi Omakase web origin'lerine (`https://getomakase.app`, Firebase Hosting domainleri ve localhost) izin verecek şekilde daraltılmıştır.
-* [`backend/Dockerfile`](file:///Users/kuzey/projects/omakase/backend/Dockerfile#L11-L13) içine yetkisiz `appuser` (`UID 10001`) eklenmiştir.
+* `OmakaseAPIError` ([`errors.py`](file:///Users/kuzey/projects/omakase/backend/app/errors.py)) istemciye ham istisna detaylarını sızdırmaz; `/health` ([`main.py#L102-L105`](file:///Users/kuzey/projects/omakase/backend/main.py#L102-L105)) yalnızca `{"status": "ok"}` döner.
+* `CORSMiddleware` ([`config.py#L89-L96`](file:///Users/kuzey/projects/omakase/backend/app/config.py#L89-L96)) yalnızca resmi Omakase domainleri (`https://getomakase.app`, `https://www.getomakase.app`, `https://gen-lang-client-0120875563.web.app`, `.firebaseapp.com` ve localhost dev portları) ile sınırlıdır ve `X-Omakase-Device-Id`, `X-Omakase-Timezone` başlıklarına izin verir.
+* [`backend/Dockerfile#L12-L13`](file:///Users/kuzey/projects/omakase/backend/Dockerfile#L12-L13) `appuser` (`UID 10001`) olarak çalışır.
 
 ---
 
 ## 5. Bölüm 3: Cloud Firestore & Sosyal Grafik Güvenlik Analizi (`firestore.rules`)
 
-### 5.1. [✅ ÇÖZÜLDÜ — S-04] `users/{userId}` Üzerinden E-posta (PII) Sızıntısının Kapatılması
-* [`FirestoreService.swift#L68-L100`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift#L68-L100) içinde `ensureUserProfile` artık `users/{uid}` belgesine e-posta adresi yazmamakta ve mevcut belgelerdeki `email` alanını `"email": FieldValue.delete()` ile temizlemektedir.
-* [`UserProfile.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Models/UserProfile.swift#L32-L54) geriye dönük uyumlu özel `init(from decoder:)` ile `email` alanı olmayan belgeleri sorunsuz okumakta, kullanıcının kendi profil sayfası ([`UserProfileSheet.swift#L319`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift#L319)) ise e-postayı doğrudan `authService.email` üzerinden göstermektedir.
+### 5.1. [✅ ÇÖZÜLDÜ — S-04 & S-15] `users/{userId}` PII Temizliği ve `usernames/{handle}` Atomik Kilidi
+* [`FirestoreService.swift#L89-L93`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift#L89-L93) içinde `ensureUserProfile` artık `users/{uid}` belgelerine `email` veya `photoURL` yazmamakta ve mevcut belgelerdeki eski alanları `"email": FieldValue.delete()`, `"photoURL": FieldValue.delete()` ile temizlemektedir.
+* [`firestore.rules#L187-L213`](file:///Users/kuzey/projects/omakase/firestore.rules#L187-L213) ve [`#L454-L463`](file:///Users/kuzey/projects/omakase/firestore.rules#L454-L463): `usernames/{handle}` (`^[a-z0-9_.]{3,20}$`) koleksiyonu `!exists(...)` ve `uid == request.auth.uid` kontrolüyle aynı kullanıcı adının iki hesaba verilmesini engeller; `isValidUsernameUpdate()` ise `usernameUpdatedAt` üzerinden sunucu saatiyle (`request.time`) **14 günlük değişim beklemesini** zorunlu kılar.
 
-### 5.2. [✅ ÇÖZÜLDÜ — S-06] `firestore.rules` Sosyal Grafik ve Sayaç/Rapor Kuralları
-* **`users/{userId}/following/{targetUid}` ([`firestore.rules#L161-L167`](file:///Users/kuzey/projects/omakase/firestore.rules#L161-L167)):** `create, update` yalnızca `isOwner(userId)` ile sınırlandırılarak "Forced Follow" açığı kapatıldı; `delete` için `userId` veya `targetUid` izni korundu (engelleme ve hesap silme akışları için).
-* **`users/{userId}/followers/{followerUid}` ([`firestore.rules#L169-L177`](file:///Users/kuzey/projects/omakase/firestore.rules#L169-L177)):** `create, update` yalnızca `request.auth.uid == followerUid` ve karşı tarafın `blocked_users` listesinde olmama (`!exists(...)`) şartına bağlandı.
-* **`shared_posts/{postId}/reactions/{reactionUid}` ([`firestore.rules#L223-L230`](file:///Users/kuzey/projects/omakase/firestore.rules#L223-L230)):** `create, update` yalnızca `request.auth.uid == reactionUid` olarak sınırlandırıldı.
-* **`shared_posts` & `comments` Sayaç/Rapor Doğrulaması ([`firestore.rules#L199-L254`](file:///Users/kuzey/projects/omakase/firestore.rules#L199-L254)):** Gönderi sahibi dışındaki güncellemelerde `commentCount` değişimi `±1` ile sınırlandırıldı, `totalReactions >= 0` zorunlu kılındı ve `reportedBy` listesinin küçültülmesi engellenip yalnızca `request.auth.uid` eklenmesine izin verildi.
+### 5.2. [✅ ÇÖZÜLDÜ — S-06 & S-11] Sosyal Grafik, Sayaçlar ve Sunucu Koleksiyonları
+* `following`, `followers`, `blocked_users`, `shared_posts`, `reactions`, `comments` ve `moderation_reports` belgelerinin tamamında `hasOnly` alan beyaz listeleri, `timestamp` tip doğrulaması, kendini takip etme engeli, çift yönlü engel kontrolü ve yazarın `reportedBy` listesini silememesi uygulanmıştır.
+* `entitlements/{userId}` ve `usage/{docId}` istemci yazımına kapalıdır (`allow create, update, delete: if false`).
+* `device_usage`, `metrics_daily`, `daily_active`, `user_feedback`, `notification_queue`, `notification_cooldowns` koleksiyonları varsayılan red (`allow read, write: if false`) ile tüm istemci erişimine kapalıdır.
+* *Takip Notu (Minör Uyum):* [`firestore.rules#L330`](file:///Users/kuzey/projects/omakase/firestore.rules#L330) ve [`#L368`](file:///Users/kuzey/projects/omakase/firestore.rules#L368) içinde `devices` ve `notification_prefs` belgelerindeki `language` alanı şu an `['en', 'tr']` olarak kısıtlıdır; diğer 5 dil (`ja, de, fr, es, ko`) kullanıcılarının FCM tercih yazabilmesi için canlı deploy öncesi 7 dile genişletilmelidir.
 
 ---
 
-## 6. Bölüm 4: iOS İstemci & Web (`web/`) Güvenlik Analizi
+## 6. Bölüm 4: iOS İstemci, Mission Control (`admin-web/`) & Web (`web/`) Güvenlik Analizi
 
-### 6.1. [✅ ÇÖZÜLDÜ] iOS İstemci Ağı ve Derleme Güvenliği
-* [`SSEClient.swift#L26-L40`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L26-L40) içindeki `APITokenProvider.baseURL` ile `http://127.0.0.1:8000` fallback'i yalnızca `#if DEBUG` derlemelerine izole edilmiş; `Release` derlemelerinde güvenli HTTPS Cloud Run adresi zorunlu kılınmıştır.
+### 6.1. [✅ ÇÖZÜLDÜ — S-10] iOS İstemci Ağı, Derleme ve Hesap Silme Güvenliği
+* [`SSEClient.swift#L25-L37`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L25-L37) içinde `http://127.0.0.1:8000` yalnızca `#if DEBUG` derlemelerinde aktiftir; `Release` derlemeleri yalnızca HTTPS Cloud Run adresini kullanır.
+* [`AuthService.swift#L446-L483`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift#L446-L483) içinde hesap silme (`deleteAccount`) Apple token iptalini, tüm Firestore verilerinin silinmesini, Firebase Auth silinmesini ve yerel `PostCacheService` + `BookmarkStore` + `UserDefaults` temizliğini eksiksiz uygular.
 
-### 6.2. [✅ ÇÖZÜLDÜ — S-09] Kimlik Doğrulama Parola Politikası & Web Güvenlik Başlıkları
-* [`AuthService.swift#L154`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift#L154), [`AuthView.swift#L52`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift#L52) ve [`Localization/L10n.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Localization/L10n.swift#L652-L657) üzerinde yeni hesap kayıtları için minimum şifre uzunluğu **8 karaktere** çıkarılmıştır (mevcut kullanıcıların giriş akışı etkilenmez).
-* [`firebase.json`](file:///Users/kuzey/projects/omakase/firebase.json#L12-L42) içine `Strict-Transport-Security`, `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy` ve `Permissions-Policy` başlıkları eklenmiştir.
+### 6.2. [✅ ÇÖZÜLDÜ — S-09 & S-14] Mission Control (`admin-web/`) ve Tanıtım Web (`web/`) Ayrımı
+* **Mission Control (`admin-web/`):** 25 Kasım'da `web/` dizininden çıkarılarak yalnızca Firebase Hosting üzerinden sunulacak şekilde izole edilmiştir ([`firebase.json`](file:///Users/kuzey/projects/omakase/firebase.json)). `X-Robots-Tag: noindex, nofollow`, `Strict-Transport-Security`, `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Cross-Origin-Opener-Policy: same-origin-allow-popups`, `Referrer-Policy` ve `Permissions-Policy` başlıkları tanımlıdır.
+* **Tanıtım Sitesi (`web/` — `getomakase.app`):** [`wrangler.json`](file:///Users/kuzey/projects/omakase/wrangler.json) ile Cloudflare statik barındırmada sunulur; hiçbir admin kodu, özel API anahtarı veya yönetim arayüzü içermez. *(Öneri: Cloudflare yanıt başlıklarına da HSTS / `X-Content-Type-Options: nosniff` / CSP kuralları eklenmesi savunma derinliğini artırır.)*
 
 ---
 
 ## 7. Bölüm 5: Siber Güvenlik Eylem Planı & Kalan Bulut Konsolu Adımları
 
 ### Kod Tabanında Tamamlananlar
-- [x] **1. Backend Uç Noktalarına Firebase Auth ID Token Zorunluluğu (`S-01`):** `backend/main.py` ve iOS `APITokenProvider` (`SSEClient`, `InterestSuggestor`, `CategoryExpansionService`, `LetterboxdService`) güncellendi.
-- [x] **2. Rate Limiting ve Pydantic Uzunluk Sınırları (`S-02`):** Kayan pencereli hız sınırlayıcı ve `DeepDiveRequest` / `FeedRequest.letterboxd_films` doğrulamaları eklendi.
-- [x] **3. `users/{uid}` İçinden `email` (PII) Alanının Kaldırılması (`S-04`):** `FirestoreService.ensureUserProfile` ve `UserProfile` güncellendi.
-- [x] **4. `firestore.rules` Sosyal Grafik ve Sayaç Kurallarının Sıkılaştırılması (`S-06`):** `following`, `followers`, `reactions`, `shared_posts` ve `comments` kuralları sıkılaştırıldı.
-- [x] **5. `/letterboxd/films` SSRF & XML Sertleştirmesi (`S-05`):** Whitelist regex, redirect kontrolü, 2 MB yanıt sınırı ve XML `<!DOCTYPE`/`<!ENTITY` koruması eklendi.
-- [x] **6. Backend & Konteyner Sertleştirmesi (`S-07`):** Hata mesajları temizlendi, `/health` sadeleştirildi, CORS kısıtlandı ve `Dockerfile` içine non-root `appuser` eklendi.
-- [x] **7. Prompt Injection Sınırlandırması (`S-08`):** `<user_context>` XML izolasyonu ve kontrol karakteri temizliği uygulandı.
-- [x] **8. Web Güvenlik Başlıkları & 8 Karakter Parola Politikası (`S-09`):** `firebase.json` ve `AuthService`/`AuthView` güncellendi.
+- [x] **S-01, S-02, S-04 – S-12:** Firebase JWT, Sliding-Window Rate Limiting, Pydantic sınırları, PII temizliği, `firestore.rules` sertleştirmesi (`5/5`), Letterboxd SSRF/XXE, Prompt Injection `<user_context>`, non-root `Dockerfile`, 8 karakter parola, billing/notification sertleştirmeleri.
+- [x] **S-13 (Cihaz Bazlı Kota Koruması):** Keychain `quotaDeviceID` + `X-Omakase-Device-Id` + SHA-256 `device_usage` ([`access_service.py`](file:///Users/kuzey/projects/omakase/backend/app/services/access_service.py)).
+- [x] **S-14 (Mission Control Güvenliği):** `verify_admin_user`, `/admin/*` rate limits, `admin-web/` ayrı Firebase Hosting izolasyonu ve güvenlik başlıkları.
+- [x] **S-15 (`@username` Atomikliği & Bekleme Süresi):** `usernames/{handle}` + 14 gün sunucu zamanlı bekleme kuralı.
 
 ### Canlı Ortam (Cloud Console & CLI) Dağıtım Adımları
-- [ ] **1. Güncel Backend'i Cloud Run'a Dağıtın:**
+- [ ] **1. Güncel Backend'i Cloud Run'a Dağıtın** (`ADMIN_UIDS`, `REVENUECAT_V2_SECRET_API_KEY`, opsiyonel `ADMIN_ALERT_WEBHOOK_URL` dahil):
   ```bash
   cd backend && gcloud run deploy omakase-backend --source . --region us-central1 --project gen-lang-client-0120875563
   ```
-- [ ] **2. Güncel Firestore Kurallarını ve Web Başlıklarını Firebase'e Dağıtın:**
+- [ ] **2. Güncel Firestore Kurallarını (`language` 7 dil güncellemesi sonrası) ve Mission Control Hosting'i Dağıtın:**
   ```bash
   firebase deploy --only firestore:rules,hosting --project gen-lang-client-0120875563
   ```
-- [ ] **3. Google Cloud Console'da `AIzaSyBr65...` Anahtarını Kısıtlayın (`S-03`):**
-  - `Application restrictions` → `iOS apps` → `kuzeysinay.omakase`
-  - `API restrictions` → `Generative Language API` erişimini kapatıp yalnızca Firebase/Firestore API'lerini bırakın.
-- [ ] **4. Firebase Console'da App Check (App Attest) ve Email Enumeration Protection'ı Etkinleştirin.**
+- [ ] **3. Tanıtım Sitesini (`web/`) Cloudflare'e Dağıtın** ve Cloudflare Transform Rules üzerinden `nosniff` / HSTS başlıklarını doğrulayın.
+- [ ] **4. Google Cloud Console'da `AIzaSyBr65...` Anahtarını Kısıtlayın (`S-03`)** ve Firebase Console'da **App Check (App Attest)** + **Email Enumeration Protection**'ı etkinleştirin.
 
 ---
 
-## 8. Bölüm 6: 22 Kasım 2026 Güncel Denetim (`firebase-security-rules-auditor` & Faz 1–3 Taraması)
+## 8. Bölüm 6: Güncel Denetim (26 Kasım 2026 — Faz 1–4, Admin & Cihaz Kota Koruması)
 
-### 8.1. Faz 1–3 Yeni Sistemlerinin Güvenlik Doğrulaması
-* **Monetizasyon (`/billing/*` & `entitlements`/`usage`):** `REVENUECAT_SECRET_API_KEY` ve `REVENUECAT_WEBHOOK_SECRET` yalnızca sunucu ortam değişkenlerinden okunur; webhook doğrulaması sabit zamanlı `hmac.compare_digest` ile yapılır. İstemci tarafı `entitlements/{uid}` ve `usage/{uid}_{yyyymmdd}` koleksiyonlarına yazamaz (`allow create, update, delete: if false`). `/billing/status` (30/dk) ve `/billing/sync` (10/dk) uç noktalarına rate limiter eklendi (`S-12`).
-* **Bildirim Sistemi (`/notifications/*`, `devices`, `notification_prefs`, `notification_queue`, `notification_cooldowns`):** `notification_queue` ve `notification_cooldowns` tüm istemci okuma/yazmalarına kapalıdır. `/notifications/process-queue` `X-Omakase-Cron-Secret` ile sabit zamanlı korunur. `record_social_event` içinde alıcı UID'si gönderi yazarından veya `followers` alt koleksiyonundan sunucu tarafında doğrulanır ve `_resolve_actor_display_name` ile push gönderen ismi Firestore'dan okunur (`S-12`).
-* **Hata Sözleşmesi & Telemetri (`OmakaseError` + Crashlytics):** Teknik istisnalar ve stack trace'ler asla iOS kullanıcı arayüzüne veya API JSON yanıtlarına basılmaz; `ErrorReporter.record` yalnızca non-fatal telemetri toplar.
+### 8.1. Yeni Sistemlerin Güvenlik Doğrulaması
+* **Cihaz-Bazlı Kota Koruması (`S-13`):** İstemcinin gönderdiği `X-Omakase-Device-Id` en az 8, en fazla 128 karakter doğrulanır ve sunucuda sabit tuzlu (`omakase-device-quota:`) SHA-256 hash'ine dönüştürülerek 32 karakterlik özet olarak `device_usage/{hash}_{yyyymmdd}` belgesinde saklanır. Ham cihaz ID'si veritabanında tutulmaz; `device_usage` istemci okumasına/yazmasına tamamen kapalıdır ve `test_device_quota_prevents_free_account_switching_abuse` birim testiyle doğrulanmıştır.
+* **Mission Control & Telemetri (`S-14`):** `POST /telemetry/events` (`60/dk`) ve `POST /feedback` (`5/dk`) yalnızca doğrulanmış Firebase kullanıcısı kabul eder ve `metrics_daily`, `daily_active`, `user_feedback` koleksiyonlarına yalnızca Admin SDK yazar. Tüm `/admin/*` uç noktaları `verify_admin_user` ile korunur; `test_admin_and_telemetry.py` tarafından red-team erişim testlerinden geçirilmiştir.
+* **Monetizasyon & Bildirimler:** RevenueCat v1/v2 anahtarları ve `NOTIFICATION_CRON_SECRET` yalnızca sunucu ortamındadır; `entitlements/{uid}` ve `usage/{uid}_{yyyymmdd}` istemci yazımına kapalıdır.
 
-### 8.2. `firebase-security-rules-auditor` Red Team Değerlendirme Çıktısı (`firestore.rules`)
-
-`S-11` sıkılaştırması (`hasOnly` alan beyaz listeleri, `timestamp` tip kontrolleri, kendini takip etme engeli, çift yönlü engel kontrolü ve yazarların `reportedBy` dizisini değiştirememesi) sonrası denetim skoru:
-
-```json
-{
-  "score": 5,
-  "summary": "firestore.rules enforces strict ownership, immutable author/ID fields, server-only isolation for entitlements/usage/notification_queue/notification_cooldowns, bounded string/list sizes, and whitelisted schema keys across all user-writable collections.",
-  "findings": [
-    {
-      "check": "Update Bypass & Identity-Level Security (S-11)",
-      "severity": "minor",
-      "issue": "Resolved: Author updates on shared_posts and comments previously omitted a guard preventing removal of reportedBy entries, and follow/block/post/comment/report docs lacked strict hasOnly key allowlists.",
-      "recommendation": "Deployed strict hasOnly allowlists, timestamp type checks, self-follow prevention, target block check on following, and reportedBy immutability for authors."
-    }
-  ]
-}
-```
+### 8.2. `firestore.rules` Güvenlik Durumu Özeti
+`S-11` ve `S-15` sonrası `firestore.rules`:
+- Tüm kullanıcı yazılabilir koleksiyonlarda sıkı `hasOnly` anahtar beyaz listeleri, tip/uzunluk sınırları, sunucu zamanı tabanlı 14 gün `@username` beklemesi, kendini/engelliyi takip yasağı ve `reportedBy` değişmezliği uygulanmaktadır.
+- İdari ve sunucu koleksiyonları (`entitlements`, `usage`, `device_usage`, `metrics_daily`, `daily_active`, `user_feedback`, `notification_queue`, `notification_cooldowns`) istemci yazımına (ve `usage`/`entitlements` dışındakiler istemci okumasına da) tamamen kapalıdır.
+- *Açık Küçük İş:* `devices` (`#L330`) ve `notification_prefs` (`#L368`) içindeki `language in ['en', 'tr']` listesi deploy öncesi 7 dile genişletilmelidir.

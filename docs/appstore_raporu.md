@@ -1,8 +1,8 @@
 # 🍣 Omakase — App Store Gönderim Denetimi & Prodüksiyon Raporu
 
-> **Son Güncelleme:** 24 Kasım 2026 (Tüm Kod, 7 Dil, RevenueCat/Bildirim & PrivacyInfo Güncellemeleri Tamamlandı)  
+> **Son Güncelleme:** 26 Kasım 2026 (7 Veri Tipli `PrivacyInfo`, AI Gönderi Raporlama, Mission Control Moderasyon, Export Studio, 12 XCUITest & 8×7 Ekran Görüntüsü Tamamlandı)  
 > **Denetim Metodolojisi:** Apple Agent Kit — `workflow.app-store-submission` (`skill.app-store-review-guidelines.submission` → `skill.privacy.foundations` → `skill.xcode.foundations`) & `workflow.authentication` (`skill.authenticationservices.foundations` → `skill.security.foundations` → `skill.style-guide.writing` → `skill.accessibility.foundations`)  
-> **Amaç:** Uygulamanın ve web altyapısının (`omakase/`, `backend/`, `web/`, `firestore.rules`) App Store Connect gönderimi öncesinde tespit edilen tüm kritik red sebeplerinin giderilmesi ve yapılan prodüksiyon güncellemelerinin belgelenmesi.
+> **Amaç:** Uygulamanın ve web/admin altyapısının (`omakase/`, `backend/`, `web/`, `admin-web/`, `firestore.rules`, `app-store-screenshots/`) App Store Connect gönderimi öncesinde tespit edilen tüm kritik red sebeplerinin giderilmesi ve güncel prodüksiyon uyumunun belgelenmesi.
 
 ---
 
@@ -20,17 +20,17 @@
 
 ## 1. Yönetici Özeti: Tespit Edilen Kırmızı Bayraklar ve Çözüm Durumu
 
-İlk denetimde tespit edilen **7 kritik bulgunun tamamı** kod tabanında, güvenlik kurallarında ve web yasal sayfalarında çözülmüştür:
+İlk denetimde tespit edilen **7 kritik bulgunun tamamı** kod tabanında, güvenlik kurallarında ve web/admin altyapısında çözülmüştür:
 
 | # | Durum | Kategori / Kural | Yapılan Düzeltme & Uygulama Özeti | İlgili Dosya |
 |---|-------|------------------|-----------------------------------|--------------|
-| **1** | ✅ **ÇÖZÜLDÜ** | **Kural 5.1.2** — `PrivacyInfo.xcprivacy` | Uygulama hedefinde `PrivacyInfo.xcprivacy` oluşturuldu ve Faz 4 kapsamında güncellendi (`NSPrivacyAccessedAPICategoryUserDefaults` → `CA92.1` ve `Name`, `EmailAddress`, `UserID`, `PurchaseHistory`, `CrashData`, `OtherUserContent` veri beyanları). | [`omakase/omakase/PrivacyInfo.xcprivacy`](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) |
-| **2** | ✅ **ÇÖZÜLDÜ** | **Kural 4.8** — Sign in with Apple | `AuthenticationServices` + `CryptoKit` (SHA256 Nonce) + Keychain (`appleIDUser`) + `getCredentialState` + `credentialRevokedNotification` ile tam **Sign in with Apple** akışı ve Google ile eşit görünürlükte buton eklendi. | [`Auth/AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift), [`Auth/AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift) |
-| **3** | ✅ **ÇÖZÜLDÜ** | **Kural 5.1.1(v)** — Hesap Silme | `AuthService.deleteAccount(l10n:)` ve `FirestoreService.deleteAllUserData(uid:)` eklendi. `MyProfileSheet` içine onay uyarılı **Hesabı Sil (`Delete Account`)** butonu yerleştirildi. | [`Auth/AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift), [`Services/FirestoreService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift), [`Social/UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift) |
-| **4** | ✅ **ÇÖZÜLDÜ** | **Kural 1.2** — UGC Moderasyon (Kullanıcı Engelleme, Gönderi/Profil Şikayeti & Ön Filtre) | 1) `blockUser` / `unblockUser` eklendi; engellenen kullanıcının gönderileri, yorumları ve arama sonuçları anında gizleniyor.<br>2) Gönderi (`reportPost`), Yorum (`reportComment`) ve Profil (`reportUser`) şikayetleri `moderation_reports` koleksiyonuna yazılıyor.<br>3) Yorumlarda (`CommentsView`) ve kayıt sırasında (`displayName`, `@username`) `ContentModerationService.isAppropriate` ön filtresi zorunlu kılındı. | [`Services/ContentModerationService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/ContentModerationService.swift), [`Services/FirestoreService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift), [`Social/TimelinePostCard.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/TimelinePostCard.swift), [`Social/CommentsView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/CommentsView.swift), [`Social/UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift), [`Social/UserSearchView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserSearchView.swift) |
-| **5** | ✅ **ÇÖZÜLDÜ** | **Kural 1.2, 1.5 & 5.1.1(i)** — Uygulama İçi İletişim & Yasal Web Sayfaları | `MyProfileSheet` ve `AuthView` içine **Destek & İletişim (`mailto:destek@getomakase.app`)**, **Gizlilik Politikası (`https://getomakase.app/privacy.html`)** ve **Kullanım Koşulları (`https://getomakase.app/terms.html`)** eklendi; `web/privacy.html` ve `web/terms.html` oluşturuldu. | [`Social/UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift), [`Auth/AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift), [`web/privacy.html`](file:///Users/kuzey/projects/omakase/web/privacy.html), [`web/terms.html`](file:///Users/kuzey/projects/omakase/web/terms.html) |
-| **6** | ✅ **ÇÖZÜLDÜ** | **Kural 1.6** — Veri Güvenliği (`firestore.rules`) | Herkese yazma izni veren `allow read, write: if request.auth != null;` kaldırıldı; `users`, `following`, `followers`, `blocked_users`, `shared_posts`, `reactions`, `comments` ve `moderation_reports` için sıkı sahip/şema doğrulamalı kurallar yazıldı. | [`firestore.rules`](file:///Users/kuzey/projects/omakase/firestore.rules) |
-| **7** | ✅ **ÇÖZÜLDÜ** | **Kural 1.6 & 2.1(a)** — `Info.plist` ATS, `NSLocalNetworkUsageDescription` & Debug Telemetri Temizliği | 1) `Info.plist` içindeki `172.20.10.14` ve yerel HTTP istisnaları kaldırıldı.<br>2) `INFOPLIST_KEY_NSLocalNetworkUsageDescription` Release yapılandırmasından çıkarıldı.<br>3) `SSEClient.swift` ve `FeedViewModel.swift` içindeki `127.0.0.1:7607` `AgentDebugLog` telemetri kodları temizlendi, geliştirici hata mesajları kullanıcı dostu hale getirildi. | [`omakase/omakase/Info.plist`](file:///Users/kuzey/projects/omakase/omakase/omakase/Info.plist), [`omakase/omakase.xcodeproj/project.pbxproj`](file:///Users/kuzey/projects/omakase/omakase/omakase.xcodeproj/project.pbxproj), [`Networking/SSEClient.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift), [`Feed/FeedViewModel.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Feed/FeedViewModel.swift), [`Localization/L10n.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Localization/L10n.swift) |
+| **1** | ✅ **ÇÖZÜLDÜ** | **Kural 5.1.2** — `PrivacyInfo.xcprivacy` | `PrivacyInfo.xcprivacy` güncellendi: `NSPrivacyAccessedAPICategoryUserDefaults` (`CA92.1`), `NSPrivacyTracking: false` ve **7 toplanan veri tipi** (`Name`, `EmailAddress`, `UserID`, `PurchaseHistory`, `CrashData`, `OtherUserContent`, `ProductInteraction`). | [`omakase/omakase/PrivacyInfo.xcprivacy`](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) |
+| **2** | ✅ **ÇÖZÜLDÜ** | **Kural 4.8** — Sign in with Apple | `AuthenticationServices` + `CryptoKit` (SHA256 Nonce) + Keychain (`appleIDUser`) + `getCredentialState` + `credentialRevokedNotification` + kayıt sonrası `ProfileSetupView` ve atomik `usernames/{handle}` rezervasyonu. | [`Auth/AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift), [`Auth/AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift), [`Onboarding/OnboardingView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Onboarding/OnboardingView.swift) |
+| **3** | ✅ **ÇÖZÜLDÜ** | **Kural 5.1.1(v)** — Hesap Silme | `AuthService.deleteAccount(l10n:)` ve `FirestoreService.deleteAllUserData(uid:)` Apple token iptali, Firestore temizliği, SwiftData önbellek (`PostCacheService`) ve `BookmarkStore` temizliği yapar. | [`Auth/AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift), [`Services/FirestoreService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift) |
+| **4** | ✅ **ÇÖZÜLDÜ** | **Kural 1.2** — UGC & AI İçerik Moderasyonu | 1) `ContentModerationService.isAppropriate` ön filtresi (yorum, `displayName`, `@username`).<br>2) Gönderi (`reportPost`), Yorum (`reportComment`), Profil (`reportUser`) ve **AI Üretimi Post (`reportAIPost`)** şikayetleri `moderation_reports` koleksiyonuna yazılır.<br>3) `blockUser` anında akışı gizler; **Mission Control (`admin-web/`)** 24 saatlik inceleme triyajı sunar. | [`Services/ContentModerationService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/ContentModerationService.swift), [`Feed/FeedView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Feed/FeedView.swift), [`admin-web/admin.html`](file:///Users/kuzey/projects/omakase/admin-web/admin.html) |
+| **5** | ✅ **ÇÖZÜLDÜ** | **Kural 1.2, 1.5 & 5.1.1(i)** — İletişim, Geri Bildirim & Yasal Sayfalar | `MyProfileSheet` / Ayarlar ve `AuthView` içinde **Destek (`mailto:destek@getomakase.app`)**, **Uygulama İçi Geri Bildirim (`FeedbackSheetView`)**, **Gizlilik Politikası (`privacy.html`)** ve **Kullanım Koşulları (`terms.html`)** bağlıdır. *(Not: `privacy.html` / `terms.html` son telemetri ve cihaz kota maddeleri için güncellenmelidir.)* | [`Profile/FeedbackSheetView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Profile/FeedbackSheetView.swift), [`web/privacy.html`](file:///Users/kuzey/projects/omakase/web/privacy.html), [`web/terms.html`](file:///Users/kuzey/projects/omakase/web/terms.html) |
+| **6** | ✅ **ÇÖZÜLDÜ** | **Kural 1.6** — Veri Güvenliği (`firestore.rules`) | `users`, `usernames`, `following`, `followers`, `blocked_users`, `shared_posts`, `reactions`, `comments` ve `moderation_reports` için `hasOnly` + sahip/şema doğrulamalı kurallar; sunucu koleksiyonları (`entitlements`, `usage`, `device_usage`, `metrics_daily`, `user_feedback`) korumalı. | [`firestore.rules`](file:///Users/kuzey/projects/omakase/firestore.rules) |
+| **7** | ✅ **ÇÖZÜLDÜ** | **Kural 1.6 & 2.1(a)** — `Info.plist`, ATS & Telemetri Temizliği | Yerel HTTP istisnaları ve `Release` `NSLocalNetworkUsageDescription` kaldırıldı; `ExportPostSheet` için `LSApplicationQueriesSchemes` (`instagram-stories`, `instagram`, `whatsapp`, `twitter`) ve `NSPhotoLibraryAddUsageDescription` eklendi. | [`omakase/omakase/Info.plist`](file:///Users/kuzey/projects/omakase/omakase/omakase/Info.plist), [`Networking/SSEClient.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift) |
 
 ---
 
@@ -39,106 +39,70 @@
 ### 2.1. Giriş Servisleri ve Eşdeğer Seçenek Zorunluluğu — Kural 4.8 (✅ Tamamlandı)
 * **Dayanak:** `knowledge.app-store-review-guidelines.login-services-equivalent-option`, `workflow.authentication`
 * **Yapılan Uygulama:**
-  - [`AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift) içinde `AuthenticationServices` ve `CryptoKit` kullanılarak `signInWithApple()` metodu, kriptografik olarak güvenli rastgele nonce + SHA256 özeti (`sha256(_:)`), yalnızca ilk girişte dönen `fullName` bilgisinin yakalanıp Firebase Auth profiline ve Firestore `users/{uid}` belgesine kaydedilmesi sağlandı.
-  - Apple kullanıcı tanımlayıcısı (`credential.user`) arka plan iş parçacığında (`Task.detached`) iOS Keychain (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) üzerinde saklanmakta, uygulama açılışında ve ön plana gelişinde `ASAuthorizationAppleIDProvider().getCredentialState(forUserID:)` kontrol edilmekte ve `ASAuthorizationAppleIDProvider.credentialRevokedNotification` dinlenerek iptal durumunda oturum kapatılmaktadır.
-  - [`AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift) karşılama ve giriş ekranlarında **"Apple ile devam et" / "Continue with Apple"** butonu Google Sign-In butonunun hemen üstünde, eşit boyut ve görsel ağırlıkta konumlandırılmıştır.
+  - [`AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift) içinde `AuthenticationServices` ve `CryptoKit` kullanılarak `signInWithApple()` metodu, kriptografik nonce + SHA256 özeti, yalnızca ilk girişte dönen `fullName` yakalama, Keychain (`appleIDUser`) saklama, `getCredentialState` ve `credentialRevokedNotification` dinleyicisi uygulanmıştır.
+  - Apple, Google veya eksik profilli kullanıcılar giriş sonrası `ProfileSetupView` ([`Onboarding/OnboardingView.swift#L350`](file:///Users/kuzey/projects/omakase/omakase/omakase/Onboarding/OnboardingView.swift#L350)) üzerinden görünür ad + atomik benzersiz `@username` (`usernames/{handle}`) belirler; `@username` değişimi 14 günlük bekleme süresiyle sınırlandırılmıştır.
+  - [`AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift) ekranında **"Apple ile devam et" / "Continue with Apple"** butonu Google Sign-In butonunun üstünde, eşit boyut ve görsel ağırlıkta yer alır.
 
-### 2.2. Kullanıcı Tarafından Oluşturulan İçerik (UGC) Moderasyonu — Kural 1.2 (✅ Tamamlandı)
+### 2.2. Kullanıcı Tarafından Oluşturulan İçerik (UGC) & AI İçerik Moderasyonu — Kural 1.2 (✅ Tamamlandı)
 * **Dayanak:** `knowledge.app-store-review-guidelines.user-generated-content-moderation`
-* **Yapılan Uygulama (4 Zorunlu Mekanizma):**
-  1. **Yayın Öncesi Sakıncalı İçerik Filtresi (Rule 1):**
-     - [`ContentModerationService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/ContentModerationService.swift) içindeki TR/EN küfür, nefret söylemi, taciz, şiddet ve müstehcen içerik regex listesi genişletildi ve `isAppropriate(_:maxLength:)` desteği eklendi.
-     - [`CommentsView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/CommentsView.swift) içindeki `sendComment()` fonksiyonu, yorumu Firestore'a göndermeden önce `ContentModerationService.isAppropriate(trimmed, maxLength: 500)` kontrolünden geçirir; uygunsuz içerikte hata uyarısı gösterir.
-     - [`AuthView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthView.swift) ve [`AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift) içinde görünür ad (`displayName`) ve `@kullanıcı_adı` (`username`) kayıt adımlarında `ContentModerationService.isAppropriate` kontrolü zorunlu hale getirildi.
-  2. **Şikayet Mekanizması (Rule 2):**
-     - [`FirestoreService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift) içinde `reportPost`, `reportComment` ve `reportUser` fonksiyonları tüm şikayetleri merkezi `moderation_reports` koleksiyonuna yazar.
-     - [`TimelinePostCard.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/TimelinePostCard.swift) üzerinde diğer kullanıcıların gönderileri için üç nokta (`ellipsis`) menüsü ile **"Gönderiyi Bildir" (`Report Post`)** ve **"Kullanıcıyı Engelle" (`Block User`)** aksiyonları eklendi.
-     - [`UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift) üst barına diğer kullanıcı profilleri için **"Kullanıcıyı Bildir" (`Report User`)** ve **"Kullanıcıyı Engelle / Engeli Kaldır"** menüsü eklendi.
-  3. **Kötü Niyetli Kullanıcıları Engelleme (Rule 3):**
-     - [`FirestoreService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift) içinde `blockUser(targetUid:currentUid:)` çağrıldığında hedef kullanıcı `users/{uid}/blocked_users/{targetUid}` koleksiyonuna kaydedilir, karşılıklı takip ilişkisi koparılır ve `.omakaseDidUpdateBlockedUsers` bildirimi yayınlanır.
-     - [`TimelineViewModel.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/TimelineViewModel.swift), [`CommentsView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/CommentsView.swift) ve [`UserSearchView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserSearchView.swift) bu bildirimi dinleyerek engellenen kullanıcının tüm gönderilerini, yorumlarını ve arama sonuçlarını anında ekrandan kaldırır.
-  4. **Yayınlanmış İletişim Bilgisi (Rule 4):**
-     - Hem `MyProfileSheet` hem de `AuthView` içinde `mailto:destek@getomakase.app` doğrudan erişilebilir durumdadır.
+* **Yapılan Uygulama (4 Zorunlu Mekanizma + AI Raporlama & Admin Triyajı):**
+  1. **Yayın Öncesi Sakıncalı İçerik Filtresi:** [`ContentModerationService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/ContentModerationService.swift) yorumlarda (`CommentsView.sendComment()`), `displayName` ve `@username` adımlarında zorunludur; backend tarafında da `_BLOCKLIST_RE` ve Gemini `BLOCK_MEDIUM_AND_ABOVE` güvenlik filtreleri çalışır.
+  2. **Şikayet Mekanizması (UGC + AI Post):**
+     - Topluluk gönderileri (`reportPost`), yorumlar (`reportComment`) ve profiller (`reportUser`) yanında **ana akıştaki AI üretimi gönderiler** de üç nokta (`ellipsis`) menüsü üzerinden (`FirestoreService.reportAIPost` → `moderation_reports`) bildirilebilir ([`FeedView.swift#L1012-L1360`](file:///Users/kuzey/projects/omakase/omakase/omakase/Feed/FeedView.swift#L1012-L1360)).
+     - Gelen şikayetler **Mission Control (`admin-web/`) Moderasyon sekmesi** ve `PATCH /admin/reports/{report_id}` üzerinden 24 saat içinde incelenip çözülebilir veya ilgili gönderi silinebilir.
+  3. **Kötü Niyetli Kullanıcıları Engelleme:** `blockUser(targetUid:currentUid:)` karşı kayıtları ve karşılıklı takibi temizler, `.omakaseDidUpdateBlockedUsers` ile tüm akıştan, yorumlardan ve aramadan anında gizler.
+  4. **Yayınlanmış İletişim Bilgisi:** `mailto:destek@getomakase.app` Ayarlar ve `AuthView` içinde erişilebilirdir.
 
-### 2.3. Geliştirici İletişim Bilgileri ve Yasal Web Sayfaları — Kural 1.5 & 5.1.1(i) (✅ Tamamlandı)
-* **Dayanak:** `knowledge.app-store-review-guidelines.developer-contact-information`
-* **Yapılan Uygulama:**
-  - `MyProfileSheet` ([`Social/UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift)) içerisine **"Destek ve Yasal" (`Support & Legal`)** bölümü eklendi:
-    - **Destek ve İletişim:** `mailto:destek@getomakase.app`
-    - **Gizlilik Politikası:** `https://getomakase.app/privacy.html`
-    - **Kullanım Koşulları (EULA):** `https://getomakase.app/terms.html`
-  - Web dizininde çift dilli (TR/EN) [`web/privacy.html`](file:///Users/kuzey/projects/omakase/web/privacy.html) ve [`web/terms.html`](file:///Users/kuzey/projects/omakase/web/terms.html) sayfaları oluşturuldu, [`web/index.html`](file:///Users/kuzey/projects/omakase/web/index.html) alt bilgisine bağlantıları eklendi ve [`firebase.json`](file:///Users/kuzey/projects/omakase/firebase.json) içinde `"cleanUrls": true` aktif edildi.
+### 2.3. Geliştirici İletişim Bilgileri, Geri Bildirim & Yasal Web Sayfaları — Kural 1.5 & 5.1.1(i) (✅ Kod Hazır · ⏳ Yasal Metin Güncellemesi)
+* Ayarlar (ayrı ekran — [`UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift)) ve `AuthView` içinde **Destek (`mailto:destek@getomakase.app`)**, **Geri Bildirim Gönder ([`FeedbackSheetView.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Profile/FeedbackSheetView.swift))**, **Gizlilik Politikası (`https://getomakase.app/privacy.html`)** ve **Kullanım Koşulları (`https://getomakase.app/terms.html`)** yer alır.
+* *Not:* [`web/privacy.html`](file:///Users/kuzey/projects/omakase/web/privacy.html) ve [`web/terms.html`](file:///Users/kuzey/projects/omakase/web/terms.html) şu an `22 Kasım 2026` tarihlidir; gönderim öncesi `ProductInteraction` analitiği, uygulama içi geri bildirim, günlük 1 Letterboxd ücretsiz kotası ve anonim Keychain cihaz kota özeti maddelerini yansıtacak şekilde güncellenip Cloudflare'e dağıtılmalıdır.
 
 ### 2.4. Veri Toplama, Saklama ve Hesap Silme — Kural 5.1.1(v) (✅ Tamamlandı)
-* **Dayanak:** `knowledge.app-store-review-guidelines.privacy-nutrition-label` & Guideline 5.1.1(v)
-* **Yapılan Uygulama:**
-  - [`FirestoreService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift) içindeki `deleteAllUserData(uid:)` kullanıcının paylaştığı gönderileri (`shared_posts`), takip/takipçi bağlantılarının karşı kayıtlarını, `following`, `followers`, `blocked_users` alt koleksiyonlarını ve `users/{uid}` belgesini siler.
-  - [`AuthService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift) içindeki `deleteAccount(l10n:)` tüm Firestore verilerini temizledikten sonra `Auth.auth().currentUser?.delete()` çağrısını yapar, Keychain'deki Apple kimlik kaydını ve yerel `@AppStorage` verilerini sıfırlar.
-  - `MyProfileSheet` ([`Social/UserProfileSheet.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Social/UserProfileSheet.swift)) en altına yıkıcı (`role: .destructive`) **"Hesabı Sil" (`Delete Account`)** butonu ve onay uyarısı eklendi.
+* [`FirestoreService.swift#L709`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/FirestoreService.swift#L709) içindeki `deleteAllUserData(uid:)` kullanıcının `shared_posts`, takip/takipçi bağlantıları, `blocked_users` ve `users/{uid}` belgesini siler.
+* [`AuthService.swift#L446-L483`](file:///Users/kuzey/projects/omakase/omakase/omakase/Auth/AuthService.swift#L446-L483) içindeki `deleteAccount(l10n:)` Apple yetkilendirme kodunu iptal eder (`revokeToken`), Firestore verilerini ve Firebase Auth hesabını siler; ardından Keychain Apple kimliğini, `PostCacheService` SwiftData önbelleğini, `BookmarkStore` yer imlerini ve `UserDefaults` tercihlerini temizler.
+* *Not (Kural 5.1.1 & Kota Suistimali):* [`SSEClient.swift#L42-L72`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift#L42-L72) içindeki `quotaDeviceID`, kullanıcıyı kimliklendirmeyen ve iCloud'a senkronlanmayan bir anonim Keychain UUID'si olarak yalnızca sunucuda SHA-256 hash'iyle (`device_usage`) ücretsiz günlük kota suistimalini önlemek için korunur; reklam veya takip amaçlı kullanılmaz.
 
 ---
 
 ## 3. Kapı 2: Gizlilik Manifestosu ve Veri Beyanı Denetimi (`skill.privacy.foundations`)
 
-* **Dayanak:**
-  - `knowledge.privacy.manifest-file-structure-and-scope`
-  - `knowledge.privacy.required-reason-api-declarations`
-  - `knowledge.privacy.collected-data-types-declaration`
-  - `knowledge.privacy.tracking-domains-and-third-party-sdk-signatures`
+* **Dayanak:** `manifest-file-structure-and-scope`, `required-reason-api-declarations`, `collected-data-types-declaration`, `tracking-domains-and-third-party-sdk-signatures`
 
-### 3.1. `PrivacyInfo.xcprivacy` Dosyası (✅ Tamamlandı)
-[`omakase/omakase/PrivacyInfo.xcprivacy`](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) oluşturuldu ve `plutil -lint` ile doğrulandı (`OK`). Proje `PBXFileSystemSynchronizedRootGroup` kullandığı için dosya otomatik olarak uygulama paketinin köküne (`omakase.app/PrivacyInfo.xcprivacy`) dahil edilmektedir.
+### 3.1. `PrivacyInfo.xcprivacy` Dosyası (✅ Tamamlandı — 7 Veri Tipi)
+[`omakase/omakase/PrivacyInfo.xcprivacy`](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) dosyası `PBXFileSystemSynchronizedRootGroup` üzerinden uygulama paketinin köküne (`omakase.app/PrivacyInfo.xcprivacy`) dahil edilmektedir:
 - `NSPrivacyTracking`: `false`
 - `NSPrivacyTrackingDomains`: `[]`
 - `NSPrivacyAccessedAPITypes`: `NSPrivacyAccessedAPICategoryUserDefaults` (`CA92.1`)
-- `NSPrivacyCollectedDataTypes`:
-  - `NSPrivacyCollectedDataTypeName` (Linked: `true`, Tracking: `false`, Purpose: `AppFunctionality`)
-  - `NSPrivacyCollectedDataTypeEmailAddress` (Linked: `true`, Tracking: `false`, Purpose: `AppFunctionality`)
-  - `NSPrivacyCollectedDataTypeUserID` (Linked: `true`, Tracking: `false`, Purpose: `AppFunctionality`)
+- `NSPrivacyCollectedDataTypes` (**7 veri tipi**):
+  1. `NSPrivacyCollectedDataTypeName` (`Linked: true`, `Tracking: false`, Purpose: `AppFunctionality`)
+  2. `NSPrivacyCollectedDataTypeEmailAddress` (`Linked: true`, `Tracking: false`, Purpose: `AppFunctionality`)
+  3. `NSPrivacyCollectedDataTypeUserID` (`Linked: true`, `Tracking: false`, Purpose: `AppFunctionality`)
+  4. `NSPrivacyCollectedDataTypePurchaseHistory` (`Linked: true`, `Tracking: false`, Purpose: `AppFunctionality`)
+  5. `NSPrivacyCollectedDataTypeCrashData` (`Linked: false`, `Tracking: false`, Purpose: `AppFunctionality`)
+  6. `NSPrivacyCollectedDataTypeOtherUserContent` (`Linked: true`, `Tracking: false`, Purpose: `AppFunctionality`)
+  7. `NSPrivacyCollectedDataTypeProductInteraction` (`Linked: true`, `Tracking: false`, Purpose: `Analytics` — [`TelemetryService.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Services/TelemetryService.swift) izinli ürün etkileşimleri)
+
+> [!IMPORTANT]
+> App Store Connect → **App Privacy** anketi doldurulurken `Product Interaction` (`Analytics`, Linked to User, Not Used for Tracking) dahil yukarıdaki **7 veri tipinin tamamı** birebir eşleştirilmelidir.
 
 ---
 
 ## 4. Kapı 3: Xcode, İmzalama, Güvenlik ve Arşiv Denetimi (`skill.xcode.foundations`)
 
 ### 4.1. Veri Güvenliği ve `firestore.rules` Sıkılaştırması (✅ Tamamlandı)
-* **Dayanak:** `knowledge.app-store-review-guidelines.data-security` (Rule 1, 2, 5)
-* **Yapılan Uygulama:** [`firestore.rules`](file:///Users/kuzey/projects/omakase/firestore.rules) dosyası `firestore-rules-author` alt ajanı tarafından tamamen yenilendi:
-  - `users/{userId}`: Okuma yalnızca oturum açmış kullanıcılara (`isSignedIn()`), oluşturma/güncelleme/silme yalnızca hesap sahibine (`isOwner(userId)`) ve alan bazlı şema/tip/uzunluk kontrollerine bağlandı.
-  - `users/{userId}/following/{targetUid}` & `blocked_users/{blockedUid}`: Yalnızca hesap sahibi (`isOwner(userId)`) okuyup yazabilir.
-  - `users/{userId}/followers/{followerUid}`: Hesap sahibi veya takipçi (`isOwner(userId) || isOwner(followerUid)`) tarafından yönetilebilir.
-  - `shared_posts/{postId}`: Oluşturma ve silme yalnızca gönderi sahibine (`authorId == request.auth.uid`), güncelleme ise yalnızca `reactionCounts` haritası veya `commentCount` sayacının ±1 değişimiyle sınırlandırıldı.
-  - `moderation_reports/{reportId}`: Yalnızca `reporterUid == request.auth.uid` ile rapor oluşturulabilir; istemciden okuma, güncelleme ve silme tamamen kapatıldı (`allow read, update, delete: if false;`).
+* [`firestore.rules`](file:///Users/kuzey/projects/omakase/firestore.rules): Tüm kullanıcı yazılabilir belgelerde `hasOnly`, tip/uzunluk kilidi, `usernames/{handle}` atomikliği, 14 günlük `@username` değişim beklemesi ve sunucu koleksiyonları (`entitlements`, `usage`, `device_usage`, `metrics_daily`, `daily_active`, `user_feedback`, `notification_queue`, `notification_cooldowns`) için istemci yazım yasağı uygulanmıştır. *(Not: `devices` ve `notification_prefs` `language` doğrulaması deploy öncesi `en/tr`'den 7 dile genişletilecektir.)*
 
-### 4.2. `Info.plist` ATS, `NSLocalNetworkUsageDescription` ve Telemetri Temizliği (✅ Tamamlandı)
-* [`omakase/omakase/Info.plist`](file:///Users/kuzey/projects/omakase/omakase/omakase/Info.plist) içindeki `NSAppTransportSecurity` (`172.20.10.14`, `127.0.0.1`, `localhost` HTTP istisnaları) tamamen kaldırıldı.
-* [`omakase/omakase.xcodeproj/project.pbxproj`](file:///Users/kuzey/projects/omakase/omakase/omakase.xcodeproj/project.pbxproj) içinde `INFOPLIST_KEY_NSLocalNetworkUsageDescription` anahtarı `Release` yapılandırmasından çıkarıldı (yalnızca `Debug` yapılandırmasında bırakıldı).
-* [`Networking/SSEClient.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Networking/SSEClient.swift) ve [`Feed/FeedViewModel.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Feed/FeedViewModel.swift) içindeki `http://127.0.0.1:7607/ingest/...` adresine istek atan `AgentDebugLog` kodları tamamen silindi.
-* [`Localization/L10n.swift`](file:///Users/kuzey/projects/omakase/omakase/omakase/Localization/L10n.swift) içindeki geliştiriciye yönelik bağlantı hata metinleri (`OMAKASE_API_URL`, `uvicorn` vb.) son kullanıcıya uygun mesajlarla değiştirildi.
-* `AppIcon.appiconset/omakase.png` dosyası `sips -g all` ile kontrol edildi: `1024×1024`, `RGB`, `hasAlpha: no`, `sRGB IEC61966-2.1` (✅ App Store ikon standartlarına tam uyumlu).
+### 4.2. `Info.plist`, Entitlements ve Görsel Varlıklar (✅ Tamamlandı)
+* [`omakase/omakase/Info.plist`](file:///Users/kuzey/projects/omakase/omakase/omakase/Info.plist) içinde yerel HTTP istisnaları ve Release `NSLocalNetworkUsageDescription` temizlenmiştir. Export Studio için yalnızca gereken `NSPhotoLibraryAddUsageDescription` (yalnızca ekleme izni) ve `LSApplicationQueriesSchemes` (`instagram-stories`, `instagram`, `whatsapp`, `twitter`) tanımlıdır.
+* [`omakase/omakase/omakase.entitlements`](file:///Users/kuzey/projects/omakase/omakase/omakase/omakase.entitlements) üzerinde `com.apple.developer.applesignin` (`Default`) ve `aps-environment` (`development`) yetkileri mevcuttur.
+* `AppIcon.appiconset/omakase.png`: `1024×1024`, `RGB`, `hasAlpha: no`, `sRGB`.
 
-### 4.3. Derleme Yapılandırmaları (`Debug` vs `Release`), Yetenekler (`Capabilities`) ve Cihaz Otomasyonu
-* **Dayanak:** [`knowledge.xcode.build-configurations`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/build-configurations.md) (Rule 1–3) & [`knowledge.xcode.entitlements-capabilities`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/entitlements-capabilities.md) (Rule 1–4)
-* **Per-Configuration Yapılandırma (`build-configurations` Rule 1–3):** `Debug` ve `Release` arasında farklı olması gereken değerler **"Any Configuration"** yerine ilgili sütuna tanımlanmalı; `#if DEBUG` koşulları `SWIFT_ACTIVE_COMPILATION_CONDITIONS` üzerinden doğrulanmalıdır.
-
-| Ortam | `OMAKASE_API_URL` Değeri | Kullanım Amacı |
-|-------|--------------------------|----------------|
-| **Canlı (Cloud Run — Varsayılan)** | `https://omakase-backend-20235796246.us-central1.run.app` | Fiziksel cihaz, Simulator, TestFlight ve App Store Release |
-| **Lokal (Localhost — Geliştirme)** | `http://127.0.0.1:8000` | Yalnızca lokal FastAPI (`uvicorn`) testi yapılırken |
-
-* **Capabilities & Entitlements (`entitlements-capabilities` Rule 1–4):** `Sign in with Apple` yeteneği `.entitlements` dosyası elle düzenlenerek değil, mutlaka Xcode'da **omakase target → Signing & Capabilities → + Capability** üzerinden eklenmelidir ki Apple Developer Portal üzerindeki App ID ve Provisioning Profile otomatik güncellensin.
-* **Otomasyon Betikleri:** Fiziksel iPhone doğrulaması için [`scripts/launch-ios.sh`](file:///Users/kuzey/projects/omakase/scripts/launch-ios.sh) (`ADFC2ADA-EA3F-51A7-9C82-E2554869B97D`), Simulator doğrulaması için [`scripts/launch-simulator.sh`](file:///Users/kuzey/projects/omakase/scripts/launch-simulator.sh) (`45BCCBC2-5804-4E7A-BF2C-8E3FE4C47134`) kullanılmaktadır.
-
-### 4.4. App Store Arşivleme (`Archive`) ve Dağıtım (`Export`) Prosedürü
-* **Dayanak:** [`knowledge.xcode.archive-process`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/archive-process.md) & [`knowledge.xcode.export-options`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/export-options.md)
-
-App Store Connect veya TestFlight'a paket gönderirken uyulması gereken zorunlu sıra:
-
-1. **Hedef Cihaz Seçimi (`archive-process` Rule 1):** Xcode üst çubuğunda hedef olarak bir Simulator değil, **"Any iOS Device (arm64)"** veya bağlı fiziksel iPhone seçilmelidir (Simulator seçiliyken `Product → Archive` menüsü devre dışıdır).
-2. **Release Konfigürasyonu Kontrolü (`archive-process` Rule 4):** `Edit Scheme → Archive` altında Build Configuration değerinin **Release** olduğu doğrulanmalıdır.
-3. **Gizlilik Raporu Kontrolü (`manifest-file-structure-and-scope` Rule 5):** `Product → Archive` tamamlandıktan sonra açılan Organizer penceresinde arşive sağ tıklayıp **Generate Privacy Report** seçilerek uygulama ve Firebase/GoogleSignIn SDK gizlilik bildirimlerinin birleştiği teyit edilmelidir.
-4. **Yerel Doğrulama (`archive-process` Rule 2 & `export-options` Rule 3):** **"Distribute App"** butonuna basmadan önce mutlaka **"Validate App"** çalıştırılmalı; dağıtım yöntemi veya imzalama seçeneği değiştirilirse yeniden doğrulama yapılmalıdır.
-5. **Dağıtım ve Otomatik İmzalama (`export-options` Rule 1 & Rule 2):** **Distribute App → App Store Connect** seçilmeli ve proje Automatic Signing kullandığı için dışa aktarım sırasında da **Automatic Signing** tercih edilmelidir.
-6. **Arşivin ve `dSYMs` Sembollerinin Saklanması (`archive-process` Rule 3):** Yükleme başarılı olduktan sonra Organizer içindeki `.xcarchive` **kesinlikle silinmemelidir**; üretim ortamındaki çökme raporlarını (crash logs) sembolize etmek için gereken `dSYMs` dosyaları yalnızca bu arşiv içinde yer alır.
+### 4.3. Derleme Yapılandırmaları, Otomatik Testler & Arşiv Prosedürü
+* **Otomatik Doğrulama:** Backend tarafında **32/32** birim testi (`backend/tests/`), iOS tarafında ise `omakaseUITests/` altında **12 XCUITest** (Auth, 3 slayt Onboarding, Bento & Letterboxd, Feed/Kaynakça/Deep Dive, Export Studio, Topluluk & Günlük Limit/Paywall) hazırlanmıştır.
+* **Arşiv & Dağıtım (`archive-process` & `export-options`):**
+  1. Hedef olarak **"Any iOS Device (arm64)"** seçin; Scheme → Archive yapılandırmasının **Release** olduğunu doğrulayın.
+  2. **Product → Archive** sonrası Organizer'da **Generate Privacy Report** çalıştırarak Firebase, GoogleSignIn ve RevenueCat manifestolarının uygulama `PrivacyInfo.xcprivacy` ile birleştiğini teyit edin.
+  3. **Validate App** → **Distribute App → App Store Connect** (Automatic Signing) adımlarını izleyin ve `.xcarchive` içindeki `dSYMs` sembollerini Crashlytics için saklayın.
 
 ---
 
@@ -146,44 +110,42 @@ App Store Connect veya TestFlight'a paket gönderirken uyulması gereken zorunlu
 
 | Bileşen | Durum | App Store Hazırlık Notu |
 |---------|-------|-------------------------|
-| **Kayıt & Giriş (`AuthView`, `AuthService`)** | ✅ Hazır | Sign in with Apple (Kural 4.8), Google Sign-In, 3 adımlı E-posta kaydı (`displayName` + `@username` moderasyon filtreli) ve Hesap Silme (`deleteAccount` — Kural 5.1.1v) tamamlandı. |
-| **Kişisel Akış & Kategori Seçici (`BentoTasteBox`)** | ✅ Hazır | 12 kategori, dinamik alt konular, özel konu moderasyonu ve Deep Dive bottom sheet modal hazır. `AgentDebugLog` yerel port çağrıları temizlendi. |
-| **Topluluk (`TimelineView`, `CommentsView`, `UserProfileSheet`, `UserSearchView`)** | ✅ Hazır | Gönderi/Yorum/Profil Şikayet Etme (`moderation_reports`), Kullanıcı Engelleme (`blockUser` / `unblockUser` + anlık akış filtresi) ve yorum ön moderasyonu (Kural 1.2) tamamlandı. |
-| **Web Tanıtım & Yasal Sayfalar (`web/`)** | ✅ Hazır | `web/privacy.html` (Gizlilik Politikası + RevenueCat/Crashlytics/FCM) ve `web/terms.html` (Kullanım Koşulları / EULA + otomatik yenilenen Pro abonelik şartları + UGC sıfır tolerans) güncellendi. |
-| **Gizlilik Manifestosu (`PrivacyInfo.xcprivacy`)** | ✅ Hazır | `omakase/omakase/PrivacyInfo.xcprivacy` (`CA92.1` + `Name`, `EmailAddress`, `UserID`, `PurchaseHistory`, `CrashData`, `OtherUserContent`) güncellendi. |
-| **Monetizasyon, Bildirim & 7 Dil (`IAP`, `APNs`, `.lproj`)** | ✅ Hazır | `RevenueCat` `5.103.2` (StoreKit 2 + Geri Yükle + Abonelik Yönetimi), `aps-environment`, bağlam içi bildirim izni ve **7 dil** (`en, tr, ja, de, fr, es, ko`) `.lproj` lokalizasyonları eklendi. |
-| **Firestore Güvenlik Kuralları (`firestore.rules`)** | ✅ Hazır | Sahip bazlı ve şema doğrulamalı güvenlik kuralları yazıldı. |
-| **Canlı Backend (Cloud Run)** | ✅ Hazır | `https://omakase-backend-20235796246.us-central1.run.app` üzerinde HTTPS ile çalışıyor; `GEMINI_API_KEY` sunucuda korunuyor. |
+| **Kayıt, Profil Kurulumu & Ayarlar** | ✅ Hazır | Sign in with Apple (Kural 4.8), Google Sign-In, E-posta (8 krk parola), `ProfileSetupView`, atomik `@username` + 14 gün bekleme, Hesap Silme (Kural 5.1.1v) ve ayrı Ayarlar + Geri Bildirim ekranı. |
+| **3 Slaytlı Onboarding & Bento Akış** | ✅ Hazır | ASCII suşi 3 slaytlı `OnboardingView` (varsayılan ilgi alanı dayatmaz), 12 kategori + 24 merak merceği + Şefin Seçimi, `PostSourceView` birincil kaynakça, `DeepDiveSheetView`, 15–25 sn Cooldown ve `reportAIPost`. |
+| **Export Studio (`ExportPostSheet`)** | ✅ Hazır | 3D önizleme, 3 oran (`1080×1920`, `1080×1350`, `1080×1080`), 4 tema, Instagram Stories / WhatsApp / X / Fotoğraflar / Kopyala / Paylaş. |
+| **Topluluk & Mission Control (`admin-web/`)** | ✅ Hazır | Keşfet/Takip akışı, `contentModerationService`, gönderi/yorum/profil/AI şikayet (`moderation_reports`), `blockUser` ve Firebase Hosting üzerinde 24 saatlik moderasyon triyaj paneli. |
+| **Monetizasyon, Cihaz Kotası & 7 Dil** | ✅ Hazır | `RevenueCat` `5.103.2` (StoreKit 2), 3 post/gün (1 Letterboxd/gün) + 1 Deep Dive (`+1` paylaşım ödülü), Keychain `device_usage` koruması, bağlam içi bildirim ve **7 dil** (`en, tr, ja, de, fr, es, ko`). |
+| **Web Tanıtım & Yasal Sayfalar (`web/`)** | ⚠️ Metin Güncellemesi | Yenilenen `index.html` (8 slayt & 4 ekran maket) Cloudflare'e hazır; `privacy.html` / `terms.html` son telemetri, geri bildirim ve Letterboxd/cihaz kotası detaylarıyla güncellenmeli. |
+| **App Store Ekran Görüntüleri** | ✅ Hazır | `app-store-screenshots/exports/ios/iphone/` altında **8 slayt × 7 dil** (`1125×2436`, `1206×2622`, `1284×2778`, `1320×2868`). |
 
 ---
 
 ## 6. Adım Adım Yayına Hazırlık Eylem Planı (Checklist)
 
-### Tamamlanan Kod ve Yapılandırma Maddeleri
-- [x] **1. `PrivacyInfo.xcprivacy` Oluşturulması (Kapı 2):** [`omakase/omakase/PrivacyInfo.xcprivacy`](file:///Users/kuzey/projects/omakase/omakase/omakase/PrivacyInfo.xcprivacy) oluşturuldu (`NSPrivacyAccessedAPICategoryUserDefaults` -> `CA92.1` ve `NSPrivacyCollectedDataTypes` beyanları).
-- [x] **2. Sign in with Apple Kod Entegrasyonu (Kapı 1 — Kural 4.8):** `AuthService.swift` ve `AuthView.swift` içinde SHA256 nonce, Keychain `appleIDUser` saklama, `getCredentialState` kontrolü ve eşit görünürlükte "Apple ile devam et" butonu eklendi.
-- [x] **3. Hesap Silme Özelliği (Kapı 1 — Kural 5.1.1v):** `AuthService.deleteAccount(l10n:)` ve `FirestoreService.deleteAllUserData(uid:)` yazıldı; `MyProfileSheet` içine onay uyarılı "Hesabı Sil" butonu eklendi.
-- [x] **4. UGC Moderasyon Tamamlaması (Kapı 1 — Kural 1.2):**
-  - `CommentsView.sendComment()` ve `AuthView` (`displayName` / `username`) içine `ContentModerationService.isAppropriate` kontrolü eklendi.
-  - `TimelinePostCard` içine "Gönderiyi Bildir" (`reportPost`) ve "Kullanıcıyı Engelle" (`blockUser`) seçenekleri eklendi.
-  - `UserProfileSheet` içine "Kullanıcıyı Bildir" (`reportUser`) ve "Kullanıcıyı Engelle / Engeli Kaldır" (`blockUser` / `unblockUser`) eklendi; engellenen kullanıcıların içerikleri akıştan, yorumlardan ve aramadan anında filtrelendi.
-- [x] **5. Uygulama İçi İletişim ve Yasal Bağlantılar (Kapı 1 — Kural 1.2 & 1.5):** `MyProfileSheet` ve `AuthView` içerisine "Destek ve İletişim (`mailto:destek@getomakase.app`)", "Gizlilik Politikası (`https://getomakase.app/privacy.html`)" ve "Kullanım Koşulları (`https://getomakase.app/terms.html`)" eklendi; `web/privacy.html` ve `web/terms.html` hazırlandı.
-- [x] **6. `firestore.rules` Sıkılaştırması (Kapı 1 & 3 — Kural 1.6):** Sahip bazlı (`authorId == request.auth.uid`, `userId == request.auth.uid`) ve şema doğrulamalı kurallar yazıldı.
-- [x] **7. `Info.plist` ve Debug Telemetri Temizliği (Kapı 3 — Kural 1.6):** `Info.plist` içindeki `172.20.10.14` HTTP istisnası, Release `NSLocalNetworkUsageDescription` anahtarı ve `127.0.0.1:7607` `AgentDebugLog` çağrıları kaldırıldı.
+### Tamamlanan Kod, Test ve Varlık Maddeleri
+- [x] **1. `PrivacyInfo.xcprivacy` (7 Veri Tipi):** `CA92.1` + `Name`, `EmailAddress`, `UserID`, `PurchaseHistory`, `CrashData`, `OtherUserContent`, `ProductInteraction`.
+- [x] **2. Sign in with Apple & `ProfileSetupView` (Kural 4.8):** SHA256 nonce, Keychain `appleIDUser`, `getCredentialState` ve atomik `@username` rezervasyonu.
+- [x] **3. Tam Hesap Silme (Kural 5.1.1v):** Auth + Firestore + Apple token iptali + `PostCacheService` + `BookmarkStore` temizliği.
+- [x] **4. UGC & AI Moderasyon (Kural 1.2):** Ön filtre, gönderi/yorum/profil/AI post raporlama, `blockUser` ve Mission Control Moderasyon sekmesi.
+- [x] **5. Uygulama İçi İletişim, Geri Bildirim & Yasal Bağlantılar (Kural 1.2 & 1.5):** `mailto:destek@getomakase.app`, `FeedbackSheetView`, `privacy.html`, `terms.html`.
+- [x] **6. `Info.plist`, `omakase.entitlements` & Otomatik Testler:** ATS/debug log temizliği, Export Studio izinleri, **32/32** backend testi ve **12** XCUITest.
+- [x] **7. App Store Ekran Görüntüleri:** **8 slayt × 7 dil** 4 iPhone boyutunda üretildi.
 
-### Gönderim Öncesi Manuel Konsol & Xcode GUI Adımları (Geliştirici Aksiyonları)
-- [ ] **A. Xcode Lisans Onayı ve Capability Ekleme:**
-  1. macOS'ta Xcode güncellendiği için terminalde bir kez `sudo xcodebuild -license accept` çalıştırın (veya Xcode'u açıp yeni lisans sözleşmesini onaylayın).
-  2. `knowledge.xcode.entitlements-capabilities` **Rule 1** uyarınca `.entitlements` dosyası elle düzenlenmemelidir; Xcode'da **omakase target → Signing & Capabilities → + Capability → Sign in with Apple** ekleyerek provisioning profile'ın otomatik güncellenmesini sağlayın.
-- [ ] **B. Firebase Console & Dağıtım:**
-  1. Firebase Console → **Authentication → Sign-in method** altından **Apple** sağlayıcısını etkinleştirin.
-  2. Güncellenen Firestore kurallarını ve yasal web sayfalarını canlıya alın:
+### Gönderim Öncesi Kalan Güncelleme, Dağıtım & Konsol Adımları
+- [ ] **A. Son Küçük Güncellemeler ve Dağıtımlar:**
+  1. `firestore.rules` içinde `devices` / `notification_prefs` `language` kısıtını 7 dile genişletin; `web/privacy.html` & `web/terms.html` sayfalarını güncelleyin.
+  2. Güncel backend'i Cloud Run'a, `firestore:rules` ve `admin-web/` Hosting'i Firebase'e, `web/` tanıtım sitesini Cloudflare'e (`wrangler`) dağıtın:
      ```bash
-     firebase deploy --only firestore:rules,hosting
+     cd backend && gcloud run deploy omakase-backend --source . --region us-central1 --project gen-lang-client-0120875563
+     firebase deploy --only firestore:rules,hosting --project gen-lang-client-0120875563
      ```
-- [ ] **C. App Store Connect & Arşiv Doğrulaması:**
-  1. App Store Connect → **App Review Information** bölümüne inceleme ekibi için aktif bir **Demo Hesap (E-posta ve Şifre)** girin (`knowledge.app-store-review-guidelines.demo-account` Rule 1).
-  2. Xcode'da **Any iOS Device (arm64)** seçerek **Product → Archive** alın; Organizer'da **Validate App** ve **Generate Privacy Report** kontrollerini çalıştırıp **Distribute App** ile gönderin.
+- [ ] **B. Xcode, Firebase & RevenueCat Konsolu:**
+  1. Xcode'da **Signing & Capabilities** altında `Sign in with Apple` ve `Push Notifications` profil doğrulamasını kontrol edin (`Release` aps-environment otomatik imzalanacaktır).
+  2. Firebase Console → **Authentication → Apple** sağlayıcısını açın, **APNs `.p8`** anahtarını yükleyin ve `S-03` iOS `API_KEY` kısıtlamasını GCP Console'dan uygulayın.
+  3. App Store Connect **Paid Apps Agreement (`Active`)**, `omakase.pro.monthly` / `omakase.pro.yearly` incelemesi ve RevenueCat Webhook Sandbox testini tamamlayın.
+- [ ] **C. App Store Connect Gönderimi:**
+  1. **App Privacy** anketini 7 veri tipi (`ProductInteraction` dahil) ile eşleştirin; **App Review Information** içine Demo Hesap girin; 8 slayt × 7 dil ekran görüntülerini yükleyin.
+  2. Xcode'da **Any iOS Device (arm64)** seçip **Product → Archive → Generate Privacy Report → Validate App → Distribute App** adımlarını tamamlayın.
 
 ---
 
@@ -191,25 +153,6 @@ App Store Connect veya TestFlight'a paket gönderirken uyulması gereken zorunlu
 
 `.agents/AGENTS.md` kuralları gereğince bu denetim ve uygulama sürecinde kullanılan yönlendirme zinciri:
 
-1. **Seçilen Workflow'lar:**
-   - [`workflow.app-store-submission`](file:///Users/kuzey/projects/omakase/.agents/workflows/app-store-submission/WORKFLOW.md): Uygulamanın App Store gönderimi öncesinde inceleme kuralları, gizlilik manifestosu ve Xcode/güvenlik kapılarından geçirilmesi için.
-   - [`workflow.authentication`](file:///Users/kuzey/projects/omakase/.agents/workflows/authentication/WORKFLOW.md): Kural 4.8 kapsamında zorunlu olan **Sign in with Apple** akışının kimlik doğrulama, Keychain saklama, UI metin stili ve erişilebilirlik kurallarına uygun olarak uçtan uca geliştirilmesi için.
-2. **Sırasıyla Çalıştırılan Skill'ler:**
-   - [`skill.app-store-review-guidelines.submission`](file:///Users/kuzey/projects/omakase/.agents/skills/app-store-review-guidelines/SKILL.md)
-   - [`skill.privacy.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/privacy/SKILL.md)
-   - [`skill.xcode.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/xcode/SKILL.md)
-   - [`skill.authenticationservices.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/authenticationservices/SKILL.md)
-   - [`skill.security.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/security/SKILL.md)
-   - [`skill.style-guide.writing`](file:///Users/kuzey/projects/omakase/.agents/skills/style-guide/SKILL.md)
-   - [`skill.accessibility.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/accessibility/SKILL.md)
-3. **Yüklenen Knowledge Contracts ve Gerekçeleri:**
-   - [`app-completeness.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/app-completeness.md) & [`demo-account.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/demo-account.md): Giriş zorunlu (login-gated) yapı nedeniyle demo hesap gereksinimi ve uygulama tamlığı kontrolü için.
-   - [`login-services-equivalent-option.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/login-services-equivalent-option.md): Google Sign-In kullanımının Kural 4.8 kapsamında Sign in with Apple zorunluluğunu tetiklediğini doğrulamak için.
-   - [`user-generated-content-moderation.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/user-generated-content-moderation.md): Topluluk akışı, profiller ve yorumlar için Kural 1.2'nin 4 zorunlu mekanizmasını (ön filtre, şikayet etme, kullanıcı engelleme, iletişim) uygulamak için.
-   - [`developer-contact-information.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/developer-contact-information.md): Kural 1.5 uyarınca uygulama içi iletişim bilgisi ve yasal bağlantıları eklemek için.
-   - [`data-security.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/data-security.md): Kural 1.6 kapsamında `Info.plist` ATS istisnalarını temizlemek ve `firestore.rules` yetki kurallarını sıkılaştırmak için.
-   - [`privacy-manifest.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/privacy-manifest.md), [`privacy-nutrition-label.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/privacy-nutrition-label.md), [`manifest-file-structure-and-scope.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/privacy/manifest-file-structure-and-scope.md), [`required-reason-api-declarations.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/privacy/required-reason-api-declarations.md), [`collected-data-types-declaration.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/privacy/collected-data-types-declaration.md), [`tracking-domains-and-third-party-sdk-signatures.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/privacy/tracking-domains-and-third-party-sdk-signatures.md): `PrivacyInfo.xcprivacy` dosyasını Apple şemasına (`CA92.1` ve toplanan veri tipleri) uygun olarak oluşturmak için.
-   - [`sign-in-with-apple-request-and-credential.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/authenticationservices/sign-in-with-apple-request-and-credential.md), [`nonce-and-identity-token-verification.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/authenticationservices/nonce-and-identity-token-verification.md), [`credential-state-and-revocation.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/authenticationservices/credential-state-and-revocation.md), [`session-persistence-and-sign-out.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/authenticationservices/session-persistence-and-sign-out.md): Sign in with Apple akışında SHA256 nonce, ilk girişte `fullName` yakalama, `getCredentialState` ve `credentialRevokedNotification` kurallarını eksiksiz uygulamak için.
-   - [`keychain-item-crud.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/security/keychain-item-crud.md) & [`keychain-accessibility-levels.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/security/keychain-accessibility-levels.md): Apple `user` kimliğini arka plan iş parçacığında (`Task.detached`) ve `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` seviyesinde Keychain'de saklamak için.
-   - [`sign-in-and-authentication-terminology.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/style-guide/sign-in-and-authentication-terminology.md) & [`accessibility-labels.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/accessibility/accessibility-labels.md): Kimlik doğrulama buton metinlerini ve ikon butonlarının VoiceOver erişilebilirlik etiketlerini (`accessibilityLabel`) standartlara uygun yazmak için.
-   - [`build-configurations.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/build-configurations.md), [`entitlements-capabilities.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/entitlements-capabilities.md), [`archive-process.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/archive-process.md), [`export-options.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/export-options.md): Debug/Release yapılandırma ayrımı ve capability/arşivleme kurallarını uygulamak için.
+1. **Seçilen Workflow'lar:** [`workflow.app-store-submission`](file:///Users/kuzey/projects/omakase/.agents/workflows/app-store-submission/WORKFLOW.md), [`workflow.authentication`](file:///Users/kuzey/projects/omakase/.agents/workflows/authentication/WORKFLOW.md)
+2. **Sırasıyla Çalıştırılan Skill'ler:** [`skill.app-store-review-guidelines.submission`](file:///Users/kuzey/projects/omakase/.agents/skills/app-store-review-guidelines/SKILL.md), [`skill.privacy.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/privacy/SKILL.md), [`skill.xcode.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/xcode/SKILL.md), [`skill.authenticationservices.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/authenticationservices/SKILL.md), [`skill.security.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/security/SKILL.md), [`skill.style-guide.writing`](file:///Users/kuzey/projects/omakase/.agents/skills/style-guide/SKILL.md), [`skill.accessibility.foundations`](file:///Users/kuzey/projects/omakase/.agents/skills/accessibility/SKILL.md)
+3. **Yüklenen Knowledge Contracts:** [`app-completeness.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/app-completeness.md), [`demo-account.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/demo-account.md), [`login-services-equivalent-option.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/login-services-equivalent-option.md), [`user-generated-content-moderation.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/user-generated-content-moderation.md), [`developer-contact-information.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/developer-contact-information.md), [`data-security.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/data-security.md), [`privacy-manifest.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/privacy-manifest.md), [`privacy-nutrition-label.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/app-store-review-guidelines/privacy-nutrition-label.md), [`manifest-file-structure-and-scope.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/privacy/manifest-file-structure-and-scope.md), [`required-reason-api-declarations.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/privacy/required-reason-api-declarations.md), [`collected-data-types-declaration.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/privacy/collected-data-types-declaration.md), [`tracking-domains-and-third-party-sdk-signatures.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/privacy/tracking-domains-and-third-party-sdk-signatures.md), [`sign-in-with-apple-request-and-credential.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/authenticationservices/sign-in-with-apple-request-and-credential.md), [`nonce-and-identity-token-verification.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/authenticationservices/nonce-and-identity-token-verification.md), [`credential-state-and-revocation.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/authenticationservices/credential-state-and-revocation.md), [`session-persistence-and-sign-out.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/authenticationservices/session-persistence-and-sign-out.md), [`keychain-item-crud.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/security/keychain-item-crud.md), [`keychain-accessibility-levels.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/security/keychain-accessibility-levels.md), [`sign-in-and-authentication-terminology.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/style-guide/sign-in-and-authentication-terminology.md), [`accessibility-labels.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/accessibility/accessibility-labels.md), [`build-configurations.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/build-configurations.md), [`entitlements-capabilities.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/entitlements-capabilities.md), [`archive-process.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/archive-process.md), [`export-options.md`](file:///Users/kuzey/projects/omakase/.agents/knowledge/xcode/export-options.md).
