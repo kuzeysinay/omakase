@@ -116,6 +116,37 @@ def _stream_chunk_text(chunk: object) -> str:
 
 _SAFETY_REASON_SUBSTRINGS = ("SAFETY", "PROHIBITED", "BLOCKLIST", "SPII")
 
+# Finish reasons that mean the model stopped before writing a complete post. Without this
+# check the SSE stream would end with `done`, and clients would silently keep a half post.
+_INCOMPLETE_FINISH_REASONS = (
+    "MAX_TOKENS",
+    "SAFETY",
+    "RECITATION",
+    "PROHIBITED_CONTENT",
+    "BLOCKLIST",
+    "SPII",
+    "IMAGE_SAFETY",
+    "MALFORMED_FUNCTION_CALL",
+    "UNEXPECTED_TOOL_CALL",
+)
+
+
+def _chunk_finish_reason(chunk: object) -> str:
+    """Return the normalized finish reason of a stream chunk ('' when absent)."""
+    try:
+        cands = getattr(chunk, "candidates", None) or []
+        if cands:
+            finish_reason = getattr(cands[0], "finish_reason", None)
+            if finish_reason is not None:
+                return str(finish_reason).upper()
+    except (IndexError, AttributeError, TypeError):
+        pass
+    return ""
+
+
+def _is_safety_finish_reason(reason: str) -> bool:
+    return any(token in reason.upper() for token in _SAFETY_REASON_SUBSTRINGS)
+
 
 def _is_safety_block_chunk(chunk: object) -> bool:
     """Return True when Gemini indicates prompt or candidate safety blocking."""
@@ -161,26 +192,34 @@ def _feed_tokens_from_stream_chunks(
     queue: asyncio.Queue,
     loop: asyncio.AbstractEventLoop,
     usage_out: Optional[dict[str, int]] = None,
-) -> bool:
+) -> str:
     """Turn Gemini stream chunks into queue items.
 
     Emits ('title', str), then ('tags', list[str]), then body ('token', str) events.
-    Returns True if generation was halted by a safety block before yielding text.
+    Returns a status string:
+      - "ok": the stream ended normally.
+      - "blocked": generation was halted by a safety block before any text was yielded.
+      - "truncated": the stream ended with a non-STOP finish reason (e.g. MAX_TOKENS,
+        RECITATION), so the post is incomplete even though text was already emitted.
     """
     carry = ""
     title_done = False
     tags_done = False
     saw_text = False
+    last_finish_reason = ""
     for chunk in response:
         in_tok, out_tok = _extract_usage_tokens(chunk)
         if usage_out is not None and (in_tok or out_tok):
             usage_out["input_tokens"] = max(usage_out.get("input_tokens", 0), in_tok)
             usage_out["output_tokens"] = max(usage_out.get("output_tokens", 0), out_tok)
+        finish_reason = _chunk_finish_reason(chunk)
+        if finish_reason:
+            last_finish_reason = finish_reason
         text = _stream_chunk_text(chunk)
         if not text:
             if not saw_text and _is_safety_block_chunk(chunk):
                 loop.call_soon_threadsafe(queue.put_nowait, ("blocked", None))
-                return True
+                return "blocked"
             continue
         saw_text = True
         carry += text
@@ -246,7 +285,12 @@ def _feed_tokens_from_stream_chunks(
                 _enqueue_stream_body_fragment(loop, queue, carry)
         else:
             _enqueue_stream_body_fragment(loop, queue, carry)
-    return False
+    if last_finish_reason and any(
+        token in last_finish_reason for token in _INCOMPLETE_FINISH_REASONS
+    ):
+        loop.call_soon_threadsafe(queue.put_nowait, ("truncated", last_finish_reason))
+        return "truncated"
+    return "ok"
 
 
 def _sse_event(data: dict, *, event: str | None = None) -> str:
@@ -305,12 +349,14 @@ async def _stream_post(
         def _produce() -> None:
             try:
                 assert genai_client is not None
-                # Use thinking_budget=0 + low temperature (0.35) for sub-second TTFT while
-                # keeping sampling strictly anchored to high-probability, documented facts.
-                # For Letterboxd film posts, retain a compact 128-token budget and 0.25 temp.
+                # Keep TTFT low while sampling stays anchored to documented facts.
+                # Letterboxd posts keep a small thinking budget, but gemini-3.5-flash may
+                # overshoot it; give generous max_output_tokens headroom so thoughts cannot
+                # push the visible post past MAX_TOKENS. The truncation guard below remains
+                # as a safety net.
                 thinking_budget = 128 if letterboxd_films else 0
                 temp = 0.25 if letterboxd_films else 0.35
-                max_tokens = 1024 if letterboxd_films else 600
+                max_tokens = 2048 if letterboxd_films else 600
                 response = genai_client.models.generate_content_stream(
                     model=GEMINI_MODEL,
                     contents=prompt,
@@ -323,8 +369,8 @@ async def _stream_post(
                         safety_settings=SAFETY_SETTINGS,
                     ),
                 )
-                blocked = _feed_tokens_from_stream_chunks(response, queue, loop, usage_stats)
-                if not blocked:
+                status = _feed_tokens_from_stream_chunks(response, queue, loop, usage_stats)
+                if status == "ok":
                     loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
             except Exception as exc:  # noqa: BLE001
                 loop.call_soon_threadsafe(queue.put_nowait, ("error", exc))
@@ -364,6 +410,33 @@ async def _stream_post(
                     {
                         "code": ErrorCode.CONTENT_BLOCKED,
                         "message": "Content blocked by safety filter.",
+                    },
+                    event="error",
+                )
+                break
+            elif kind == "truncated":
+                saw_error = True
+                reason = str(payload or "unknown")
+                err_code = (
+                    ErrorCode.CONTENT_BLOCKED
+                    if _is_safety_finish_reason(reason)
+                    else ErrorCode.GENERATION_FAILED
+                )
+                logger.warning(
+                    "Gemini stream ended early (post_id=%s, finish_reason=%s); "
+                    "refusing to emit a half post",
+                    post_id,
+                    reason,
+                )
+                await record_api_error_async(
+                    err_code,
+                    status_code=422 if err_code == ErrorCode.CONTENT_BLOCKED else 502,
+                    safety_blocked=(err_code == ErrorCode.CONTENT_BLOCKED),
+                )
+                yield _sse_event(
+                    {
+                        "code": err_code,
+                        "message": "Generation ended before the post was complete.",
                     },
                     event="error",
                 )
@@ -476,13 +549,15 @@ async def _stream_deep_dive(
                         system_instruction=system,
                         temperature=0.35,
                         top_p=0.85,
-                        max_output_tokens=600,
+                        # 150-250 words (plus a source line) can exceed 600 tokens for
+                        # Japanese/Korean, so keep headroom against silent MAX_TOKENS cuts.
+                        max_output_tokens=1024,
                         thinking_config=types.ThinkingConfig(thinking_budget=0),
                         safety_settings=SAFETY_SETTINGS,
                     ),
                 )
-                blocked = _feed_tokens_from_stream_chunks(response, queue, loop, usage_stats)
-                if not blocked:
+                status = _feed_tokens_from_stream_chunks(response, queue, loop, usage_stats)
+                if status == "ok":
                     loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
             except Exception as exc:  # noqa: BLE001
                 loop.call_soon_threadsafe(queue.put_nowait, ("error", exc))
@@ -520,6 +595,33 @@ async def _stream_deep_dive(
                     {
                         "code": ErrorCode.CONTENT_BLOCKED,
                         "message": "Content blocked by safety filter.",
+                    },
+                    event="error",
+                )
+                break
+            elif kind == "truncated":
+                saw_error = True
+                reason = str(payload or "unknown")
+                err_code = (
+                    ErrorCode.CONTENT_BLOCKED
+                    if _is_safety_finish_reason(reason)
+                    else ErrorCode.GENERATION_FAILED
+                )
+                logger.warning(
+                    "Gemini deep-dive ended early (post_id=%s, finish_reason=%s); "
+                    "refusing to emit a half deep dive",
+                    post_id,
+                    reason,
+                )
+                await record_api_error_async(
+                    err_code,
+                    status_code=422 if err_code == ErrorCode.CONTENT_BLOCKED else 502,
+                    safety_blocked=(err_code == ErrorCode.CONTENT_BLOCKED),
+                )
+                yield _sse_event(
+                    {
+                        "code": err_code,
+                        "message": "Generation ended before the deep dive was complete.",
                     },
                     event="error",
                 )

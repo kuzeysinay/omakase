@@ -14,6 +14,33 @@ class _Chunk:
         self.candidates = []
 
 
+class _Candidate:
+    def __init__(self, finish_reason: str) -> None:
+        self.finish_reason = finish_reason
+        self.content = None
+
+
+class _FinishChunk:
+    def __init__(self, finish_reason: str) -> None:
+        self.text = ""
+        self.candidates = [_Candidate(finish_reason)]
+
+
+def _run_chunks_with_status(chunks: list[object]) -> tuple[str, list[str]]:
+    async def _collect():
+        queue: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        status = _feed_tokens_from_stream_chunks(chunks, queue, loop)
+        await asyncio.sleep(0)
+        events: list[str] = []
+        while not queue.empty():
+            kind, _payload = queue.get_nowait()
+            events.append(kind)
+        return status, events
+
+    return asyncio.run(_collect())
+
+
 def _run_chunks(chunks: list[str]) -> tuple[list[str], list[list[str]], str]:
     async def _collect():
         queue: asyncio.Queue = asyncio.Queue()
@@ -80,6 +107,41 @@ class StreamParserTests(unittest.TestCase):
         self.assertEqual(titles, ["Nighthawks Lighting"])
         self.assertEqual(tags, [["Art", "Hopper"]])
         self.assertEqual(body, "Body starts here.")
+
+    def test_stop_finish_reason_is_ok(self) -> None:
+        status, events = _run_chunks_with_status([
+            _Chunk("TITLE: Heat's Diners\n"),
+            _Chunk("TAGS: Film\n"),
+            _Chunk("Michael Mann recorded real restaurant ambience."),
+            _FinishChunk("FinishReason.STOP"),
+        ])
+        self.assertEqual(status, "ok")
+        self.assertNotIn("truncated", events)
+
+    def test_max_tokens_after_text_marks_truncated(self) -> None:
+        # Real-world Letterboxd failure: thinking tokens consumed max_output_tokens,
+        # so Gemini stopped after one sentence. The post must not be treated as done.
+        status, events = _run_chunks_with_status([
+            _Chunk("TITLE: Chungking Express\nTAGS: Film\n\nWong Kar-wai, *Ashes of Time*\n"),
+            _FinishChunk("FinishReason.MAX_TOKENS"),
+        ])
+        self.assertEqual(status, "truncated")
+        self.assertIn("truncated", events)
+        self.assertNotIn("done", events)
+
+    def test_safety_after_text_marks_truncated(self) -> None:
+        status, _events = _run_chunks_with_status([
+            _Chunk("TITLE: A Film\nTAGS: Film\nSome partial body text."),
+            _FinishChunk("FinishReason.SAFETY"),
+        ])
+        self.assertEqual(status, "truncated")
+
+    def test_safety_before_text_marks_blocked(self) -> None:
+        status, events = _run_chunks_with_status([
+            _FinishChunk("FinishReason.PROHIBITED_CONTENT"),
+        ])
+        self.assertEqual(status, "blocked")
+        self.assertIn("blocked", events)
 
 
 if __name__ == "__main__":
